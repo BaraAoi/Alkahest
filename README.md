@@ -2,9 +2,9 @@
 
 ## Скачать мод
 
-[**Скачать Alkahest Alpha 0.1.0 для Minecraft 1.21.1 (JAR)**](https://github.com/BaraAoi/Alkahest/raw/refs/heads/arena/89ddcff0-alkahest/downloads/Alkahest-alpha-0.1.0-fabric-1.21.1.jar)
+[**Скачать Alkahest Alpha 0.1.1 для Minecraft 1.21.1 (JAR)**](https://github.com/BaraAoi/Alkahest/raw/refs/heads/arena/89ddcff0-alkahest/downloads/Alkahest-alpha-0.1.1-fabric-1.21.1.jar)
 
-Это ранняя неполная версия мода. Поместите JAR в папку `mods`; также необходимы Fabric Loader, Fabric API и Trinkets для Minecraft 1.21.1. Сборка проверена автоматическими тестами, но запуск в игре пока не проверялся.
+Это ранняя неполная версия мода. Поместите JAR в папку `mods`; также необходимы Fabric Loader, Fabric API и Trinkets для Minecraft 1.21.1. Сборка и автоматический запуск клиента и сервера проверены; игровой процесс пока не проверен полностью.
 
 Мод разрабатывается для **Minecraft 1.21.1 / Fabric / Java 21**. Спецификация и планы находятся в `ALKAHEST_SPECIFICATION.md`. Это **не полная реализация**: исследовательская книга, Алкагест, жидкая перегонка, банки и трубы в мире, артефакты, мобы, мультиблоки, биом и Астрал пока отсутствуют. Боевые эффекты реагентов пока не реализованы. Визуальные ресурсы временные.
 
@@ -22,4 +22,4 @@
 
 ## Сборка и запуск
 
-Нужен JDK 21; команда `./gradlew build` создаёт JAR в `build/libs/`. Для игры установите Fabric Loader, Fabric API и Trinkets для версии 1.21.1. Тесты: `./gradlew test`. Сборка автоматически проверяется GitHub Actions, реальный запуск клиента и сервера пока не проверен.
+Нужен JDK 21; команда `./gradlew build` создаёт JAR в `build/libs/`. Для игры установите Fabric Loader, Fabric API и Trinkets для версии 1.21.1. Тесты: `./gradlew test`. Сборка и старт клиента и сервера автоматически проверяются в GitHub Actions.
