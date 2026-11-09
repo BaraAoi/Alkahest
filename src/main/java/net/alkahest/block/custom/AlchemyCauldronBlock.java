@@ -26,6 +26,7 @@ public class AlchemyCauldronBlock extends Block implements BlockEntityProvider {
         return !world.isClient && type == ModBlockEntities.CAULDRON ? (w, p, s, be) -> CauldronBlockEntity.tick(w, p, (CauldronBlockEntity) be) : null;
     }
     @Override protected ItemActionResult onUseWithItem(ItemStack stack, BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
+        if (stack.isEmpty()) return ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
         if (!world.isClient && world.getBlockEntity(pos) instanceof CauldronBlockEntity cauldron) {
             if (stack.isOf(Items.WATER_BUCKET)) cauldron.fill(player, hand);
             else cauldron.add(player, hand);

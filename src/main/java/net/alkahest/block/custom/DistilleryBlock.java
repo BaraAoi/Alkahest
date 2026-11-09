@@ -25,6 +25,7 @@ public class DistilleryBlock extends Block implements BlockEntityProvider {
         return !world.isClient && type == ModBlockEntities.DISTILLERY ? (w, p, s, be) -> DistilleryBlockEntity.tick(w, p, (DistilleryBlockEntity) be) : null;
     }
     @Override protected ItemActionResult onUseWithItem(ItemStack stack, BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
+        if (stack.isEmpty()) return ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
         if (!world.isClient && world.getBlockEntity(pos) instanceof DistilleryBlockEntity distillery) distillery.insert(player, hand);
         return ItemActionResult.success(world.isClient);
     }
