@@ -172,7 +172,11 @@ public class ReagentGameTests implements FabricGameTest {
         context.setBlockState(2, 2, 2, Blocks.WATER);
         BlockPos center = context.getAbsolutePos(new BlockPos(2, 2, 2));
         ReagentZoneEntity.spawn(context.getWorld(), Vec3d.ofCenter(center), ReagentZoneEntity.Kind.NAPALM);
-        context.runAtTick(5, () -> context.assertTrue(context.getWorld().getBlockState(center).isOf(Blocks.FIRE), "Water cannot put out napalm fire"));
+        context.runAtTick(5, () -> {
+            context.assertTrue(context.getWorld().getBlockState(center).isOf(Blocks.FIRE), "Water cannot put out napalm fire");
+            context.getWorld().setBlockState(center, Blocks.WATER.getDefaultState());
+        });
+        context.runAtTick(15, () -> context.assertTrue(context.getWorld().getBlockState(center).isOf(Blocks.FIRE), "Fire must return after placing water"));
         context.runAtTick(210, () -> {
             context.assertTrue(context.getWorld().getBlockState(center).isOf(Blocks.WATER), "Displaced water must be restored");
             context.complete();
