@@ -1,6 +1,11 @@
 package net.alkahest.entity;
 
 import net.alkahest.registry.ModEntities;
+import net.alkahest.Alkahest;
+import net.minecraft.entity.damage.DamageSource;
+import net.minecraft.entity.damage.DamageType;
+import net.minecraft.registry.RegistryKey;
+import net.minecraft.registry.RegistryKeys;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.Entity;
@@ -27,6 +32,7 @@ public class ReagentZoneEntity extends Entity {
         final float radius; final int duration;
         Kind(float radius, int duration) { this.radius = radius; this.duration = duration; }
     }
+    private static final RegistryKey<DamageType> NAPALM_DAMAGE = RegistryKey.of(RegistryKeys.DAMAGE_TYPE, Alkahest.id("napalm"));
     private Kind kind = Kind.SLIME;
     private int remaining;
     private final List<BlockPos> fireBlocks = new ArrayList<>();
@@ -68,7 +74,7 @@ public class ReagentZoneEntity extends Entity {
                 switch (kind) {
                     case FIRE -> { if (elapsed == 0) target.setOnFireFor(5); }
                     case SLIME -> target.addStatusEffect(new StatusEffectInstance(StatusEffects.SLOWNESS, 25, 1));
-                    case NAPALM -> target.damage(world.getDamageSources().inFire(), 3.0f);
+                    case NAPALM -> target.damage(new DamageSource(world.getRegistryManager().get(RegistryKeys.DAMAGE_TYPE).entryOf(NAPALM_DAMAGE)), 3.0f);
                 }
             }
         }

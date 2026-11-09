@@ -22,6 +22,7 @@ import net.minecraft.util.ClickType;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.GameMode;
+import net.minecraft.world.GameRules;
 
 public class ReagentGameTests implements FabricGameTest {
     @GameTest(templateName = EMPTY_STRUCTURE)
@@ -97,4 +98,17 @@ public class ReagentGameTests implements FabricGameTest {
             context.complete();
         });
     }
+    @GameTest(templateName = EMPTY_STRUCTURE, tickLimit = 140)
+    public void fireZoneExpires(TestContext context) {
+        context.getWorld().getGameRules().get(GameRules.DO_FIRE_TICK).set(false, context.getWorld().getServer());
+        context.setBlockState(2, 1, 2, Blocks.STONE);
+        BlockPos center = context.getAbsolutePos(new BlockPos(2, 2, 2));
+        ReagentZoneEntity.spawn(context.getWorld(), Vec3d.ofCenter(center), ReagentZoneEntity.Kind.FIRE);
+        context.runAtTick(2, () -> context.assertTrue(context.getWorld().getBlockState(center).isOf(Blocks.FIRE), "Fire must be placed"));
+        context.runAtTick(110, () -> {
+            context.assertTrue(context.getWorld().getBlockState(center).isAir(), "Temporary fire must disappear");
+            context.complete();
+        });
+    }
+
 }
