@@ -57,6 +57,12 @@ public class ResearchGameTests implements FabricGameTest {
         cauldron.stacks().set(1, new ItemStack(Items.COAL));
         context.assertTrue(cauldron.activate(player), "Correct hypothesis should work");
         context.assertTrue((EarlyResearch.flags(player) & EarlyResearch.COMPLETED) != 0, "Completion must be recorded");
+        player.getAdvancementTracker().save();
+        player.getAdvancementTracker().reload(context.getWorld().getServer().getAdvancementLoader());
+        context.assertTrue((EarlyResearch.flags(player) & (EarlyResearch.COMPLETED | EarlyResearch.FAILED_SAND)) == (EarlyResearch.COMPLETED | EarlyResearch.FAILED_SAND), "Completion and failed choices must survive save and reload");
+        cauldron.stacks().set(0, new ItemStack(Items.COAL));
+        cauldron.stacks().set(1, new ItemStack(Items.GLASS_BOTTLE));
+        context.assertTrue(cauldron.activate(player), "Research must not prevent existing recipes");
         context.complete();
     }
 }
