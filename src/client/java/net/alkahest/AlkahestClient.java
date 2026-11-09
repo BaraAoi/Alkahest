@@ -6,12 +6,15 @@ import net.alkahest.registry.ModItems;
 import net.alkahest.registry.ModDataComponents;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.item.v1.ItemTooltipCallback;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
+import org.slf4j.LoggerFactory;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.text.Text;
 
 public final class AlkahestClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
+        ClientLifecycleEvents.CLIENT_STARTED.register(client -> LoggerFactory.getLogger("Alkahest").info("Alkahest client started"));
         ItemTooltipCallback.EVENT.register((stack, context, type, lines) -> {
             Float stability = stack.get(ModDataComponents.ESSENCE_STABILITY);
             if (stability != null) lines.add(Text.translatable("message.alkahest.stability", Math.round(stability * 100)));
