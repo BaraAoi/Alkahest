@@ -140,7 +140,8 @@ public class CauldronBlockEntity extends BlockEntity {
         List<Item> items = new ArrayList<>(); inputs.forEach(s -> items.add(s.getItem()));
         if (items.size() == 2 && items.contains(Items.GLASS_BOTTLE) && (items.contains(Items.COAL) || items.contains(Items.CHARCOAL))) return new ItemStack(ModItems.PURIFIED_WATER);
         if (items.size() == 3 && inputs.stream().filter(s -> s.isIn(FLOWERS)).count() == 2 && inputs.stream().filter(s -> s.contains(DataComponentTypes.FOOD) && !s.isIn(FLOWERS)).count() == 1) return new ItemStack(ModItems.HERBAL_PASTE, 2);
-        if (items.size() == 2 && items.contains(Items.BLAZE_POWDER) && items.contains(Items.REDSTONE)) return new ItemStack(ModItems.FIRE_DUST, 2);
+        // Gunpowder is an additional early-game recipe; the specification's blaze-powder recipe remains valid.
+        if (items.size() == 2 && items.contains(Items.REDSTONE) && (items.contains(Items.BLAZE_POWDER) || items.contains(Items.GUNPOWDER))) return new ItemStack(ModItems.FIRE_DUST, 2);
         if (items.size() == 2 && items.contains(Items.SPIDER_EYE) && items.contains(Items.CACTUS)) return new ItemStack(ModItems.CAUSTIC_SLIME, 2);
         if (items.size() == 3 && items.contains(ModItems.SALT) && items.contains(ModItems.CRYSTALS.get(net.alkahest.essence.EssenceType.ORDO)) && items.contains(Items.STRING)) return new ItemStack(ModItems.BINDING_SALT, 2);
         if (items.size() == 3 && items.contains(Items.GLASS_PANE) && items.contains(Items.GOLD_INGOT) && items.contains(ModItems.CRYSTALS.get(net.alkahest.essence.EssenceType.ORDO))) return new ItemStack(ModItems.ALCHEMISTS_MONOCLE);

@@ -2,6 +2,7 @@ package net.alkahest.test;
 
 import net.alkahest.block.entity.CauldronBlockEntity;
 import net.alkahest.registry.ModBlocks;
+import net.alkahest.block.custom.AlchemyCauldronBlock;
 import net.alkahest.registry.ModItems;
 import net.fabricmc.fabric.api.gametest.v1.FabricGameTest;
 import net.minecraft.block.Blocks;
@@ -91,6 +92,38 @@ public class CauldronGameTests implements FabricGameTest {
             context.assertTrue(result.get(DataComponentTypes.CUSTOM_NAME) != null && result.getName().getString().equals("Precious sample"), "Item components must survive insertion and saving");
             context.complete();
         });
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void fireDustRecipesRequireWaterAndHeat(TestContext context) {
+        CauldronBlockEntity cauldron = cauldron(context);
+        PlayerEntity player = context.createMockPlayer(GameMode.SURVIVAL);
+        cauldron.stacks().set(0, new ItemStack(Items.GUNPOWDER));
+        cauldron.stacks().set(1, new ItemStack(Items.REDSTONE));
+        context.assertFalse(cauldron.activate(player), "Dry cauldron must not consume recipe inputs");
+        context.assertTrue(!cauldron.stacks().get(0).isEmpty(), "Inputs must remain after dry activation");
+        player.setStackInHand(Hand.MAIN_HAND, new ItemStack(Items.WATER_BUCKET));
+        cauldron.fill(player, Hand.MAIN_HAND);
+        context.setBlockState(3, 1, 3, Blocks.STONE);
+        context.assertFalse(cauldron.activate(player), "Unheated cauldron must not cook");
+        context.assertTrue(!cauldron.stacks().get(1).isEmpty(), "Inputs must remain without heat");
+        context.setBlockState(3, 1, 3, Blocks.MAGMA_BLOCK);
+        context.assertTrue(cauldron.activate(player), "Gunpowder and redstone must cook");
+        context.assertTrue(player.getInventory().contains(new ItemStack(ModItems.FIRE_DUST, 2)), "Result should be fire dust");
+        BlockPos pos = context.getAbsolutePos(new BlockPos(3, 2, 3));
+        context.assertFalse(context.getWorld().getBlockState(pos).get(AlchemyCauldronBlock.FILLED), "Cooking consumes water");
+        player.setStackInHand(Hand.MAIN_HAND, new ItemStack(Items.WATER_BUCKET));
+        cauldron.fill(player, Hand.MAIN_HAND);
+        cauldron.stacks().set(0, new ItemStack(Items.REDSTONE));
+        cauldron.stacks().set(1, new ItemStack(Items.BLAZE_POWDER));
+        context.assertTrue(cauldron.activate(player), "Original blaze-powder recipe must still work");
+        int count = 0;
+        for (int i = 0; i < player.getInventory().size(); i++) {
+            ItemStack stack = player.getInventory().getStack(i);
+            if (stack.isOf(ModItems.FIRE_DUST)) count += stack.getCount();
+        }
+        context.assertTrue(count == 4, "Both recipes should yield two each: " + count);
+        context.complete();
     }
 
 }

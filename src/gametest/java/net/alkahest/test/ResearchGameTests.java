@@ -3,6 +3,7 @@ package net.alkahest.test;
 import net.alkahest.block.entity.CauldronBlockEntity;
 import net.alkahest.block.custom.AlchemyCauldronBlock;
 import net.alkahest.registry.ModBlocks;
+import net.alkahest.registry.ModItems;
 import net.alkahest.research.EarlyResearch;
 import net.fabricmc.fabric.api.gametest.v1.FabricGameTest;
 import net.minecraft.block.Blocks;
@@ -96,10 +97,24 @@ public class ResearchGameTests implements FabricGameTest {
         context.assertTrue((EarlyResearch.flags(player) & EarlyResearch.FAILED_CLAY) != 0, "Clay failure must be recorded");
         cauldron.stacks().set(0, new ItemStack(Items.GUNPOWDER));
         cauldron.stacks().set(1, new ItemStack(Items.REDSTONE));
+        context.assertFalse(player.getInventory().contains(new ItemStack(ModItems.FIRE_DUST)), "Hypothesis should not produce the ordinary recipe result");
         context.assertTrue(cauldron.activate(player), "Second research correct hypothesis should work");
+        context.assertFalse(player.getInventory().contains(new ItemStack(ModItems.FIRE_DUST)), "The research attempt itself should only complete research");
+        context.assertTrue(context.getWorld().getBlockState(pos).get(AlchemyCauldronBlock.FILLED), "Research leaves water in the cauldron");
         player.getAdvancementTracker().save();
         player.getAdvancementTracker().reload(context.getWorld().getServer().getAdvancementLoader());
         context.assertTrue((EarlyResearch.flags(player) & (EarlyResearch.REACTIVE_COMPLETED | EarlyResearch.FAILED_FEATHER)) == (EarlyResearch.REACTIVE_COMPLETED | EarlyResearch.FAILED_FEATHER), "Second research must survive save and reload");
+        cauldron.stacks().set(0, new ItemStack(Items.REDSTONE));
+        cauldron.stacks().set(1, new ItemStack(Items.GUNPOWDER));
+        context.assertTrue(cauldron.activate(player), "After research, repeating the combination must cook fire dust");
+        int result = 0;
+        for (int i = 0; i < player.getInventory().size(); i++) {
+            ItemStack stack = player.getInventory().getStack(i);
+            if (stack.isOf(ModItems.FIRE_DUST)) result += stack.getCount();
+        }
+        context.assertTrue(result == 2, "Repeat recipe should produce exactly two fire dust: " + result);
+        context.assertTrue(cauldron.stacks().stream().allMatch(ItemStack::isEmpty), "Recipe must consume ingredients");
+        context.assertFalse(context.getWorld().getBlockState(pos).get(AlchemyCauldronBlock.FILLED), "Recipe must consume water");
         context.complete();
     }
 }
