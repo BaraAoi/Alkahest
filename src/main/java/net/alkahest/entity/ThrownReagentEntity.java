@@ -34,7 +34,7 @@ public class ThrownReagentEntity extends ThrownItemEntity {
                 target.damage(owner != null ? world.getDamageSources().indirectMagic(this, owner) : world.getDamageSources().magic(), 6.0f);
             }
             world.spawnParticles(ParticleTypes.ITEM_SLIME, getX(), getY(), getZ(), 40, 0.7, 0.4, 0.7, 0.2);
-            world.playSound(null, getBlockPos(), SoundEvents.ENTITY_GENERIC_EXPLODE, SoundCategory.PLAYERS, 0.8f, 1.4f);
+            world.playSound(null, getBlockPos(), SoundEvents.ENTITY_GENERIC_EXPLODE.value(), SoundCategory.PLAYERS, 0.8f, 1.4f);
         } else {
             ReagentZoneEntity.Kind kind = reagent.isOf(ModItems.FIRE_DUST) ? ReagentZoneEntity.Kind.FIRE
                 : reagent.isOf(ModItems.CAUSTIC_SLIME) ? ReagentZoneEntity.Kind.SLIME

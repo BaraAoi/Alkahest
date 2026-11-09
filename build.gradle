@@ -13,12 +13,32 @@ repositories {
     mavenCentral()
 }
 
+sourceSets {
+    gametest {
+        compileClasspath += main.compileClasspath
+        runtimeClasspath += main.runtimeClasspath
+    }
+}
+
 loom {
     splitEnvironmentSourceSets()
     mods {
         alkahest {
             sourceSet sourceSets.main
             sourceSet sourceSets.client
+        }
+        alkahest_gametest {
+            sourceSet sourceSets.gametest
+        }
+    }
+    runs {
+        gametest {
+            server()
+            name = "Alkahest Game Tests"
+            source sourceSets.gametest
+            vmArg "-Dfabric-api.gametest"
+            vmArg "-Dfabric-api.gametest.report-file=${project.buildDir}/gametest-results.xml"
+            runDir "build/gametest"
         }
     }
 }
@@ -32,6 +52,7 @@ dependencies {
     modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
     modImplementation "dev.emi:trinkets:${project.trinkets_version}"
+    gametestImplementation sourceSets.main.output
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.3'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }

@@ -23,6 +23,16 @@ jobs:
             python3 -c 'import pathlib; s=pathlib.Path("build.log").read_text()[:30000]; print("::error::" + s.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A"))'
           fi
           exit "$result"
+      - name: Gameplay tests
+        run: |
+          set +e
+          ./gradlew runGametest --no-daemon --console=plain > gametest.log 2>&1
+          result=$?
+          cat gametest.log
+          if [ "$result" -ne 0 ]; then
+            python3 -c 'import pathlib; s=pathlib.Path("gametest.log").read_text()[-3800:]; print("::error::" + s.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A"))'
+          fi
+          exit "$result"
       - name: Server startup smoke test
         run: python3 scripts/smoke_test.py server
       - name: Client startup smoke test
