@@ -6,6 +6,8 @@ import net.alkahest.registry.ModItems;
 import net.fabricmc.fabric.api.gametest.v1.FabricGameTest;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.ItemEntity;
+import net.minecraft.component.DataComponentTypes;
+import net.minecraft.text.Text;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
@@ -72,4 +74,23 @@ public class CauldronGameTests implements FabricGameTest {
             context.complete();
         });
     }
+    @GameTest(templateName = EMPTY_STRUCTURE, tickLimit = 80)
+    public void droppedItemComponentsSurviveSave(TestContext context) {
+        CauldronBlockEntity cauldron = cauldron(context);
+        fill(context, cauldron);
+        ItemStack named = new ItemStack(Items.DIAMOND);
+        named.set(DataComponentTypes.CUSTOM_NAME, Text.literal("Precious sample"));
+        item(context, 3.5, 4.0, 3.5, named);
+        context.runAtTick(25, () -> {
+            var registry = context.getWorld().getRegistryManager();
+            var saved = cauldron.createNbt(registry);
+            CauldronBlockEntity restored = new CauldronBlockEntity(cauldron.getPos(), cauldron.getCachedState());
+            restored.readComponentlessNbt(saved, registry);
+            ItemStack result = restored.stacks().get(0);
+            context.assertTrue(result.isOf(Items.DIAMOND), "Dropped ingredient must persist in block entity NBT");
+            context.assertTrue(result.get(DataComponentTypes.CUSTOM_NAME) != null && result.getName().getString().equals("Precious sample"), "Item components must survive insertion and saving");
+            context.complete();
+        });
+    }
+
 }
