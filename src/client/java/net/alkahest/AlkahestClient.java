@@ -28,7 +28,7 @@ public final class AlkahestClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         ClientPlayNetworking.registerGlobalReceiver(OpenJournalPayload.ID, (payload, context) ->
-            context.client().execute(() -> context.client().setScreen(new JournalScreen())));
+            context.client().execute(() -> context.client().setScreen(new JournalScreen(payload.flags()))));
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.NAPALM_FLAME, RenderLayer.getCutout());
         EntityRendererRegistry.register(ModEntities.THROWN_REAGENT, FlyingItemEntityRenderer::new);
         EntityRendererRegistry.register(ModEntities.REAGENT_ZONE, EmptyEntityRenderer::new);

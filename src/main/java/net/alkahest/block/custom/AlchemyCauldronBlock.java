@@ -1,6 +1,9 @@
 package net.alkahest.block.custom;
 
 import net.alkahest.block.entity.CauldronBlockEntity;
+import net.alkahest.research.EarlyResearch;
+import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.entity.LivingEntity;
 import net.alkahest.item.custom.CrystalWandItem;
 import net.alkahest.registry.ModBlockEntities;
 import net.minecraft.block.Block;
@@ -46,7 +49,16 @@ public class AlchemyCauldronBlock extends Block implements BlockEntityProvider {
     @Override public <T extends BlockEntity> BlockEntityTicker<T> getTicker(World world, BlockState state, BlockEntityType<T> type) {
         return !world.isClient && type == ModBlockEntities.CAULDRON ? (w, p, s, be) -> CauldronBlockEntity.tick(w, p, (CauldronBlockEntity) be) : null;
     }
+    @Override public void onPlaced(World world, BlockPos pos, BlockState state, LivingEntity placer, ItemStack stack) {
+        super.onPlaced(world, pos, state, placer, stack);
+        if (!world.isClient && placer instanceof ServerPlayerEntity player) EarlyResearch.discoverCauldron(player, world, pos);
+    }
+    private static void discover(World world, BlockPos pos, PlayerEntity player) {
+        // Existing worlds may already contain a placed cauldron before the journal is opened.
+        if (!world.isClient && player instanceof ServerPlayerEntity serverPlayer) EarlyResearch.discoverCauldron(serverPlayer, world, pos);
+    }
     @Override protected ItemActionResult onUseWithItem(ItemStack stack, BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
+        discover(world, pos, player);
         if (stack.isEmpty()) return ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
         if (!world.isClient && world.getBlockEntity(pos) instanceof CauldronBlockEntity cauldron) {
             if (stack.getItem() instanceof CrystalWandItem wand) {
@@ -57,6 +69,7 @@ public class AlchemyCauldronBlock extends Block implements BlockEntityProvider {
         return ItemActionResult.success(world.isClient);
     }
     @Override protected ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, BlockHitResult hit) {
+        discover(world, pos, player);
         if (!world.isClient && world.getBlockEntity(pos) instanceof CauldronBlockEntity cauldron) {
             if (player.isSneaking()) cauldron.empty(player); else cauldron.activate(player);
         }

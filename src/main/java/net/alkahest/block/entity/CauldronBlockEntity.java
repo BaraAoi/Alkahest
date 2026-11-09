@@ -1,6 +1,9 @@
 package net.alkahest.block.entity;
 
 import net.alkahest.registry.ModBlockEntities;
+import net.alkahest.research.EarlyResearch;
+import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.world.ServerWorld;
 import net.alkahest.block.custom.AlchemyCauldronBlock;
 import net.minecraft.block.Block;
 import net.alkahest.registry.ModItems;
@@ -103,6 +106,20 @@ public class CauldronBlockEntity extends BlockEntity {
         if (!water) { message(player, "message.alkahest.need_water"); return false; }
         if (!heated()) { message(player, "message.alkahest.need_heat"); return false; }
         List<ItemStack> inputs = stacks.stream().filter(s -> !s.isEmpty()).toList();
+        if (player instanceof ServerPlayerEntity researcher && world instanceof ServerWorld serverWorld) {
+            var attempt = EarlyResearch.identify(EarlyResearch.flags(researcher), inputs);
+            if (attempt == EarlyResearch.Attempt.ALREADY_FAILED) {
+                message(player, "message.alkahest.research.already_failed");
+                return false;
+            }
+            if (attempt != EarlyResearch.Attempt.NONE) {
+                if (!EarlyResearch.record(researcher, attempt, serverWorld, pos)) return false;
+                stacks.replaceAll(ignored -> ItemStack.EMPTY);
+                evaporation = 0;
+                markDirty();
+                return true;
+            }
+        }
         ItemStack output = recipe(inputs);
         if (output.isEmpty()) { message(player, "message.alkahest.no_recipe"); return false; }
         stacks.replaceAll(ignored -> ItemStack.EMPTY); setWater(false); evaporation = 0; markDirty();
