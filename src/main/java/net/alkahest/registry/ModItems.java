@@ -3,6 +3,7 @@ package net.alkahest.registry;
 import dev.emi.trinkets.api.TrinketItem;
 import net.alkahest.Alkahest;
 import net.alkahest.essence.EssenceType;
+import net.alkahest.item.custom.CrystalWandItem;
 import net.fabricmc.fabric.api.itemgroup.v1.FabricItemGroup;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemGroup;
@@ -24,18 +25,22 @@ public final class ModItems {
     public static final Item BINDING_SALT = item("binding_salt", new Item(new Item.Settings()));
     public static final Item ASH = item("ash", new Item(new Item.Settings()));
     public static final Map<EssenceType, Item> CRYSTALS = crystals();
+    public static final Map<EssenceType, Item> WANDS = wands();
     public static final ItemGroup GROUP = Registry.register(Registries.ITEM_GROUP, Alkahest.id("main"),
         FabricItemGroup.builder().displayName(Text.translatable("itemGroup.alkahest.main"))
             .icon(() -> new ItemStack(ALCHEMISTS_MONOCLE))
             .entries((context, entries) -> {
                 entries.add(ModBlocks.ALCHEMY_CAULDRON);
                 entries.add(ModBlocks.DISTILLERY);
+                entries.add(ModBlocks.SALT_ORE);
                 entries.add(ALCHEMISTS_MONOCLE);
                 entries.add(SALT); entries.add(PURIFIED_WATER); entries.add(HERBAL_PASTE);
                 entries.add(FIRE_DUST); entries.add(CAUSTIC_SLIME); entries.add(BINDING_SALT); entries.add(ASH);
                 for (EssenceType type : EssenceType.values()) {
                     Item item = CRYSTALS.get(type);
                     if (item != null) entries.add(item);
+                    Item wand = WANDS.get(type);
+                    if (wand != null) entries.add(wand);
                 }
             }).build());
 
@@ -44,6 +49,14 @@ public final class ModItems {
         for (EssenceType type : EssenceType.values()) {
             if (type == EssenceType.VACUUM) continue;
             result.put(type, item("crystal_" + type.asString(), new Item(new Item.Settings())));
+        }
+        return Map.copyOf(result);
+    }
+    private static Map<EssenceType, Item> wands() {
+        Map<EssenceType, Item> result = new EnumMap<>(EssenceType.class);
+        for (EssenceType type : EssenceType.values()) {
+            if (type.tier() == EssenceType.Tier.PRIMA)
+                result.put(type, item("crystal_wand_" + type.asString(), new CrystalWandItem(type)));
         }
         return Map.copyOf(result);
     }

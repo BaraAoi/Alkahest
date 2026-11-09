@@ -1,0 +1,15 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "minecraft:stick"
+    },
+    {
+      "item": "alkahest:crystal_ordo"
+    }
+  ],
+  "result": {
+    "id": "alkahest:crystal_wand_ordo",
+    "count": 1
+  }
+}

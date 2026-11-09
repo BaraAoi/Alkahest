@@ -1,7 +1,6 @@
 {
   "variants": {
-    "": {
-      "model": "alkahest:block/alchemy_cauldron"
-    }
+    "filled=false": {"model": "alkahest:block/alchemy_cauldron"},
+    "filled=true": {"model": "minecraft:block/water_cauldron_full"}
   }
 }

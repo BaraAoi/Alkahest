@@ -39,5 +39,13 @@
   "message.alkahest.distillery_organic": "Raw distillation only accepts mapped organic materials.",
   "message.alkahest.distillery_started": "Distillation started: one minute.",
   "message.alkahest.distillery_wait": "No output yet.",
-  "message.alkahest.stability": "Stability: %s%%"
+  "message.alkahest.stability": "Stability: %s%%",
+  "block.alkahest.salt_ore": "Salt Ore",
+  "message.alkahest.wand_charge": "Charges: %s / 100",
+  "item.alkahest.crystal_wand_ignis": "Crystal Wand Ignis",
+  "item.alkahest.crystal_wand_aqua": "Crystal Wand Aqua",
+  "item.alkahest.crystal_wand_terra": "Crystal Wand Terra",
+  "item.alkahest.crystal_wand_aer": "Crystal Wand Aer",
+  "item.alkahest.crystal_wand_ordo": "Crystal Wand Ordo",
+  "item.alkahest.crystal_wand_perditio": "Crystal Wand Perditio"
 }

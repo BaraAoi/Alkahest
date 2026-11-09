@@ -1,6 +1,8 @@
 package net.alkahest.block.entity;
 
 import net.alkahest.registry.ModBlockEntities;
+import net.alkahest.block.custom.AlchemyCauldronBlock;
+import net.minecraft.block.Block;
 import net.alkahest.registry.ModItems;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
@@ -41,7 +43,7 @@ public class CauldronBlockEntity extends BlockEntity {
     }
     public void fill(PlayerEntity player, Hand hand) {
         if (water) { message(player, "message.alkahest.cauldron_full"); return; }
-        water = true; evaporation = 0;
+        setWater(true); evaporation = 0;
         if (!player.isCreative()) player.setStackInHand(hand, new ItemStack(Items.BUCKET));
         markDirty(); message(player, "message.alkahest.cauldron_filled");
     }
@@ -62,15 +64,16 @@ public class CauldronBlockEntity extends BlockEntity {
         }
         markDirty(); message(player, "message.alkahest.cauldron_emptied");
     }
-    public void activate(PlayerEntity player) {
-        if (!water) { message(player, "message.alkahest.need_water"); return; }
-        if (!heated()) { message(player, "message.alkahest.need_heat"); return; }
+    public boolean activate(PlayerEntity player) {
+        if (!water) { message(player, "message.alkahest.need_water"); return false; }
+        if (!heated()) { message(player, "message.alkahest.need_heat"); return false; }
         List<ItemStack> inputs = stacks.stream().filter(s -> !s.isEmpty()).toList();
         ItemStack output = recipe(inputs);
-        if (output.isEmpty()) { message(player, "message.alkahest.no_recipe"); return; }
-        stacks.replaceAll(ignored -> ItemStack.EMPTY); water = false; evaporation = 0; markDirty();
+        if (output.isEmpty()) { message(player, "message.alkahest.no_recipe"); return false; }
+        stacks.replaceAll(ignored -> ItemStack.EMPTY); setWater(false); evaporation = 0; markDirty();
         if (!player.giveItemStack(output)) player.dropItem(output, false);
         message(player, "message.alkahest.cauldron_success");
+        return true;
     }
     private static ItemStack recipe(List<ItemStack> inputs) {
         List<Item> items = new ArrayList<>(); inputs.forEach(s -> items.add(s.getItem()));
@@ -82,10 +85,24 @@ public class CauldronBlockEntity extends BlockEntity {
         if (items.size() == 3 && items.contains(Items.GLASS_PANE) && items.contains(Items.GOLD_INGOT) && items.contains(ModItems.CRYSTALS.get(net.alkahest.essence.EssenceType.ORDO))) return new ItemStack(ModItems.ALCHEMISTS_MONOCLE);
         return ItemStack.EMPTY;
     }
+    private void setWater(boolean value) {
+        water = value;
+        syncWaterState();
+        markDirty();
+    }
+    private void syncWaterState() {
+        if (world == null || world.isClient) return;
+        BlockState state = world.getBlockState(pos);
+        if (state.getBlock() instanceof AlchemyCauldronBlock && state.get(AlchemyCauldronBlock.FILLED) != water) {
+            world.setBlockState(pos, state.with(AlchemyCauldronBlock.FILLED, water), Block.NOTIFY_ALL);
+        }
+    }
     public static void tick(World world, BlockPos pos, CauldronBlockEntity self) {
+        // Old worlds saved the water only in NBT. Restore the visual state after loading.
+        self.syncWaterState();
         if (self.water && self.heated() && self.stacks.stream().allMatch(ItemStack::isEmpty)) {
             if (++self.evaporation >= 400) {
-                self.water = false; self.evaporation = 0;
+                self.setWater(false); self.evaporation = 0;
                 ItemScatterer.spawn(world, pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5, new ItemStack(ModItems.SALT, 2));
             }
             self.markDirty();

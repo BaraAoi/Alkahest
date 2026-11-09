@@ -39,5 +39,13 @@
   "message.alkahest.distillery_organic": "Грубая перегонка принимает только известную органику.",
   "message.alkahest.distillery_started": "Перегонка началась: одна минута.",
   "message.alkahest.distillery_wait": "Результат ещё не готов.",
-  "message.alkahest.stability": "Стабильность: %s%%"
+  "message.alkahest.stability": "Стабильность: %s%%",
+  "block.alkahest.salt_ore": "Соляная руда",
+  "message.alkahest.wand_charge": "Заряд: %s / 100",
+  "item.alkahest.crystal_wand_ignis": "Жезл с кристаллом Ignis",
+  "item.alkahest.crystal_wand_aqua": "Жезл с кристаллом Aqua",
+  "item.alkahest.crystal_wand_terra": "Жезл с кристаллом Terra",
+  "item.alkahest.crystal_wand_aer": "Жезл с кристаллом Aer",
+  "item.alkahest.crystal_wand_ordo": "Жезл с кристаллом Ordo",
+  "item.alkahest.crystal_wand_perditio": "Жезл с кристаллом Perditio"
 }
