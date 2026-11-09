@@ -20,6 +20,9 @@ public final class ItemEssenceMap {
     private static final TagKey<Item> PLANKS = tag("minecraft", "planks");
     private static final TagKey<Item> SEEDS = tag("c", "seeds");
     private static final Map<Item, List<EssenceStack>> VALUES = Map.ofEntries(
+        e(Items.APPLE, s(HERBA, 3), s(AQUA, 1), s(ORDO, 1)),
+        e(Items.BREAD, s(HERBA, 3), s(ORDO, 1)),
+        e(Items.CARROT, s(HERBA, 3), s(AQUA, 1)),
         e(Items.COBBLESTONE, s(TERRA, 2), s(PERDITIO, 1)),
         e(Items.STONE, s(TERRA, 2), s(ORDO, 1)),
         e(Items.COAL, s(IGNIS, 3), s(TERRA, 1)),

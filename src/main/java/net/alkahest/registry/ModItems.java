@@ -16,12 +16,23 @@ import java.util.Map;
 
 public final class ModItems {
     public static final Item ALCHEMISTS_MONOCLE = item("alchemists_monocle", new TrinketItem(new Item.Settings().maxCount(1)));
+    public static final Item SALT = item("salt", new Item(new Item.Settings()));
+    public static final Item PURIFIED_WATER = item("purified_water", new Item(new Item.Settings()));
+    public static final Item HERBAL_PASTE = item("herbal_paste", new Item(new Item.Settings()));
+    public static final Item FIRE_DUST = item("fire_dust", new Item(new Item.Settings()));
+    public static final Item CAUSTIC_SLIME = item("caustic_slime", new Item(new Item.Settings()));
+    public static final Item BINDING_SALT = item("binding_salt", new Item(new Item.Settings()));
+    public static final Item ASH = item("ash", new Item(new Item.Settings()));
     public static final Map<EssenceType, Item> CRYSTALS = crystals();
     public static final ItemGroup GROUP = Registry.register(Registries.ITEM_GROUP, Alkahest.id("main"),
         FabricItemGroup.builder().displayName(Text.translatable("itemGroup.alkahest.main"))
             .icon(() -> new ItemStack(ALCHEMISTS_MONOCLE))
             .entries((context, entries) -> {
+                entries.add(ModBlocks.ALCHEMY_CAULDRON);
+                entries.add(ModBlocks.DISTILLERY);
                 entries.add(ALCHEMISTS_MONOCLE);
+                entries.add(SALT); entries.add(PURIFIED_WATER); entries.add(HERBAL_PASTE);
+                entries.add(FIRE_DUST); entries.add(CAUSTIC_SLIME); entries.add(BINDING_SALT); entries.add(ASH);
                 for (EssenceType type : EssenceType.values()) {
                     Item item = CRYSTALS.get(type);
                     if (item != null) entries.add(item);

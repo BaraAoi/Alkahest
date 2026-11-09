@@ -1,6 +1,8 @@
 package net.alkahest;
 
 import net.alkahest.registry.ModDataComponents;
+import net.alkahest.registry.ModBlocks;
+import net.alkahest.registry.ModBlockEntities;
 import net.alkahest.registry.ModItems;
 import net.fabricmc.api.ModInitializer;
 import net.minecraft.util.Identifier;
@@ -15,6 +17,8 @@ public final class Alkahest implements ModInitializer {
     @Override
     public void onInitialize() {
         ModDataComponents.register();
+        ModBlocks.register();
+        ModBlockEntities.register();
         ModItems.register();
     }
 }
