@@ -56,6 +56,7 @@ public class ReagentGameTests implements FabricGameTest {
     public void acidProjectile(TestContext context) {
         context.setBlockState(2, 1, 2, Blocks.STONE);
         context.setBlockState(4, 1, 2, Blocks.STONE);
+        context.setBlockState(4, 5, 2, Blocks.STONE);
         ZombieEntity zombie = context.spawnEntity(EntityType.ZOMBIE, 4, 2, 2);
         zombie.setAiDisabled(true);
         ItemStack helmet = new ItemStack(Items.IRON_HELMET);
@@ -65,8 +66,8 @@ public class ReagentGameTests implements FabricGameTest {
         projectile.setVelocity(0, -0.7, 0);
         context.runAtTick(10, () -> {
             context.assertTrue(projectile.isRemoved(), "Projectile must disappear after impact");
-            context.assertTrue(Math.abs(zombie.getHealth() - 14.0f) < 0.01f, "Acid must deal 6 magic damage");
-            context.assertTrue(helmet.getDamage() == 35, "Acid must damage armor by 35");
+            context.assertTrue(Math.abs(zombie.getHealth() - 14.0f) < 0.01f, "Acid must deal 6 magic damage, health=" + zombie.getHealth());
+            context.assertTrue(helmet.getDamage() == 35, "Acid must damage armor by 35, actual=" + helmet.getDamage());
             context.complete();
         });
     }

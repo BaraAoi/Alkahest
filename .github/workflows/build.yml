@@ -30,7 +30,7 @@ jobs:
           result=$?
           cat gametest.log
           if [ "$result" -ne 0 ]; then
-            python3 -c 'import pathlib; s=pathlib.Path("gametest.log").read_text()[-3800:]; print("::error::" + s.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A"))'
+            python3 -c 'import pathlib; p=pathlib.Path("build/gametest-results.xml"); s=p.read_text() if p.exists() else pathlib.Path("gametest.log").read_text()[-3800:]; print("::error::" + s[:3900].replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A"))'
           fi
           exit "$result"
       - name: Server startup smoke test
