@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "id": "alkahest",
+  "version": "${version}",
+  "name": "Alkahest",
+  "description": "Алхимия и эссенции — ранняя версия.",
+  "environment": "*",
+  "entrypoints": {
+    "main": ["net.alkahest.Alkahest"],
+    "client": ["net.alkahest.AlkahestClient"]
+  },
+  "depends": {
+    "fabricloader": ">=0.16.10",
+    "minecraft": "~1.21.1",
+    "java": ">=21",
+    "fabric-api": "*",
+    "trinkets": ">=3.10.0"
+  }
+}
