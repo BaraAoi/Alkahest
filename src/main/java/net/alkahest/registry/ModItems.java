@@ -5,6 +5,7 @@ import net.alkahest.Alkahest;
 import net.alkahest.essence.EssenceType;
 import net.alkahest.item.custom.CrystalWandItem;
 import net.alkahest.item.custom.ReagentItem;
+import net.alkahest.item.custom.AlchemicalJournalItem;
 import net.fabricmc.fabric.api.itemgroup.v1.FabricItemGroup;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemGroup;
@@ -17,6 +18,7 @@ import java.util.EnumMap;
 import java.util.Map;
 
 public final class ModItems {
+    public static final Item ALCHEMICAL_JOURNAL = item("alchemical_journal", new AlchemicalJournalItem(new Item.Settings().maxCount(1)));
     public static final Item ALCHEMISTS_MONOCLE = item("alchemists_monocle", new TrinketItem(new Item.Settings().maxCount(1)));
     public static final Item SALT = item("salt", new Item(new Item.Settings()));
     public static final Item PURIFIED_WATER = item("purified_water", new Item(new Item.Settings()));
@@ -36,6 +38,7 @@ public final class ModItems {
                 entries.add(ModBlocks.ALCHEMY_CAULDRON);
                 entries.add(ModBlocks.DISTILLERY);
                 entries.add(ModBlocks.SALT_ORE);
+                entries.add(ALCHEMICAL_JOURNAL);
                 entries.add(ALCHEMISTS_MONOCLE);
                 entries.add(SALT); entries.add(PURIFIED_WATER); entries.add(HERBAL_PASTE);
                 entries.add(FIRE_DUST); entries.add(CAUSTIC_SLIME); entries.add(NAPALM); entries.add(ACID_BOMB); entries.add(BINDING_SALT); entries.add(ASH);

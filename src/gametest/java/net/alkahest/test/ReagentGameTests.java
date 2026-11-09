@@ -4,6 +4,7 @@ import net.alkahest.entity.ReagentZoneEntity;
 import net.alkahest.entity.ThrownReagentEntity;
 import net.alkahest.registry.ModEntities;
 import net.alkahest.registry.ModItems;
+import net.alkahest.registry.ModBlocks;
 import net.fabricmc.fabric.api.gametest.v1.FabricGameTest;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.EntityType;
@@ -89,13 +90,16 @@ public class ReagentGameTests implements FabricGameTest {
     @GameTest(templateName = EMPTY_STRUCTURE, tickLimit = 100)
     public void napalmZone(TestContext context) {
         context.setBlockState(2, 1, 2, Blocks.STONE);
+        context.setBlockState(2, 5, 2, Blocks.STONE);
         ZombieEntity zombie = context.spawnEntity(EntityType.ZOMBIE, 2, 2, 2);
         zombie.setAiDisabled(true);
         zombie.equipStack(EquipmentSlot.HEAD, new ItemStack(Items.IRON_HELMET));
         BlockPos center = context.getAbsolutePos(new BlockPos(2, 2, 2));
         ReagentZoneEntity.spawn(context.getWorld(), Vec3d.ofCenter(center), ReagentZoneEntity.Kind.NAPALM);
         context.runAtTick(25, () -> {
-            context.assertTrue(Math.abs(zombie.getHealth() - 14.0f) < 0.01f, "Napalm must deal 3 damage per second");
+            context.assertTrue(zombie.isOnFire(), "Targets should visibly burn inside the napalm zone");
+            context.assertTrue(context.getWorld().getBlockState(center).isOf(ModBlocks.NAPALM_FLAME), "Napalm flames must be visible on solid ground");
+            context.assertTrue(Math.abs(zombie.getHealth() - 14.0f) < 0.01f, "Napalm must deal 3 damage per second: " + zombie.getHealth());
             context.complete();
         });
     }
@@ -108,6 +112,34 @@ public class ReagentGameTests implements FabricGameTest {
         context.runAtTick(2, () -> context.assertTrue(context.getWorld().getBlockState(center).isOf(Blocks.FIRE), "Fire must be placed"));
         context.runAtTick(110, () -> {
             context.assertTrue(context.getWorld().getBlockState(center).isAir(), "Temporary fire must disappear");
+            context.complete();
+        });
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE, tickLimit = 80)
+    public void napalmKeepsDamagingInWater(TestContext context) {
+        context.setBlockState(2, 1, 2, Blocks.STONE);
+        context.setBlockState(2, 2, 2, Blocks.WATER);
+        context.setBlockState(2, 5, 2, Blocks.STONE);
+        ZombieEntity zombie = context.spawnEntity(EntityType.ZOMBIE, 2, 2, 2);
+        zombie.setAiDisabled(true);
+        zombie.setNoGravity(true);
+        zombie.equipStack(EquipmentSlot.HEAD, new ItemStack(Items.IRON_HELMET));
+        BlockPos center = context.getAbsolutePos(new BlockPos(2, 2, 2));
+        ReagentZoneEntity.spawn(context.getWorld(), Vec3d.ofCenter(center), ReagentZoneEntity.Kind.NAPALM);
+        context.runAtTick(25, () -> {
+            context.assertTrue(Math.abs(zombie.getHealth() - 14.0f) < 0.01f, "Water must not stop napalm damage: " + zombie.getHealth());
+            context.complete();
+        });
+    }
+    @GameTest(templateName = EMPTY_STRUCTURE, tickLimit = 240)
+    public void napalmFlameExpires(TestContext context) {
+        context.setBlockState(2, 1, 2, Blocks.STONE);
+        BlockPos center = context.getAbsolutePos(new BlockPos(2, 2, 2));
+        ReagentZoneEntity.spawn(context.getWorld(), Vec3d.ofCenter(center), ReagentZoneEntity.Kind.NAPALM);
+        context.runAtTick(2, () -> context.assertTrue(context.getWorld().getBlockState(center).isOf(ModBlocks.NAPALM_FLAME), "Napalm flame must appear"));
+        context.runAtTick(210, () -> {
+            context.assertTrue(context.getWorld().getBlockState(center).isAir(), "Napalm flame must disappear after 10 seconds");
             context.complete();
         });
     }

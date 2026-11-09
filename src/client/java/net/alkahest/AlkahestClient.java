@@ -3,6 +3,9 @@ package net.alkahest;
 import dev.emi.trinkets.api.TrinketsApi;
 import net.alkahest.essence.ItemEssenceMap;
 import net.alkahest.registry.ModItems;
+import net.alkahest.network.OpenJournalPayload;
+import net.alkahest.client.gui.JournalScreen;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.alkahest.registry.ModEntities;
 import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
 import net.minecraft.client.render.entity.FlyingItemEntityRenderer;
@@ -10,6 +13,8 @@ import net.minecraft.client.render.entity.EmptyEntityRenderer;
 import net.alkahest.item.custom.CrystalWandItem;
 import net.alkahest.registry.ModBlocks;
 import net.fabricmc.fabric.api.client.rendering.v1.ColorProviderRegistry;
+import net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap;
+import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.color.world.BiomeColors;
 import net.alkahest.registry.ModDataComponents;
 import net.fabricmc.api.ClientModInitializer;
@@ -22,6 +27,9 @@ import net.minecraft.text.Text;
 public final class AlkahestClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
+        ClientPlayNetworking.registerGlobalReceiver(OpenJournalPayload.ID, (payload, context) ->
+            context.client().execute(() -> context.client().setScreen(new JournalScreen())));
+        BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.NAPALM_FLAME, RenderLayer.getCutout());
         EntityRendererRegistry.register(ModEntities.THROWN_REAGENT, FlyingItemEntityRenderer::new);
         EntityRendererRegistry.register(ModEntities.REAGENT_ZONE, EmptyEntityRenderer::new);
         ColorProviderRegistry.BLOCK.register((state, world, pos, tintIndex) ->

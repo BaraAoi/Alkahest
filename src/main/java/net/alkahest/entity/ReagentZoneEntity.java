@@ -1,6 +1,7 @@
 package net.alkahest.entity;
 
 import net.alkahest.registry.ModEntities;
+import net.alkahest.registry.ModBlocks;
 import net.alkahest.Alkahest;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.damage.DamageType;
@@ -18,6 +19,7 @@ import net.minecraft.nbt.NbtCompound;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
@@ -41,7 +43,10 @@ public class ReagentZoneEntity extends Entity {
     public static void spawn(ServerWorld world, Vec3d position, Kind kind) {
         ReagentZoneEntity zone = new ReagentZoneEntity(ModEntities.REAGENT_ZONE, world);
         zone.setPosition(position); zone.kind = kind; zone.remaining = kind.duration;
-        if (world.spawnEntity(zone) && kind == Kind.FIRE) zone.placeFire();
+        if (world.spawnEntity(zone)) {
+            if (kind == Kind.FIRE) zone.placeFire();
+            if (kind == Kind.NAPALM) zone.placeNapalmFlames();
+        }
     }
     private void placeFire() {
         BlockPos center = getBlockPos();
@@ -56,16 +61,29 @@ public class ReagentZoneEntity extends Entity {
             }
         }
     }
+    private void placeNapalmFlames() {
+        BlockPos center = getBlockPos();
+        int radius = (int) Math.ceil(kind.radius);
+        for (int dx = -radius; dx <= radius; dx++) for (int dz = -radius; dz <= radius; dz++) {
+            if (dx * dx + dz * dz > kind.radius * kind.radius) continue;
+            BlockPos pos = center.add(dx, 0, dz);
+            if (getWorld().isAir(pos) && getWorld().getBlockState(pos.down()).isSideSolidFullSquare(getWorld(), pos.down(), Direction.UP)) {
+                getWorld().setBlockState(pos, ModBlocks.NAPALM_FLAME.getDefaultState());
+                if (!fireBlocks.contains(pos)) fireBlocks.add(pos.toImmutable());
+            }
+        }
+    }
     @Override public void tick() {
         super.tick();
         if (!(getWorld() instanceof ServerWorld world)) return;
         if (remaining <= 0) { expire(); return; }
         int elapsed = kind.duration - remaining;
+        if (kind == Kind.NAPALM && elapsed % 20 == 0) placeNapalmFlames();
         if (elapsed % 5 == 0) {
             world.spawnParticles(kind == Kind.SLIME ? ParticleTypes.ITEM_SLIME : ParticleTypes.FLAME,
                 getX(), getY() + 0.15, getZ(), 8, kind.radius / 2, 0.1, kind.radius / 2, 0.01);
         }
-        if (elapsed % (kind == Kind.NAPALM ? 20 : 10) == 0) {
+        if (elapsed % 10 == 0) {
             Box area = new Box(getX() - kind.radius, getY() - 1, getZ() - kind.radius,
                                getX() + kind.radius, getY() + 2, getZ() + kind.radius);
             for (LivingEntity target : world.getEntitiesByClass(LivingEntity.class, area, e -> !e.isSpectator())) {
@@ -74,7 +92,14 @@ public class ReagentZoneEntity extends Entity {
                 switch (kind) {
                     case FIRE -> { if (elapsed == 0) target.setOnFireFor(5); }
                     case SLIME -> target.addStatusEffect(new StatusEffectInstance(StatusEffects.SLOWNESS, 25, 1));
-                    case NAPALM -> target.damage(new DamageSource(world.getRegistryManager().get(RegistryKeys.DAMAGE_TYPE).entryOf(NAPALM_DAMAGE)), 3.0f);
+                    case NAPALM -> {
+                        // A short refreshed burn makes the effect visible without adding an extra
+                        // vanilla burn tick to the specified 3 HP/sec. Existing longer fires remain intact.
+                        if (!target.isFireImmune() && !target.hasStatusEffect(StatusEffects.FIRE_RESISTANCE)
+                                && target.getFireTicks() < 10) target.setOnFireForTicks(19);
+                        if (elapsed % 20 == 0)
+                            target.damage(new DamageSource(world.getRegistryManager().get(RegistryKeys.DAMAGE_TYPE).entryOf(NAPALM_DAMAGE)), 3.0f);
+                    }
                 }
             }
         }
@@ -82,7 +107,9 @@ public class ReagentZoneEntity extends Entity {
     }
     private void expire() {
         if (!getWorld().isClient) for (BlockPos pos : fireBlocks) {
-            if (getWorld().getBlockState(pos).isOf(Blocks.FIRE)) getWorld().removeBlock(pos, false);
+            BlockState current = getWorld().getBlockState(pos);
+            if ((kind == Kind.FIRE && current.isOf(Blocks.FIRE)) || (kind == Kind.NAPALM && current.isOf(ModBlocks.NAPALM_FLAME)))
+                getWorld().removeBlock(pos, false);
         }
         discard();
     }

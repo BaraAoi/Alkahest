@@ -9,6 +9,8 @@ import net.minecraft.entity.projectile.thrown.ThrownItemEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.particle.ParticleTypes;
+import net.minecraft.particle.DustParticleEffect;
+import org.joml.Vector3f;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
@@ -33,7 +35,10 @@ public class ThrownReagentEntity extends ThrownItemEntity {
                 }
                 target.damage(owner != null ? world.getDamageSources().indirectMagic(this, owner) : world.getDamageSources().magic(), 6.0f);
             }
-            world.spawnParticles(ParticleTypes.ITEM_SLIME, getX(), getY(), getZ(), 40, 0.7, 0.4, 0.7, 0.2);
+            world.spawnParticles(ParticleTypes.ITEM_SLIME, getX(), getY(), getZ(), 55, 1.0, 0.6, 1.0, 0.15);
+            world.spawnParticles(new DustParticleEffect(new Vector3f(0.32f, 0.9f, 0.12f), 1.3f),
+                getX(), getY(), getZ(), 45, 1.1, 0.6, 1.1, 0.05);
+            world.spawnParticles(ParticleTypes.POOF, getX(), getY(), getZ(), 16, 0.6, 0.3, 0.6, 0.05);
             world.playSound(null, getBlockPos(), SoundEvents.ENTITY_GENERIC_EXPLODE.value(), SoundCategory.PLAYERS, 0.8f, 1.4f);
         } else {
             ReagentZoneEntity.Kind kind = reagent.isOf(ModItems.FIRE_DUST) ? ReagentZoneEntity.Kind.FIRE

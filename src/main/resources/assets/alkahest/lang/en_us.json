@@ -49,5 +49,14 @@
   "item.alkahest.crystal_wand_ordo": "Crystal Wand Ordo",
   "item.alkahest.crystal_wand_perditio": "Crystal Wand Perditio",
   "item.alkahest.napalm": "Napalm",
-  "item.alkahest.acid_bomb": "Acid Bomb"
+  "item.alkahest.acid_bomb": "Acid Bomb",
+  "item.alkahest.alchemical_journal": "Alchemical Journal",
+  "screen.alkahest.journal": "Alchemical Journal",
+  "screen.alkahest.journal.page.0": "Introduction\n\nThis journal is a guide to the early Alkahest build. Research and hypotheses are still in development. Use the arrows to turn pages.",
+  "screen.alkahest.journal.page.1": "Cauldron\n\nCraft it with copper, a cauldron and stone. Place fire, a lit campfire, lava or magma beneath it, then fill it with a water bucket.",
+  "screen.alkahest.journal.page.2": "Brewing\n\nUse ingredients on the cauldron to add them. Use an empty hand or wand to brew. Sneak-use with an empty hand to retrieve ingredients. Heated water alone becomes salt after 20 seconds.",
+  "screen.alkahest.journal.page.3": "Cauldron recipes\n\nCoal + bottle = purified water. 2 flowers + food = paste. Blaze powder + redstone = fire dust. Spider eye + cactus = caustic slime.",
+  "screen.alkahest.journal.page.4": "Distillation\n\nCraft a distillery from 6 copper ingots, 2 glass and a furnace. Use organic material on it to start a one-minute run. Use an empty hand to collect crystals or ash.",
+  "screen.alkahest.journal.page.5": "Reagents\n\nRight-click slime with fire dust in the inventory for napalm, or gunpowder with caustic slime for an acid bomb. Throw them with right-click. They can hurt you too!",
+  "screen.alkahest.journal.page.6": "Essences\n\nA monocle reveals item essences. Craft a wand from a stick and a primal crystal to activate the cauldron 100 times. Salt ore generates in new chunks at Y 45–75."
 }
