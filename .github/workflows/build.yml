@@ -14,7 +14,15 @@ jobs:
           distribution: temurin
           java-version: '21'
       - name: Build and test
-        run: ./gradlew build --stacktrace
+        run: |
+          set +e
+          ./gradlew build --stacktrace > build.log 2>&1
+          result=$?
+          cat build.log
+          if [ "$result" -ne 0 ]; then
+            python3 -c 'import pathlib; s=pathlib.Path("build.log").read_text()[:30000]; print("::error::" + s.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A"))'
+          fi
+          exit "$result"
       - uses: actions/upload-artifact@v4
         with:
           name: Alkahest-fabric-1.21.1
