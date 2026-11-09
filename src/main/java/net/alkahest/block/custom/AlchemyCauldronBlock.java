@@ -6,6 +6,10 @@ import net.alkahest.registry.ModBlockEntities;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockEntityProvider;
 import net.minecraft.block.BlockState;
+import net.minecraft.block.Blocks;
+import net.minecraft.block.ShapeContext;
+import net.minecraft.util.shape.VoxelShape;
+import net.minecraft.world.BlockView;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.BlockEntityTicker;
 import net.minecraft.block.entity.BlockEntityType;
@@ -30,6 +34,13 @@ public class AlchemyCauldronBlock extends Block implements BlockEntityProvider {
     }
     @Override protected void appendProperties(StateManager.Builder<Block, BlockState> builder) {
         builder.add(FILLED);
+    }
+    // Match the vanilla cauldron's hollow collision shape so dropped ingredients can fall inside.
+    @Override protected VoxelShape getCollisionShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) {
+        return Blocks.CAULDRON.getDefaultState().getCollisionShape(world, pos, context);
+    }
+    @Override protected VoxelShape getOutlineShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) {
+        return Blocks.CAULDRON.getDefaultState().getOutlineShape(world, pos, context);
     }
     @Override public BlockEntity createBlockEntity(BlockPos pos, BlockState state) { return new CauldronBlockEntity(pos, state); }
     @Override public <T extends BlockEntity> BlockEntityTicker<T> getTicker(World world, BlockState state, BlockEntityType<T> type) {

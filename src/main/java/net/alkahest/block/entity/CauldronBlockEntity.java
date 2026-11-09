@@ -10,6 +10,7 @@ import net.minecraft.block.CampfireBlock;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.entity.ItemEntity;
 import net.minecraft.inventory.Inventories;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -24,6 +25,7 @@ import net.minecraft.util.Identifier;
 import net.minecraft.util.ItemScatterer;
 import net.minecraft.util.collection.DefaultedList;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Box;
 import net.minecraft.world.World;
 
 import java.util.ArrayList;
@@ -31,6 +33,7 @@ import java.util.List;
 
 public class CauldronBlockEntity extends BlockEntity {
     private final DefaultedList<ItemStack> stacks = DefaultedList.ofSize(6, ItemStack.EMPTY);
+    private static final String RETURNED_ITEM_TAG = "alkahest_cauldron_returned";
     private boolean water;
     private int evaporation;
     private static final TagKey<Item> FLOWERS = TagKey.of(RegistryKeys.ITEM, Identifier.of("minecraft", "flowers"));
@@ -47,20 +50,52 @@ public class CauldronBlockEntity extends BlockEntity {
         if (!player.isCreative()) player.setStackInHand(hand, new ItemStack(Items.BUCKET));
         markDirty(); message(player, "message.alkahest.cauldron_filled");
     }
-    public void add(PlayerEntity player, Hand hand) {
-        ItemStack held = player.getStackInHand(hand);
+    private boolean insertOne(ItemStack stack) {
+        if (stack.isEmpty()) return false;
         for (int i = 0; i < stacks.size(); i++) {
             if (stacks.get(i).isEmpty()) {
-                stacks.set(i, held.copyWithCount(1)); held.decrementUnlessCreative(1, player);
-                evaporation = 0; markDirty(); message(player, "message.alkahest.cauldron_added"); return;
+                stacks.set(i, stack.copyWithCount(1));
+                evaporation = 0;
+                markDirty();
+                return true;
             }
         }
-        message(player, "message.alkahest.cauldron_slots_full");
+        return false;
+    }
+    public void add(PlayerEntity player, Hand hand) {
+        ItemStack held = player.getStackInHand(hand);
+        if (insertOne(held)) {
+            held.decrementUnlessCreative(1, player);
+            message(player, "message.alkahest.cauldron_added");
+        } else message(player, "message.alkahest.cauldron_slots_full");
+    }
+    private void collectDroppedIngredients(World world, BlockPos pos) {
+        if (!water || stacks.stream().noneMatch(ItemStack::isEmpty)) return;
+        // The item's centre must be above the opening, not merely touching the outer walls.
+        Box opening = new Box(pos.getX() + 0.1875, pos.getY() + 0.25, pos.getZ() + 0.1875,
+                              pos.getX() + 0.8125, pos.getY() + 1.0, pos.getZ() + 0.8125);
+        for (ItemEntity entity : world.getEntitiesByClass(ItemEntity.class, opening,
+                e -> e.isAlive() && !e.getCommandTags().contains(RETURNED_ITEM_TAG))) {
+            if (entity.getX() < opening.minX || entity.getX() > opening.maxX ||
+                entity.getZ() < opening.minZ || entity.getZ() > opening.maxZ ||
+                entity.getY() < opening.minY || entity.getY() > opening.maxY) continue;
+            ItemStack dropped = entity.getStack();
+            while (insertOne(dropped)) dropped.decrement(1);
+            if (dropped.isEmpty()) entity.discard();
+            else entity.setStack(dropped);
+        }
     }
     public void empty(PlayerEntity player) {
         for (int i = 0; i < stacks.size(); i++) {
             ItemStack stack = stacks.get(i);
-            if (!stack.isEmpty()) { if (!player.giveItemStack(stack)) player.dropItem(stack, false); stacks.set(i, ItemStack.EMPTY); }
+            if (!stack.isEmpty()) {
+                if (!player.giveItemStack(stack)) {
+                    ItemEntity returned = player.dropItem(stack, false);
+                    // Do not immediately swallow items returned to a player with a full inventory.
+                    if (returned != null) returned.addCommandTag(RETURNED_ITEM_TAG);
+                }
+                stacks.set(i, ItemStack.EMPTY);
+            }
         }
         markDirty(); message(player, "message.alkahest.cauldron_emptied");
     }
@@ -100,6 +135,7 @@ public class CauldronBlockEntity extends BlockEntity {
     public static void tick(World world, BlockPos pos, CauldronBlockEntity self) {
         // Old worlds saved the water only in NBT. Restore the visual state after loading.
         self.syncWaterState();
+        self.collectDroppedIngredients(world, pos);
         if (self.water && self.heated() && self.stacks.stream().allMatch(ItemStack::isEmpty)) {
             if (++self.evaporation >= 400) {
                 self.setWater(false); self.evaporation = 0;

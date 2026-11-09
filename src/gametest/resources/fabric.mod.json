@@ -4,6 +4,14 @@
   "version": "1.0.0",
   "name": "Alkahest Game Tests",
   "environment": "server",
-  "entrypoints": {"fabric-gametest": ["net.alkahest.test.ReagentGameTests"]},
-  "depends": {"alkahest": "*", "fabric-gametest-api-v1": "*"}
+  "entrypoints": {
+    "fabric-gametest": [
+      "net.alkahest.test.ReagentGameTests",
+      "net.alkahest.test.CauldronGameTests"
+    ]
+  },
+  "depends": {
+    "alkahest": "*",
+    "fabric-gametest-api-v1": "*"
+  }
 }
