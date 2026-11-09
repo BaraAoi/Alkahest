@@ -5,6 +5,7 @@ import net.alkahest.registry.ModBlocks;
 import net.alkahest.registry.ModBlockEntities;
 import net.alkahest.registry.ModItems;
 import net.alkahest.registry.ModWorldGen;
+import net.alkahest.registry.ModEntities;
 import net.fabricmc.api.ModInitializer;
 import net.minecraft.util.Identifier;
 
@@ -21,6 +22,7 @@ public final class Alkahest implements ModInitializer {
         ModBlocks.register();
         ModBlockEntities.register();
         ModItems.register();
+        ModEntities.register();
         ModWorldGen.register();
     }
 }

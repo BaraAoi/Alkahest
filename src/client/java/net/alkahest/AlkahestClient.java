@@ -3,6 +3,10 @@ package net.alkahest;
 import dev.emi.trinkets.api.TrinketsApi;
 import net.alkahest.essence.ItemEssenceMap;
 import net.alkahest.registry.ModItems;
+import net.alkahest.registry.ModEntities;
+import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
+import net.minecraft.client.render.entity.FlyingItemEntityRenderer;
+import net.minecraft.client.render.entity.EmptyEntityRenderer;
 import net.alkahest.item.custom.CrystalWandItem;
 import net.alkahest.registry.ModBlocks;
 import net.fabricmc.fabric.api.client.rendering.v1.ColorProviderRegistry;
@@ -18,6 +22,8 @@ import net.minecraft.text.Text;
 public final class AlkahestClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
+        EntityRendererRegistry.register(ModEntities.THROWN_REAGENT, FlyingItemEntityRenderer::new);
+        EntityRendererRegistry.register(ModEntities.REAGENT_ZONE, EmptyEntityRenderer::new);
         ColorProviderRegistry.BLOCK.register((state, world, pos, tintIndex) ->
             world != null && pos != null ? BiomeColors.getWaterColor(world, pos) : 0x3F76E4,
             ModBlocks.ALCHEMY_CAULDRON);

@@ -4,6 +4,7 @@ import dev.emi.trinkets.api.TrinketItem;
 import net.alkahest.Alkahest;
 import net.alkahest.essence.EssenceType;
 import net.alkahest.item.custom.CrystalWandItem;
+import net.alkahest.item.custom.ReagentItem;
 import net.fabricmc.fabric.api.itemgroup.v1.FabricItemGroup;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemGroup;
@@ -20,8 +21,10 @@ public final class ModItems {
     public static final Item SALT = item("salt", new Item(new Item.Settings()));
     public static final Item PURIFIED_WATER = item("purified_water", new Item(new Item.Settings()));
     public static final Item HERBAL_PASTE = item("herbal_paste", new Item(new Item.Settings()));
-    public static final Item FIRE_DUST = item("fire_dust", new Item(new Item.Settings()));
-    public static final Item CAUSTIC_SLIME = item("caustic_slime", new Item(new Item.Settings()));
+    public static final Item FIRE_DUST = item("fire_dust", new ReagentItem(new Item.Settings()));
+    public static final Item CAUSTIC_SLIME = item("caustic_slime", new ReagentItem(new Item.Settings()));
+    public static final Item NAPALM = item("napalm", new ReagentItem(new Item.Settings()));
+    public static final Item ACID_BOMB = item("acid_bomb", new ReagentItem(new Item.Settings()));
     public static final Item BINDING_SALT = item("binding_salt", new Item(new Item.Settings()));
     public static final Item ASH = item("ash", new Item(new Item.Settings()));
     public static final Map<EssenceType, Item> CRYSTALS = crystals();
@@ -35,7 +38,7 @@ public final class ModItems {
                 entries.add(ModBlocks.SALT_ORE);
                 entries.add(ALCHEMISTS_MONOCLE);
                 entries.add(SALT); entries.add(PURIFIED_WATER); entries.add(HERBAL_PASTE);
-                entries.add(FIRE_DUST); entries.add(CAUSTIC_SLIME); entries.add(BINDING_SALT); entries.add(ASH);
+                entries.add(FIRE_DUST); entries.add(CAUSTIC_SLIME); entries.add(NAPALM); entries.add(ACID_BOMB); entries.add(BINDING_SALT); entries.add(ASH);
                 for (EssenceType type : EssenceType.values()) {
                     Item item = CRYSTALS.get(type);
                     if (item != null) entries.add(item);
