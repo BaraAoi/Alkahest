@@ -58,5 +58,6 @@
   "screen.alkahest.journal.page.3": "Cauldron recipes\n\nCoal + bottle = purified water. 2 flowers + food = paste. Blaze powder + redstone = fire dust. Spider eye + cactus = caustic slime.",
   "screen.alkahest.journal.page.4": "Distillation\n\nCraft a distillery from 6 copper ingots, 2 glass and a furnace. Use organic material on it to start a one-minute run. Use an empty hand to collect crystals or ash.",
   "screen.alkahest.journal.page.5": "Reagents\n\nRight-click slime with fire dust in the inventory for napalm, or gunpowder with caustic slime for an acid bomb. Throw them with right-click. They can hurt you too!",
-  "screen.alkahest.journal.page.6": "Essences\n\nA monocle reveals item essences. Craft a wand from a stick and a primal crystal to activate the cauldron 100 times. Salt ore generates in new chunks at Y 45–75."
+  "screen.alkahest.journal.page.6": "Essences\n\nA monocle reveals item essences. Craft a wand from a stick and a primal crystal to activate the cauldron 100 times. Salt ore generates in new chunks at Y 45–75.",
+  "effect.alkahest.in_napalm": "In Napalm"
 }
