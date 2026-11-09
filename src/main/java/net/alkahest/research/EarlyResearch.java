@@ -17,9 +17,12 @@ import java.util.List;
 /** Server-owned early research, persisted per player by hidden vanilla advancements. */
 public final class EarlyResearch {
     public static final int ROOT = 1, DISCOVERED = 2, FAILED_SAND = 4, FAILED_SUGAR = 8, COMPLETED = 16;
-    private static final String[] IDS = {"root", "cauldron_discovered", "cauldron_sand", "cauldron_sugar", "cauldron_complete"};
-    private static final int[] BITS = {ROOT, DISCOVERED, FAILED_SAND, FAILED_SUGAR, COMPLETED};
-    public enum Attempt { NONE, SAND, SUGAR, COAL, ALREADY_FAILED }
+    public static final int REACTIVE_DISCOVERED = 32, FAILED_FEATHER = 64, FAILED_CLAY = 128, REACTIVE_COMPLETED = 256;
+    private static final String[] IDS = {"root", "cauldron_discovered", "cauldron_sand", "cauldron_sugar", "cauldron_complete",
+        "reactive_discovered", "reactive_feather", "reactive_clay", "reactive_complete"};
+    private static final int[] BITS = {ROOT, DISCOVERED, FAILED_SAND, FAILED_SUGAR, COMPLETED,
+        REACTIVE_DISCOVERED, FAILED_FEATHER, FAILED_CLAY, REACTIVE_COMPLETED};
+    public enum Attempt { NONE, SAND, SUGAR, COAL, FEATHER, CLAY, REDSTONE, ALREADY_FAILED }
 
     private static AdvancementEntry entry(ServerPlayerEntity player, String name) {
         return player.getServer().getAdvancementLoader().get(Alkahest.id("research/" + name));
@@ -46,14 +49,27 @@ public final class EarlyResearch {
             world.playSound(null, pos, SoundEvents.ENTITY_EXPERIENCE_ORB_PICKUP, SoundCategory.PLAYERS, 0.7f, 1.0f);
         }
     }
+    public static void discoverReactive(ServerPlayerEntity player, World world, BlockPos pos) {
+        if (!has(player, "cauldron_complete") || has(player, "reactive_discovered")) return;
+        if (grant(player, "reactive_discovered")) {
+            player.sendMessage(Text.translatable("message.alkahest.research.insight"), false);
+            player.sendMessage(Text.translatable("message.alkahest.research.insight"), true);
+            world.playSound(null, pos, SoundEvents.ENTITY_EXPERIENCE_ORB_PICKUP, SoundCategory.PLAYERS, 0.7f, 1.0f);
+        }
+    }
     /** Only exact two-item inputs count; unrelated recipes are never intercepted. */
     public static Attempt identify(int flags, List<ItemStack> inputs) {
-        if ((flags & DISCOVERED) == 0 || (flags & COMPLETED) != 0 || inputs.size() != 2) return Attempt.NONE;
-        boolean charcoal = inputs.stream().anyMatch(s -> s.isOf(Items.CHARCOAL));
-        if (!charcoal) return Attempt.NONE;
-        if (inputs.stream().anyMatch(s -> s.isOf(Items.SAND))) return (flags & FAILED_SAND) == 0 ? Attempt.SAND : Attempt.ALREADY_FAILED;
-        if (inputs.stream().anyMatch(s -> s.isOf(Items.SUGAR))) return (flags & FAILED_SUGAR) == 0 ? Attempt.SUGAR : Attempt.ALREADY_FAILED;
-        if (inputs.stream().anyMatch(s -> s.isOf(Items.COAL))) return Attempt.COAL;
+        if (inputs.size() != 2) return Attempt.NONE;
+        if ((flags & DISCOVERED) != 0 && (flags & COMPLETED) == 0 && inputs.stream().anyMatch(s -> s.isOf(Items.CHARCOAL))) {
+            if (inputs.stream().anyMatch(s -> s.isOf(Items.SAND))) return (flags & FAILED_SAND) == 0 ? Attempt.SAND : Attempt.ALREADY_FAILED;
+            if (inputs.stream().anyMatch(s -> s.isOf(Items.SUGAR))) return (flags & FAILED_SUGAR) == 0 ? Attempt.SUGAR : Attempt.ALREADY_FAILED;
+            if (inputs.stream().anyMatch(s -> s.isOf(Items.COAL))) return Attempt.COAL;
+        }
+        if ((flags & REACTIVE_DISCOVERED) != 0 && (flags & REACTIVE_COMPLETED) == 0 && inputs.stream().anyMatch(s -> s.isOf(Items.GUNPOWDER))) {
+            if (inputs.stream().anyMatch(s -> s.isOf(Items.FEATHER))) return (flags & FAILED_FEATHER) == 0 ? Attempt.FEATHER : Attempt.ALREADY_FAILED;
+            if (inputs.stream().anyMatch(s -> s.isOf(Items.CLAY_BALL))) return (flags & FAILED_CLAY) == 0 ? Attempt.CLAY : Attempt.ALREADY_FAILED;
+            if (inputs.stream().anyMatch(s -> s.isOf(Items.REDSTONE))) return Attempt.REDSTONE;
+        }
         return Attempt.NONE;
     }
     /** Returns true only if persistence succeeded, so missing datapack entries cannot consume inputs. */
@@ -62,13 +78,25 @@ public final class EarlyResearch {
             case SAND -> "cauldron_sand";
             case SUGAR -> "cauldron_sugar";
             case COAL -> "cauldron_complete";
+            case FEATHER -> "reactive_feather";
+            case CLAY -> "reactive_clay";
+            case REDSTONE -> "reactive_complete";
             default -> null;
         };
         if (id == null || !grant(player, id)) return false;
-        String result = attempt == Attempt.COAL ? "success" : attempt == Attempt.SAND ? "sand" : "sugar";
+        String result = switch (attempt) {
+            case SAND -> "sand"; case SUGAR -> "sugar"; case COAL -> "success";
+            case FEATHER -> "feather"; case CLAY -> "clay"; case REDSTONE -> "reactive_success";
+            default -> throw new IllegalStateException("Unexpected attempt");
+        };
         player.sendMessage(Text.translatable("message.alkahest.research." + result), false);
-        world.spawnParticles(attempt == Attempt.COAL ? ParticleTypes.TOTEM_OF_UNDYING : ParticleTypes.SMOKE,
-            pos.getX() + .5, pos.getY() + 1, pos.getZ() + .5, 20, .25, .2, .25, .03);
+        boolean success = attempt == Attempt.COAL || attempt == Attempt.REDSTONE;
+        world.spawnParticles(success ? ParticleTypes.TOTEM_OF_UNDYING : ParticleTypes.LARGE_SMOKE,
+            pos.getX() + .5, pos.getY() + 1.15, pos.getZ() + .5, success ? 30 : 55, .32, .28, .32, .08);
+        if (!success) {
+            world.spawnParticles(ParticleTypes.POOF, pos.getX() + .5, pos.getY() + 1.1, pos.getZ() + .5, 18, .28, .2, .28, .02);
+            world.playSound(null, pos, SoundEvents.BLOCK_FIRE_EXTINGUISH, SoundCategory.BLOCKS, 1.0f, .8f);
+        }
         return true;
     }
     private EarlyResearch() { }

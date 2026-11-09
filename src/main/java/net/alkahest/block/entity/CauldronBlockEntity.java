@@ -38,6 +38,7 @@ public class CauldronBlockEntity extends BlockEntity {
     private final DefaultedList<ItemStack> stacks = DefaultedList.ofSize(6, ItemStack.EMPTY);
     private static final String RETURNED_ITEM_TAG = "alkahest_cauldron_returned";
     private boolean water;
+    private boolean dirtyWater;
     private int evaporation;
     private static final TagKey<Item> FLOWERS = TagKey.of(RegistryKeys.ITEM, Identifier.of("minecraft", "flowers"));
     public CauldronBlockEntity(BlockPos pos, BlockState state) { super(ModBlockEntities.CAULDRON, pos, state); }
@@ -48,10 +49,12 @@ public class CauldronBlockEntity extends BlockEntity {
             || below.isOf(Blocks.MAGMA_BLOCK) || CampfireBlock.isLitCampfire(below);
     }
     public void fill(PlayerEntity player, Hand hand) {
-        if (water) { message(player, "message.alkahest.cauldron_full"); return; }
+        if (water && !dirtyWater) { message(player, "message.alkahest.cauldron_full"); return; }
+        boolean cleaning = water && dirtyWater;
+        dirtyWater = false;
         setWater(true); evaporation = 0;
         if (!player.isCreative()) player.setStackInHand(hand, new ItemStack(Items.BUCKET));
-        markDirty(); message(player, "message.alkahest.cauldron_filled");
+        markDirty(); message(player, cleaning ? "message.alkahest.cauldron_cleaned" : "message.alkahest.cauldron_filled");
     }
     private boolean insertOne(ItemStack stack) {
         if (stack.isEmpty()) return false;
@@ -114,6 +117,10 @@ public class CauldronBlockEntity extends BlockEntity {
             }
             if (attempt != EarlyResearch.Attempt.NONE) {
                 if (!EarlyResearch.record(researcher, attempt, serverWorld, pos)) return false;
+                if (attempt == EarlyResearch.Attempt.SAND) {
+                    dirtyWater = true;
+                    syncWaterState();
+                }
                 stacks.replaceAll(ignored -> ItemStack.EMPTY);
                 evaporation = 0;
                 markDirty();
@@ -123,6 +130,8 @@ public class CauldronBlockEntity extends BlockEntity {
         ItemStack output = recipe(inputs);
         if (output.isEmpty()) { message(player, "message.alkahest.no_recipe"); return false; }
         stacks.replaceAll(ignored -> ItemStack.EMPTY); setWater(false); evaporation = 0; markDirty();
+        if (output.isOf(ModItems.PURIFIED_WATER) && player instanceof ServerPlayerEntity researcher)
+            EarlyResearch.discoverReactive(researcher, world, pos);
         if (!player.giveItemStack(output)) player.dropItem(output, false);
         message(player, "message.alkahest.cauldron_success");
         return true;
@@ -139,14 +148,17 @@ public class CauldronBlockEntity extends BlockEntity {
     }
     private void setWater(boolean value) {
         water = value;
+        if (!water) dirtyWater = false;
         syncWaterState();
         markDirty();
     }
     private void syncWaterState() {
         if (world == null || world.isClient) return;
         BlockState state = world.getBlockState(pos);
-        if (state.getBlock() instanceof AlchemyCauldronBlock && state.get(AlchemyCauldronBlock.FILLED) != water) {
-            world.setBlockState(pos, state.with(AlchemyCauldronBlock.FILLED, water), Block.NOTIFY_ALL);
+        if (state.getBlock() instanceof AlchemyCauldronBlock &&
+            (state.get(AlchemyCauldronBlock.FILLED) != water || state.get(AlchemyCauldronBlock.DIRTY) != (water && dirtyWater))) {
+            world.setBlockState(pos, state.with(AlchemyCauldronBlock.FILLED, water)
+                .with(AlchemyCauldronBlock.DIRTY, water && dirtyWater), Block.NOTIFY_ALL);
         }
     }
     public static void tick(World world, BlockPos pos, CauldronBlockEntity self) {
@@ -163,9 +175,9 @@ public class CauldronBlockEntity extends BlockEntity {
     }
     private void message(PlayerEntity player, String key) { player.sendMessage(Text.translatable(key), true); }
     @Override protected void writeNbt(NbtCompound nbt, RegistryWrapper.WrapperLookup registries) {
-        super.writeNbt(nbt, registries); Inventories.writeNbt(nbt, stacks, registries); nbt.putBoolean("Water", water); nbt.putInt("Evaporation", evaporation);
+        super.writeNbt(nbt, registries); Inventories.writeNbt(nbt, stacks, registries); nbt.putBoolean("Water", water); nbt.putBoolean("DirtyWater", dirtyWater); nbt.putInt("Evaporation", evaporation);
     }
     @Override protected void readNbt(NbtCompound nbt, RegistryWrapper.WrapperLookup registries) {
-        super.readNbt(nbt, registries); Inventories.readNbt(nbt, stacks, registries); water = nbt.getBoolean("Water"); evaporation = nbt.getInt("Evaporation");
+        super.readNbt(nbt, registries); Inventories.readNbt(nbt, stacks, registries); water = nbt.getBoolean("Water"); dirtyWater = water && nbt.getBoolean("DirtyWater"); evaporation = nbt.getInt("Evaporation");
     }
 }

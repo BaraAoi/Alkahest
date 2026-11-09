@@ -1,6 +1,7 @@
 package net.alkahest.test;
 
 import net.alkahest.block.entity.CauldronBlockEntity;
+import net.alkahest.block.custom.AlchemyCauldronBlock;
 import net.alkahest.registry.ModBlocks;
 import net.alkahest.research.EarlyResearch;
 import net.fabricmc.fabric.api.gametest.v1.FabricGameTest;
@@ -50,6 +51,14 @@ public class ResearchGameTests implements FabricGameTest {
         context.assertTrue(cauldron.activate(player), "Wrong hypothesis should be processed");
         context.assertTrue((EarlyResearch.flags(player) & EarlyResearch.FAILED_SAND) != 0, "Wrong hypothesis must be recorded");
         context.assertTrue(cauldron.stacks().stream().allMatch(ItemStack::isEmpty), "Failed ingredients must be consumed");
+        context.assertTrue(context.getWorld().getBlockState(pos).get(AlchemyCauldronBlock.DIRTY), "Sand should visibly dirty the water");
+        var saved = cauldron.createNbt(context.getWorld().getRegistryManager());
+        CauldronBlockEntity restored = new CauldronBlockEntity(pos, cauldron.getCachedState());
+        restored.readComponentlessNbt(saved, context.getWorld().getRegistryManager());
+        context.assertTrue(restored.createNbt(context.getWorld().getRegistryManager()).getBoolean("DirtyWater"), "Dirty water must persist in NBT");
+        player.setStackInHand(Hand.MAIN_HAND, new ItemStack(Items.WATER_BUCKET));
+        cauldron.fill(player, Hand.MAIN_HAND);
+        context.assertFalse(context.getWorld().getBlockState(pos).get(AlchemyCauldronBlock.DIRTY), "A water bucket should clean dirty water");
         cauldron.stacks().set(0, new ItemStack(Items.CHARCOAL));
         cauldron.stacks().set(1, new ItemStack(Items.SAND));
         context.assertFalse(cauldron.activate(player), "Repeated failed hypothesis should be rejected");
@@ -63,6 +72,19 @@ public class ResearchGameTests implements FabricGameTest {
         cauldron.stacks().set(0, new ItemStack(Items.COAL));
         cauldron.stacks().set(1, new ItemStack(Items.GLASS_BOTTLE));
         context.assertTrue(cauldron.activate(player), "Research must not prevent existing recipes");
+        context.assertTrue((EarlyResearch.flags(player) & EarlyResearch.REACTIVE_DISCOVERED) != 0, "Purified water should unlock the second research");
+        player.setStackInHand(Hand.MAIN_HAND, new ItemStack(Items.WATER_BUCKET));
+        cauldron.fill(player, Hand.MAIN_HAND);
+        cauldron.stacks().set(0, new ItemStack(Items.GUNPOWDER));
+        cauldron.stacks().set(1, new ItemStack(Items.FEATHER));
+        context.assertTrue(cauldron.activate(player), "Second research wrong hypothesis should be processed");
+        context.assertTrue((EarlyResearch.flags(player) & EarlyResearch.FAILED_FEATHER) != 0, "Feather failure must be recorded");
+        cauldron.stacks().set(0, new ItemStack(Items.GUNPOWDER));
+        cauldron.stacks().set(1, new ItemStack(Items.REDSTONE));
+        context.assertTrue(cauldron.activate(player), "Second research correct hypothesis should work");
+        player.getAdvancementTracker().save();
+        player.getAdvancementTracker().reload(context.getWorld().getServer().getAdvancementLoader());
+        context.assertTrue((EarlyResearch.flags(player) & (EarlyResearch.REACTIVE_COMPLETED | EarlyResearch.FAILED_FEATHER)) == (EarlyResearch.REACTIVE_COMPLETED | EarlyResearch.FAILED_FEATHER), "Second research must survive save and reload");
         context.complete();
     }
 }

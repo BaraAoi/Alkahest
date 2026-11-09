@@ -12,6 +12,7 @@ import net.minecraft.client.render.entity.FlyingItemEntityRenderer;
 import net.minecraft.client.render.entity.EmptyEntityRenderer;
 import net.alkahest.item.custom.CrystalWandItem;
 import net.alkahest.registry.ModBlocks;
+import net.alkahest.block.custom.AlchemyCauldronBlock;
 import net.fabricmc.fabric.api.client.rendering.v1.ColorProviderRegistry;
 import net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap;
 import net.minecraft.client.render.RenderLayer;
@@ -33,7 +34,8 @@ public final class AlkahestClient implements ClientModInitializer {
         EntityRendererRegistry.register(ModEntities.THROWN_REAGENT, FlyingItemEntityRenderer::new);
         EntityRendererRegistry.register(ModEntities.REAGENT_ZONE, EmptyEntityRenderer::new);
         ColorProviderRegistry.BLOCK.register((state, world, pos, tintIndex) ->
-            world != null && pos != null ? BiomeColors.getWaterColor(world, pos) : 0x3F76E4,
+            state.get(AlchemyCauldronBlock.DIRTY) ? 0x74552B :
+                world != null && pos != null ? BiomeColors.getWaterColor(world, pos) : 0x3F76E4,
             ModBlocks.ALCHEMY_CAULDRON);
         ClientLifecycleEvents.CLIENT_STARTED.register(client -> LoggerFactory.getLogger("Alkahest").info("Alkahest client started"));
         ItemTooltipCallback.EVENT.register((stack, context, type, lines) -> {

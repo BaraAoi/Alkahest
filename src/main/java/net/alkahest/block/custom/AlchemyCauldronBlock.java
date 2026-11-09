@@ -31,12 +31,13 @@ import net.minecraft.world.World;
 
 public class AlchemyCauldronBlock extends Block implements BlockEntityProvider {
     public static final BooleanProperty FILLED = BooleanProperty.of("filled");
+    public static final BooleanProperty DIRTY = BooleanProperty.of("dirty");
     public AlchemyCauldronBlock(Settings settings) {
         super(settings);
-        setDefaultState(getStateManager().getDefaultState().with(FILLED, false));
+        setDefaultState(getStateManager().getDefaultState().with(FILLED, false).with(DIRTY, false));
     }
     @Override protected void appendProperties(StateManager.Builder<Block, BlockState> builder) {
-        builder.add(FILLED);
+        builder.add(FILLED, DIRTY);
     }
     // Match the vanilla cauldron's hollow collision shape so dropped ingredients can fall inside.
     @Override protected VoxelShape getCollisionShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) {
