@@ -3,7 +3,7 @@ on:
   push:
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -26,5 +26,15 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: Alkahest-fabric-1.21.1
-          path: build/libs/*.jar
+          path: |
+            build/libs/*.jar
+            !build/libs/*-sources.jar
           if-no-files-found: error
+      - name: Make build available to the agent
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          jar=$(find build/libs -maxdepth 1 -name '*.jar' ! -name '*-sources.jar' -print -quit)
+          python3 -c 'import base64,json,sys; print(json.dumps({"content":base64.b64encode(open(sys.argv[1],"rb").read()).decode(),"encoding":"base64"}))' "$jar" > /tmp/alkahest-blob.json
+          sha=$(gh api --method POST "repos/${GITHUB_REPOSITORY}/git/blobs" --input /tmp/alkahest-blob.json --jq .sha)
+          echo "::notice title=Build blob::JAR_BLOB=$sha"
