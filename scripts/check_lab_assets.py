@@ -91,17 +91,16 @@ for level in range(4):
     assert (base / f'models/block/{model_name}.json').is_file(), model_name
 
 tier2_state = json.loads((base / 'blockstates/distillery_tier2.json').read_text())['variants']
-assert tier2_state['working=false']['model'] == 'alkahest:block/distillery_tier2'
-assert tier2_state['working=true']['model'] == 'alkahest:block/distillery_tier2_working'
+assert tier2_state['working=false']['model'] == 'alkahest:block/distillery'
+assert tier2_state['working=true']['model'] == 'alkahest:block/distillery_working'
 
 for name in ('distillery_tier2', 'distillery_bellows'):
     assert (base / f'models/item/{name}.json').is_file(), name
     assert (data_root / f'loot_table/blocks/{name}.json').is_file(), name
     assert (recipes / f'{name}.json').is_file(), name
 
-for tex in ('stabilizer_frame', 'stabilizer_glass', 'stabilizer_essence',
-            'distillery_crude', 'distillery_crude_panel', 'distillery_crude_glass',
-            'bellows_wood', 'bellows_leather'):
+for tex in ('distillery_copper', 'distillery_panel', 'distillery_vent',
+            'bellows_wood', 'bellows_leather', 'bellows_iron'):
     assert (base / f'textures/block/{tex}.png').read_bytes().startswith(b'\x89PNG\r\n\x1a\n'), tex
 
 for locale in ('ru_ru', 'en_us'):
@@ -113,5 +112,7 @@ for locale in ('ru_ru', 'en_us'):
     for name in ('bellows_instruction', 'bellows_empty', 'bellows_jar_full', 'bellows_poured',
                  'bellows_status', 'bellows_status_empty'):
         assert data.get('message.alkahest.' + name), (locale, name)
+    for name in ('bellows', 'distillery_tier2', 'stabilizer', 'working', 'idle', 'blocked', 'progress'):
+        assert data.get('screen.alkahest.monocle.' + name), (locale, name)
 
 print('Laboratory items, Elementals, Alkahest Era III assets, worldgen and translations validated')

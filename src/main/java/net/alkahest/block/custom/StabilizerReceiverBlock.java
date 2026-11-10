@@ -25,7 +25,7 @@ import net.minecraft.world.World;
 /** Lower part of the 1x3x1 Stabilizer tower; holds the essence liquid being sorted. */
 public class StabilizerReceiverBlock extends Block implements BlockEntityProvider {
     public static final BooleanProperty OCCUPIED = BooleanProperty.of("occupied");
-    private static final VoxelShape SHAPE = Block.createCuboidShape(2, 0, 2, 14, 16, 14);
+    private static final VoxelShape SHAPE = Block.createCuboidShape(1, 0, 1, 15, 16, 15);
 
     public StabilizerReceiverBlock(Settings settings) {
         super(settings);

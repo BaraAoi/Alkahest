@@ -15,6 +15,7 @@ import net.minecraft.inventory.Inventories;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.network.packet.s2c.play.BlockEntityUpdateS2CPacket;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtList;
 import net.minecraft.registry.RegistryWrapper;
@@ -135,6 +136,10 @@ public class Tier2DistilleryBlockEntity extends BlockEntity implements Inventory
             }
         }
         markDirty();
+        if (world != null && !world.isClient) {
+            BlockState state = world.getBlockState(pos);
+            world.updateListeners(pos, state, state, Block.NOTIFY_LISTENERS);
+        }
         return pending.isEmpty();
     }
 
@@ -238,4 +243,7 @@ public class Tier2DistilleryBlockEntity extends BlockEntity implements Inventory
             }
         }
     }
+
+    @Override public BlockEntityUpdateS2CPacket toUpdatePacket() { return BlockEntityUpdateS2CPacket.create(this); }
+    @Override public NbtCompound toInitialChunkDataNbt(RegistryWrapper.WrapperLookup registries) { return createNbt(registries); }
 }

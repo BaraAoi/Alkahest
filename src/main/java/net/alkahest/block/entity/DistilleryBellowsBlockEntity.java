@@ -12,6 +12,7 @@ import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.network.packet.s2c.play.BlockEntityUpdateS2CPacket;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.registry.RegistryWrapper;
 import net.minecraft.server.world.ServerWorld;
@@ -119,8 +120,12 @@ public class DistilleryBellowsBlockEntity extends BlockEntity {
         BlockState state = world.getBlockState(pos);
         if (!(state.getBlock() instanceof DistilleryBellowsBlock)) return;
         int level = level();
-        if (state.get(DistilleryBellowsBlock.LEVEL) != level)
+        if (state.get(DistilleryBellowsBlock.LEVEL) != level) {
             world.setBlockState(pos, state.with(DistilleryBellowsBlock.LEVEL, level), Block.NOTIFY_ALL);
+        } else {
+            // The fill level did not change but the type or stability may have: resend the data.
+            world.updateListeners(pos, state, state, Block.NOTIFY_LISTENERS);
+        }
     }
 
     @Override protected void writeNbt(NbtCompound nbt, RegistryWrapper.WrapperLookup registries) {
@@ -140,4 +145,7 @@ public class DistilleryBellowsBlockEntity extends BlockEntity {
         amount = Math.max(0, Math.min(CAPACITY, nbt.getInt("Amount")));
         stability = nbt.getFloat("Stability");
     }
+
+    @Override public BlockEntityUpdateS2CPacket toUpdatePacket() { return BlockEntityUpdateS2CPacket.create(this); }
+    @Override public NbtCompound toInitialChunkDataNbt(RegistryWrapper.WrapperLookup registries) { return createNbt(registries); }
 }

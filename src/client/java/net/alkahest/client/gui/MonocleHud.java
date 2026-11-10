@@ -5,6 +5,10 @@ import net.alkahest.block.custom.AlchemyPipeBlock;
 import net.alkahest.block.entity.AlchemyPipeBlockEntity;
 import net.alkahest.block.entity.JarBlockEntity;
 import net.alkahest.block.entity.CauldronBlockEntity;
+import net.alkahest.block.entity.DistilleryBellowsBlockEntity;
+import net.alkahest.block.entity.Tier2DistilleryBlockEntity;
+import net.alkahest.block.entity.StabilizerReceiverBlockEntity;
+import net.alkahest.essence.EssenceStack;
 import net.alkahest.essence.EssenceType;
 import net.alkahest.item.custom.JarItem;
 import net.alkahest.registry.ModItems;
@@ -58,6 +62,47 @@ public final class MonocleHud {
                 }
                 if (shown > 6) lines.add(Text.translatable("screen.alkahest.monocle.more", shown - 6));
             }
+        } else if (blockEntity instanceof DistilleryBellowsBlockEntity bellows) {
+            lines.add(Text.translatable("screen.alkahest.monocle.bellows"));
+            if (bellows.empty()) lines.add(Text.translatable("screen.alkahest.monocle.empty"));
+            else lines.add(Text.literal("◆ " + bellows.storedType().displayName() + ": " + bellows.amount()
+                + " / " + DistilleryBellowsBlockEntity.CAPACITY + " · " + Math.round(bellows.stability() * 100) + "%")
+                .styled(style -> style.withColor(bellows.storedType().color())));
+        } else if (blockEntity instanceof Tier2DistilleryBlockEntity distillery) {
+            lines.add(Text.translatable("screen.alkahest.monocle.distillery_tier2"));
+            lines.add(Text.translatable(switch (distillery.status()) {
+                case Tier2DistilleryBlockEntity.STATUS_WORKING -> "screen.alkahest.monocle.working";
+                case Tier2DistilleryBlockEntity.STATUS_BLOCKED -> "screen.alkahest.monocle.blocked";
+                default -> "screen.alkahest.monocle.idle";
+            }));
+            lines.add(Text.translatable("screen.alkahest.monocle.progress",
+                distillery.progress() * 100 / Tier2DistilleryBlockEntity.DURATION));
+            int shownPending = 0;
+            for (EssenceStack stack : distillery.pending()) {
+                if (shownPending++ >= 4) break;
+                lines.add(Text.literal("◆ " + stack.type().displayName() + ": " + stack.amount())
+                    .styled(style -> style.withColor(stack.type().color())));
+            }
+            if (distillery.pending().size() > 4)
+                lines.add(Text.translatable("screen.alkahest.monocle.more", distillery.pending().size() - 4));
+        } else if (blockEntity instanceof StabilizerReceiverBlockEntity receiver) {
+            var contents = receiver.contents();
+            lines.add(Text.translatable("screen.alkahest.monocle.stabilizer", contents.total(), JarItem.CAPACITY));
+            if (contents.total() == 0) {
+                lines.add(Text.translatable("screen.alkahest.monocle.empty"));
+            } else {
+                int limit = Math.min(contents.contents().size(), 4);
+                for (int i = 0; i < limit; i++) {
+                    var essence = contents.contents().get(i);
+                    lines.add(Text.literal("◆ " + essence.type().displayName() + ": " + essence.amount()
+                        + " · " + Math.round(essence.stability() * 100) + "%")
+                        .styled(style -> style.withColor(essence.type().color())));
+                }
+                if (contents.contents().size() > limit)
+                    lines.add(Text.translatable("screen.alkahest.monocle.more", contents.contents().size() - limit));
+            }
+            lines.add(Text.translatable("screen.alkahest.monocle.progress",
+                receiver.progress() * 100 / StabilizerReceiverBlockEntity.TICKS_PER_TYPE));
         } else if (blockEntity instanceof AlchemyPipeBlockEntity pipe && client.world.getBlockState(hit.getBlockPos()).getBlock() instanceof AlchemyPipeBlock) {
             var state = client.world.getBlockState(hit.getBlockPos());
             lines.add(Text.translatable("screen.alkahest.monocle.pipe"));

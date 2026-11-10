@@ -304,5 +304,12 @@
   "message.alkahest.bellows_jar_full": "Your jar is full.",
   "message.alkahest.bellows_poured": "Poured into the jar: %s × %s.",
   "message.alkahest.bellows_status": "%s: %s / %s units · %s%% stability",
-  "message.alkahest.bellows_status_empty": "The bellows are empty. Capacity: %s units."
+  "message.alkahest.bellows_status_empty": "The bellows are empty. Capacity: %s units.",
+  "screen.alkahest.monocle.bellows": "Distillation bellows",
+  "screen.alkahest.monocle.distillery_tier2": "Tier II distillery",
+  "screen.alkahest.monocle.stabilizer": "Stabilizer receiver: %s / %s",
+  "screen.alkahest.monocle.working": "Distilling",
+  "screen.alkahest.monocle.idle": "Waiting for input",
+  "screen.alkahest.monocle.blocked": "Output blocked",
+  "screen.alkahest.monocle.progress": "Progress: %s%%"
 }

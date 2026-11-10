@@ -44,25 +44,8 @@ def canvas(width, height, color=(0, 0, 0, 0)):
     return [[tuple(color) for _ in range(width)] for _ in range(height)]
 
 
-def glass_tile(seed, tint=(150, 232, 236), alpha=(28, 96)):
-    img = canvas(16, 16, (0, 0, 0, 0))
-    for y in range(16):
-        for x in range(16):
-            n = noise(x, y, seed)
-            border = x in (0, 15) or y in (0, 15)
-            a = alpha[1] if border else alpha[0] + (n % 26)
-            if (x + y) % 11 == 0 and not border:
-                a = min(150, a + 46)
-            img[y][x] = (*tint, a)
-    for x in range(2, 14):
-        img[2][x] = (240, 255, 255, 150)
-        img[3][x] = (255, 255, 255, 96)
-    for y in range(4, 13):
-        img[y][2] = (235, 255, 255, 110)
-    return img
-
-
 def metal_tile(seed, base=(184, 108, 62)):
+    """Riveted copper plate."""
     img = canvas(16, 16)
     for y in range(16):
         for x in range(16):
@@ -70,117 +53,77 @@ def metal_tile(seed, base=(184, 108, 62)):
             c = shade(base, (n % 26) - 13)
             if x in (0, 15) or y in (0, 15):
                 c = shade(base, -34)
-            if (x in (3, 12) and y in (3, 12)):
+            if x in (3, 12) and y in (3, 12):
                 c = shade(base, 36)
             img[y][x] = (*c, 255)
-    # patina specks
     for i in range(14):
         x, y = noise(i, 7, seed) % 16, noise(i, 13, seed) % 16
         img[y][x] = (86 + noise(i, 3, seed) % 30, 154 + noise(i, 5, seed) % 30, 120, 255)
     return img
 
 
-def essence_tile(seed, base=(128, 62, 196)):
-    img = canvas(16, 16)
-    for y in range(16):
-        for x in range(16):
-            n = noise(x, y, seed)
-            c = shade(base, (n % 34) - 17 + (6 if y < 6 else 0))
-            img[y][x] = (*c, 236)
-    for i in range(9):
-        x, y = 1 + noise(i, 2, seed) % 14, 1 + noise(i, 9, seed) % 14
-        img[y][x] = (226, 196, 255, 250)
-        if y + 1 < 16:
-            img[y + 1][x] = (176, 128, 236, 240)
-    return img
-
-
-def crude_copper(seed):
-    """Dented, patched copper for the crude tier-1 boiler."""
-    img = metal_tile(seed, base=(150, 92, 58))
-    for y in range(16):
-        for x in range(16):
-            n = noise(x, y, seed + 5)
-            if n % 17 == 0:
-                img[y][x] = (104, 74, 54, 255)
-            if (x * 3 + y * 5) % 23 == 0:
-                img[y][x] = (170, 126, 82, 255)
-    for i in range(5):
-        x, y = noise(i, 1, seed) % 14 + 1, noise(i, 4, seed) % 14 + 1
-        img[y][x] = (58, 42, 34, 255)
-        img[y][x - 1] = (196, 160, 112, 255)
-    # rivets along the top and bottom edges
-    for x in (2, 7, 13):
-        img[1][x] = (206, 172, 120, 255)
-        img[14][x] = (206, 172, 120, 255)
-    return img
-
-
-def crude_panel(seed):
-    img = canvas(16, 16)
-    for y in range(16):
-        for x in range(16):
-            n = noise(x, y, seed)
-            base = (66, 60, 54) if (y // 5) % 2 == 0 else (78, 68, 58)
-            img[y][x] = (*shade(base, (n % 18) - 9), 255)
-    for x in range(2, 14):
-        img[5][x] = (128, 96, 62, 255)
-        img[11][x] = (128, 96, 62, 255)
-    for y in range(1, 15):
-        img[y][1] = (96, 82, 66, 255)
-        img[y][14] = (96, 82, 66, 255)
-    return img
-
-
-def crude_glass(seed):
-    img = canvas(16, 16, (0, 0, 0, 0))
-    for y in range(16):
-        for x in range(16):
-            n = noise(x, y, seed)
-            a = 40 + n % 30
-            if x in (0, 15) or y in (0, 15):
-                a = 96
-            img[y][x] = (126, 146, 140, a)
-    img[4][6] = (220, 236, 226, 120)
-    img[5][5] = (220, 236, 226, 100)
-    return img
-
-
 def wood_tile(seed):
+    """Sturdy planks with a dark iron-grey frame and nail heads."""
     img = canvas(16, 16)
     for y in range(16):
         for x in range(16):
             n = noise(x, y, seed)
-            base = (124, 92, 56) if y < 8 else (112, 82, 50)
-            c = shade(base, (n % 16) - 8)
-            if y in (0, 7, 8, 15):
-                c = shade(base, -30)
+            base = (140, 102, 62) if y < 8 else (126, 90, 54)
+            c = shade(base, (n % 14) - 7)
+            if y in (0, 7, 8, 15) or x in (0, 15):
+                c = (74, 54, 34)
             img[y][x] = (*c, 255)
-    for x in range(16):
-        if x % 5 == 0:
-            img[8][x] = (78, 58, 36, 255)
-    for i in range(6):
-        x, y = noise(i, 6, seed) % 16, noise(i, 2, seed) % 16
-        img[y][x] = (150, 116, 74, 255)
+    for x in range(2, 14):
+        img[4][x] = (162, 122, 76, 255)
+        img[11][x] = (158, 118, 74, 255)
+    for i in range(5):
+        x, y = noise(i, 3, seed) % 14 + 1, noise(i, 8, seed) % 14 + 1
+        img[y][x] = (168, 130, 84, 255)
+    for x in (2, 13):
+        for y in (2, 13):
+            img[y][x] = (176, 176, 172, 255)
+            img[y][x + 1] = (108, 108, 104, 255)
+            img[y + 1][x] = (108, 108, 104, 255)
     return img
 
 
 def leather_tile(seed):
+    """Brown bellows leather with stitched seams and earthen highlights."""
     img = canvas(16, 16)
     for y in range(16):
         for x in range(16):
             n = noise(x, y, seed)
-            c = shade((96, 62, 40), (n % 20) - 10)
+            base = shade((122, 78, 46), (n % 22) - 11)
+            if (x + y) % 7 == 0:
+                base = shade(base, 8)
+            img[y][x] = (*base, 255)
+    for x in range(16):
+        if x % 2 == 0:
+            img[3][x] = (186, 146, 98, 255)
+            img[12][x] = (186, 146, 98, 255)
+    for y in range(4, 12):
+        img[y][1] = (168, 128, 84, 255)
+        img[y][14] = (168, 128, 84, 255)
+    for i in range(4):
+        x, y = noise(i, 5, seed) % 12 + 2, noise(i, 11, seed) % 12 + 2
+        img[y][x] = (92, 56, 32, 255)
+    return img
+
+
+def iron_tile(seed):
+    """Blue-grey iron banding used by the bellows nozzle."""
+    img = canvas(16, 16)
+    for y in range(16):
+        for x in range(16):
+            n = noise(x, y, seed)
+            c = shade((92, 94, 100), (n % 16) - 8)
+            if y == 0 or x == 0:
+                c = (146, 148, 154)
+            if y == 15 or x == 15:
+                c = (58, 60, 66)
             img[y][x] = (*c, 255)
-    for x in range(2, 14):
-        img[2][x] = (150, 112, 74, 255)
-        img[13][x] = (150, 112, 74, 255)
-    for y in range(3, 13):
-        img[y][3] = (150, 112, 74, 255)
-        img[y][12] = (150, 112, 74, 255)
-    for x in range(3, 13, 3):
-        img[2][x] = (58, 40, 26, 255)
-        img[13][x] = (58, 40, 26, 255)
+    for x in range(4, 12):
+        img[7][x] = (128, 130, 136, 255)
     return img
 
 
@@ -218,14 +161,9 @@ def crude_gui(width=472, height=568):
 
 
 def main():
-    write_png(BLOCK / 'stabilizer_glass.png', 16, 16, glass_tile(3))
-    write_png(BLOCK / 'stabilizer_frame.png', 16, 16, metal_tile(4))
-    write_png(BLOCK / 'stabilizer_essence.png', 16, 16, essence_tile(5))
-    write_png(BLOCK / 'distillery_crude.png', 16, 16, crude_copper(6))
-    write_png(BLOCK / 'distillery_crude_panel.png', 16, 16, crude_panel(7))
-    write_png(BLOCK / 'distillery_crude_glass.png', 16, 16, crude_glass(8))
     write_png(BLOCK / 'bellows_wood.png', 16, 16, wood_tile(9))
     write_png(BLOCK / 'bellows_leather.png', 16, 16, leather_tile(10))
+    write_png(BLOCK / 'bellows_iron.png', 16, 16, iron_tile(11))
     write_png(GUI / 'distillery_backdrop.png', 472, 568, crude_gui())
     print('textures written')
 

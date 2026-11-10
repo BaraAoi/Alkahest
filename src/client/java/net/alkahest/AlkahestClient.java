@@ -45,6 +45,8 @@ public final class AlkahestClient implements ClientModInitializer {
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.JAR, RenderLayer.getCutout());
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.ALCHEMY_PIPE, RenderLayer.getCutout());
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.ESSENCE_SEPARATOR, RenderLayer.getCutout());
+        BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.STABILIZER_RECEIVER, RenderLayer.getCutout());
+        BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.DISTILLERY_TIER2, RenderLayer.getCutout());
         net.minecraft.client.item.ModelPredicateProviderRegistry.register(ModBlocks.JAR.asItem(), Alkahest.id("fill"),
             (stack, world, entity, seed) -> net.alkahest.essence.JarVisuals.level(net.alkahest.item.custom.JarItem.contents(stack)) / 10.0f);
         ColorProviderRegistry.ITEM.register((stack, tint) -> tint == 0
@@ -52,6 +54,9 @@ public final class AlkahestClient implements ClientModInitializer {
         ColorProviderRegistry.BLOCK.register((state, world, pos, tint) -> tint == 0 && world != null && pos != null
             && world.getBlockEntity(pos) instanceof net.alkahest.block.entity.JarBlockEntity jar
                 ? net.alkahest.essence.JarVisuals.color(jar.contents()) : 0xffffff, ModBlocks.JAR);
+        ColorProviderRegistry.BLOCK.register((state, world, pos, tint) -> tint == 0 && world != null && pos != null
+            && world.getBlockEntity(pos) instanceof net.alkahest.block.entity.StabilizerReceiverBlockEntity receiver
+                ? net.alkahest.essence.JarVisuals.color(receiver.contents()) : 0xffffff, ModBlocks.STABILIZER_RECEIVER);
         EntityRendererRegistry.register(ModEntities.THROWN_REAGENT, FlyingItemEntityRenderer::new);
         EntityRendererRegistry.register(ModEntities.REAGENT_ZONE, EmptyEntityRenderer::new);
         EntityModelLayerRegistry.registerModelLayer(

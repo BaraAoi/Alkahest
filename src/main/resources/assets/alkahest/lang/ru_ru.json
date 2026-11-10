@@ -304,5 +304,12 @@
   "message.alkahest.bellows_jar_full": "Ваша банка полна.",
   "message.alkahest.bellows_poured": "В банку перелито: %s × %s.",
   "message.alkahest.bellows_status": "%s: %s / %s ед. · стабильность %s%%",
-  "message.alkahest.bellows_status_empty": "Меха пусты. Вместимость: %s ед."
+  "message.alkahest.bellows_status_empty": "Меха пусты. Вместимость: %s ед.",
+  "screen.alkahest.monocle.bellows": "Перегонные меха",
+  "screen.alkahest.monocle.distillery_tier2": "Перегонный куб II разряда",
+  "screen.alkahest.monocle.stabilizer": "Приёмник стабилизатора: %s / %s",
+  "screen.alkahest.monocle.working": "Идёт перегонка",
+  "screen.alkahest.monocle.idle": "Ожидает сырьё",
+  "screen.alkahest.monocle.blocked": "Выход заблокирован",
+  "screen.alkahest.monocle.progress": "Прогресс: %s%%"
 }
