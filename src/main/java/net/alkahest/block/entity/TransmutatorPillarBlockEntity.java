@@ -103,15 +103,24 @@ public class TransmutatorPillarBlockEntity extends BlockEntity {
         return removed;
     }
 
-    private JarBlockEntity findJar(World world, EssenceType type) {
-        JarBlockEntity best = null;
-        double bestDistance = Double.MAX_VALUE;
+    /** Every jar in reach that holds this single type; the core uses it to price an operation. */
+    public List<JarBlockEntity> jarsAround(World world, EssenceType type) {
+        List<JarBlockEntity> jars = new ArrayList<>();
         for (BlockPos candidate : BlockPos.iterate(pos.add(-REACH, -2, -REACH), pos.add(REACH, 2, REACH))) {
             if (!(world.getBlockEntity(candidate) instanceof JarBlockEntity jar)) continue;
             JarContentsComponent contents = jar.contents();
             if (contents.total() == 0 || contents.contents().size() != 1) continue;
             if (contents.contents().getFirst().type() != type) continue;
-            double distance = candidate.getSquaredDistance(pos);
+            jars.add(jar);
+        }
+        return jars;
+    }
+
+    private JarBlockEntity findJar(World world, EssenceType type) {
+        JarBlockEntity best = null;
+        double bestDistance = Double.MAX_VALUE;
+        for (JarBlockEntity jar : jarsAround(world, type)) {
+            double distance = jar.getPos().getSquaredDistance(pos);
             if (distance < bestDistance) { bestDistance = distance; best = jar; }
         }
         return best;

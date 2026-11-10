@@ -128,6 +128,8 @@ public class TransmutatorCoreBlockEntity extends BlockEntity implements Inventor
         }
         if (self.progress < DURATION) {
             self.progress++;
+            // Essence trickles in from the jars while the op runs, one visible stream at a time.
+            if (self.progress % 10 == 0) self.prefill(world, recipe.cost());
             setWorking(world, pos, true);
             self.markDirty();
             return;
@@ -152,12 +154,39 @@ public class TransmutatorCoreBlockEntity extends BlockEntity implements Inventor
         playFinish(world, pos);
     }
 
+    /**
+     * Draws one unit of every still-missing essence out of a jar, so the jars feed the platform
+     * gradually instead of everything appearing at the last moment. Nothing moves when the whole
+     * price cannot be paid, which keeps short jars untouched.
+     */
+    private void prefill(World world, Map<EssenceType, Integer> cost) {
+        List<TransmutatorPillarBlockEntity> pillars = pillars();
+        for (Map.Entry<EssenceType, Integer> entry : cost.entrySet()) {
+            EssenceType type = entry.getKey();
+            int need = entry.getValue();
+            if (stored(pillars, type) + jarsAround(world, pillars, type) < need) return;
+        }
+        for (Map.Entry<EssenceType, Integer> entry : cost.entrySet()) {
+            EssenceType type = entry.getKey();
+            if (stored(pillars, type) >= entry.getValue()) continue;
+            for (TransmutatorPillarBlockEntity pillar : pillars) {
+                if (pillar.buffer().total() >= TransmutatorPillarBlockEntity.CAPACITY) continue;
+                int before = stored(pillars, type);
+                pillar.request(world, type, 1);
+                // One unit per pillar per pass is enough to keep a steady stream of sparks.
+                if (stored(pillars, type) > before) break;
+            }
+        }
+    }
+
     /** Pulls the price out of the surrounding jars through the pillars. */
     private boolean collect(World world, Map<EssenceType, Integer> cost) {
         List<TransmutatorPillarBlockEntity> pillars = pillars();
         for (Map.Entry<EssenceType, Integer> entry : cost.entrySet()) {
             EssenceType type = entry.getKey();
             int need = entry.getValue();
+            // Look before pulling: a short price must leave the jars exactly as they were.
+            if (stored(pillars, type) + jarsAround(world, pillars, type) < need) return false;
             // Only pull what the whole platform is still missing, so jars are never drained greedily.
             for (TransmutatorPillarBlockEntity pillar : pillars) {
                 int missing = need - stored(pillars, type);
@@ -176,6 +205,19 @@ public class TransmutatorCoreBlockEntity extends BlockEntity implements Inventor
         }
         markDirty();
         return true;
+    }
+
+    /** Units of the type lying in the jars the platform can see, each jar counted once. */
+    private static int jarsAround(World world, List<TransmutatorPillarBlockEntity> pillars, EssenceType type) {
+        java.util.Map<BlockPos, Integer> seen = new java.util.HashMap<>();
+        for (TransmutatorPillarBlockEntity pillar : pillars) {
+            for (JarBlockEntity jar : pillar.jarsAround(world, type)) {
+                seen.putIfAbsent(jar.getPos(), jar.contents().total());
+            }
+        }
+        int total = 0;
+        for (int amount : seen.values()) total += amount;
+        return total;
     }
 
     private static int stored(List<TransmutatorPillarBlockEntity> pillars, EssenceType type) {
