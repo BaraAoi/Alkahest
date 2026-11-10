@@ -131,7 +131,7 @@
   "message.alkahest.charger_no_space_on_jar": "Не удалось поставить зарядник: освободите место над банкой.",
   "block.alkahest.alchemy_pipe": "Алхимическая труба",
   "message.alkahest.pipe_no_space": "Не удалось поставить трубу: место занято.",
-  "message.alkahest.pipe_status": "Труба: сеть из %s сегм., найдено ёмкостей: %s. Направления и фильтры не нужны — труба сама ищет, где есть эссенция и куда её налить.",
+  "message.alkahest.pipe_status": "Труба: сеть из %s сегм., ёмкостей: %s. Меха только отдают, банки только принимают — настраивать нечего.",
   "direction.alkahest.north": "север",
   "direction.alkahest.south": "юг",
   "direction.alkahest.east": "восток",

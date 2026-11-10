@@ -24,8 +24,10 @@ import org.joml.Vector3f;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -119,9 +121,24 @@ public class AlchemyPipeBlockEntity extends BlockEntity {
         if (retinted) world.updateListeners(pos, state, state, Block.NOTIFY_LISTENERS);
     }
 
-    /** Jars and distillation bellows both act as pipe endpoints. */
+    /** Jars and distillation bellows both act as pipe endpoints, but with fixed roles. */
     private static boolean isPort(BlockEntity be) {
         return be instanceof JarBlockEntity || be instanceof DistilleryBellowsBlockEntity;
+    }
+
+    /** Bellows are the source of a line: they give what the cube distilled into them. */
+    private static boolean canGive(BlockEntity be) {
+        return be instanceof DistilleryBellowsBlockEntity;
+    }
+
+    /** Jars are the sink of a line: they only take essence in and never hand it to each other. */
+    private static boolean canReceive(BlockEntity be) {
+        return be instanceof JarBlockEntity;
+    }
+
+    private static EssenceType typeOf(BlockEntity be) {
+        JarContentsComponent contents = portContents(be);
+        return contents.total() == 0 ? null : contents.contents().getFirst().type();
     }
 
     /** Bellows are a single-type container, so they are read as a one-entry jar. */
@@ -236,29 +253,49 @@ public class AlchemyPipeBlockEntity extends BlockEntity {
 
         BlockPos leader() { return pipes.getFirst(); }
 
-        /** Moves up to {@link #UNITS_PER_PULSE} units from every container with essence. */
+        /** A jar already holding the type wins; otherwise the first empty, unclaimed jar. */
+        private BlockEntity pickTarget(EssenceType type, Map<BlockEntity, EssenceType> claimed) {
+            for (BlockEntity port : ports) {
+                if (!canReceive(port) || typeOf(port) != type) continue;
+                if (portFree(port, type) > 0) return port;
+            }
+            for (BlockEntity port : ports) {
+                if (!canReceive(port)) continue;
+                if (typeOf(port) != null) continue;
+                EssenceType taken = claimed.get(port);
+                if (taken != null && taken != type) continue;
+                if (portFree(port, type) <= 0) continue;
+                return port;
+            }
+            return null;
+        }
+
+        /**
+         * Moves up to {@link #UNITS_PER_PULSE} units from every source into jars.
+         * Bellows only give, jars only receive, and each jar takes a single essence type, so
+         * several flasks feed several jars with different essences instead of shuffling one
+         * unit back and forth.
+         */
         int pulse(World world) {
             int moved = 0;
             EssenceType last = null;
-            Set<BlockEntity> received = new HashSet<>();
+            Map<BlockEntity, EssenceType> claimed = new HashMap<>();
             for (BlockEntity source : ports) {
-                // Never let essence bounce back into a container that just received it.
-                if (received.contains(source)) continue;
+                if (!canGive(source)) continue;
                 JarContentsComponent contents = portContents(source);
                 if (contents.total() == 0 || !JarItem.allowed(contents)) continue;
+                int budget = UNITS_PER_PULSE;
                 for (EssenceStack entry : contents.contents()) {
+                    if (budget <= 0) break;
                     if (entry.type() == EssenceType.VACUUM) continue;
-                    int budget = UNITS_PER_PULSE;
-                    for (BlockEntity target : ports) {
-                        if (budget <= 0) break;
-                        if (target == source) continue;
-                        int sent = move(source, target, entry.type(), budget);
-                        if (sent <= 0) continue;
-                        budget -= sent;
-                        moved += sent;
-                        last = entry.type();
-                        received.add(target);
-                    }
+                    BlockEntity target = pickTarget(entry.type(), claimed);
+                    if (target == null) continue;
+                    int sent = move(source, target, entry.type(), budget);
+                    if (sent <= 0) continue;
+                    claimed.put(target, entry.type());
+                    budget -= sent;
+                    moved += sent;
+                    last = entry.type();
                 }
             }
             if (moved == 0) return 0;

@@ -131,7 +131,7 @@
   "message.alkahest.charger_no_space_on_jar": "Could not place the charger: clear the space above the jar.",
   "block.alkahest.alchemy_pipe": "Alchemy Pipe",
   "message.alkahest.pipe_no_space": "Cannot place the pipe: the space is occupied.",
-  "message.alkahest.pipe_status": "Pipe: a network of %s segments with %s containers. No directions or filters — the pipe finds essence and room by itself.",
+  "message.alkahest.pipe_status": "Pipe: a network of %s segments with %s containers. Flasks only give, jars only receive — nothing to configure.",
   "direction.alkahest.north": "north",
   "direction.alkahest.south": "south",
   "direction.alkahest.east": "east",
