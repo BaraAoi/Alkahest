@@ -6,6 +6,9 @@ import net.minecraft.block.BlockEntityProvider;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.ShapeContext;
 import net.minecraft.block.entity.BlockEntity;
+import net.minecraft.block.entity.BlockEntityTicker;
+import net.minecraft.block.entity.BlockEntityType;
+import net.alkahest.registry.ModBlockEntities;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.state.StateManager;
@@ -31,6 +34,10 @@ public class DistilleryBellowsBlock extends Block implements BlockEntityProvider
 
     @Override protected void appendProperties(StateManager.Builder<Block, BlockState> builder) { builder.add(LEVEL); }
     @Override public BlockEntity createBlockEntity(BlockPos pos, BlockState state) { return new DistilleryBellowsBlockEntity(pos, state); }
+    @Override public <T extends BlockEntity> BlockEntityTicker<T> getTicker(World world, BlockState state, BlockEntityType<T> type) {
+        return !world.isClient && type == ModBlockEntities.DISTILLERY_BELLOWS
+            ? (w, p, s, be) -> { if (w.getTime() % 20 == 0) ((DistilleryBellowsBlockEntity) be).refreshLevel(); } : null;
+    }
     @Override protected VoxelShape getOutlineShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) { return SHAPE; }
     @Override protected VoxelShape getCollisionShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) { return SHAPE; }
 

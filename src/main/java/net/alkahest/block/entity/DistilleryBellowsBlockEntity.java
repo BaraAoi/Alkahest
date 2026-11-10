@@ -106,8 +106,15 @@ public class DistilleryBellowsBlockEntity extends BlockEntity {
             storedType().displayName(), amount, CAPACITY, Math.round(stability * 100)), false);
     }
 
+    /** Repairs the visible fill of bellows loaded from an older save. */
+    public void refreshLevel() { updateLevel(); }
+
     private void changed() {
         markDirty();
+        updateLevel();
+    }
+
+    private void updateLevel() {
         if (world == null || world.isClient) return;
         BlockState state = world.getBlockState(pos);
         if (!(state.getBlock() instanceof DistilleryBellowsBlock)) return;
