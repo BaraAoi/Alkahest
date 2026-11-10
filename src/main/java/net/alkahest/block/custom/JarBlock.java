@@ -118,7 +118,7 @@ public class JarBlock extends Block implements BlockEntityProvider {
         if (count <= 0) { player.sendMessage(Text.translatable("message.alkahest.jar_bulk_full"), true); return ActionResult.SUCCESS; }
         var addition = new JarContentsComponent(List.of(new EssenceStack(type, count, stability)));
         jar.setContents(current.merge(addition, JarItem.CAPACITY));
-        held.decrementUnlessCreative(count, player);
+        if (!player.isCreative()) held.decrement(count);
         player.sendMessage(Text.translatable("message.alkahest.jar_bulk_added", count, jar.contents().total()), true);
         return ActionResult.SUCCESS;
     }
