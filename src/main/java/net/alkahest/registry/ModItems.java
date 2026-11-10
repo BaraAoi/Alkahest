@@ -64,6 +64,9 @@ public final class ModItems {
                 entries.add(ModBlocks.ALCHEMY_PIPE);
                 entries.add(ModBlocks.TRANSMUTATOR_CORE);
                 entries.add(ModBlocks.TRANSMUTATOR_PILLAR);
+                entries.add(ModBlocks.MATRIX_CORE);
+                entries.add(ModBlocks.MATRIX_PILLAR);
+                entries.add(ModBlocks.ALCHEMICAL_BRICK);
                 entries.add(ModBlocks.SALT_ORE);
                 entries.add(ModBlocks.ALCHEMICAL_MOSS);
                 entries.add(ALCHEMICAL_JOURNAL);

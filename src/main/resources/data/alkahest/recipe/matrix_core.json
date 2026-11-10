@@ -1,0 +1,33 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "minecraft:gold_block"
+    },
+    {
+      "item": "alkahest:alkahest_vial"
+    },
+    {
+      "item": "alkahest:crystal_ignis"
+    },
+    {
+      "item": "alkahest:crystal_aqua"
+    },
+    {
+      "item": "alkahest:crystal_terra"
+    },
+    {
+      "item": "alkahest:crystal_aer"
+    },
+    {
+      "item": "alkahest:crystal_ordo"
+    },
+    {
+      "item": "alkahest:crystal_perditio"
+    }
+  ],
+  "result": {
+    "id": "alkahest:matrix_core",
+    "count": 1
+  }
+}

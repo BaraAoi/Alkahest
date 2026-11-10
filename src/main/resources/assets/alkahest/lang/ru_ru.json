@@ -325,5 +325,17 @@
   "message.alkahest.transmutator_unformed": "Ядро не собрано: поставьте 8 Опор в кольцо вокруг него",
   "message.alkahest.pillar_status": "Опора: %s / %s эссенции",
   "message.alkahest.pillar_empty": "Опора пуста: вмещает %s эссенции, забирает её из ближних банок",
-  "screen.alkahest.monocle.transmutator_core": "Трансмутатор: платформа 3×1×3"
+  "screen.alkahest.monocle.transmutator_core": "Трансмутатор: платформа 3×1×3",
+  "block.alkahest.matrix_core": "Матрица",
+  "block.alkahest.matrix_pillar": "Опора Матрицы",
+  "block.alkahest.alchemical_brick": "Алхимический кирпич",
+  "screen.alkahest.matrix.title": "Матрица",
+  "screen.alkahest.matrix.ready": "Готова к синтезу",
+  "screen.alkahest.matrix.working": "Идёт синтез",
+  "screen.alkahest.matrix.no_essence": "Ждёт эссенцию из банок",
+  "screen.alkahest.matrix.blocked": "Выход занят",
+  "screen.alkahest.matrix.unformed": "Куб не собран",
+  "screen.alkahest.matrix.no_recipe": "Нет синтеза для этой основы",
+  "message.alkahest.matrix_unformed": "Матрица не собрана: 8 Опор по углам куба 3×3×3 и 18 Алхимических кирпичей между ними",
+  "screen.alkahest.monocle.matrix_core": "Матрица: куб 3×3×3"
 }

@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "active=false": {
+      "model": "alkahest:block/matrix_core"
+    },
+    "active=true": {
+      "model": "alkahest:block/matrix_core_lit"
+    }
+  }
+}

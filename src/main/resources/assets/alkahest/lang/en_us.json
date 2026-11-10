@@ -325,5 +325,17 @@
   "message.alkahest.transmutator_unformed": "Core is not assembled: place 8 pillars in a ring around it",
   "message.alkahest.pillar_status": "Pillar: %s / %s essence",
   "message.alkahest.pillar_empty": "Pillar is empty: holds %s essence, draws it from nearby jars",
-  "screen.alkahest.monocle.transmutator_core": "Transmutator: 3×1×3 platform"
+  "screen.alkahest.monocle.transmutator_core": "Transmutator: 3×1×3 platform",
+  "block.alkahest.matrix_core": "Matrix",
+  "block.alkahest.matrix_pillar": "Matrix Pillar",
+  "block.alkahest.alchemical_brick": "Alchemical Brick",
+  "screen.alkahest.matrix.title": "Matrix",
+  "screen.alkahest.matrix.ready": "Ready to synthesise",
+  "screen.alkahest.matrix.working": "Synthesising",
+  "screen.alkahest.matrix.no_essence": "Waiting for essence from jars",
+  "screen.alkahest.matrix.blocked": "Output is full",
+  "screen.alkahest.matrix.unformed": "Cube is not assembled",
+  "screen.alkahest.matrix.no_recipe": "No synthesis for this base",
+  "message.alkahest.matrix_unformed": "Matrix is not assembled: 8 pillars on the corners of a 3×3×3 cube and 18 alchemical bricks between them",
+  "screen.alkahest.monocle.matrix_core": "Matrix: 3×3×3 cube"
 }

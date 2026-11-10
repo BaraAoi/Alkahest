@@ -1,0 +1,325 @@
+#!/usr/bin/env python3
+"""Assets for the 3x3x3 Matrix and its Alchemical Bricks.
+
+The core is a golden drum with a violet crystal orb; the eight pillars are dark obelisks with
+gold collars and a crystal cap; the eighteen bricks are deep slate tiles with copper mortar and
+a rune. Every piece has an `active` variant whose runes burn violet, so the whole cube lights up
+as one machine while a synthesis runs.
+"""
+import json
+import struct
+import zlib
+from pathlib import Path
+
+A = Path('src/main/resources/assets/alkahest')
+BLOCK = A / 'textures/block'
+MODELS = A / 'models/block'
+ITEM_MODELS = A / 'models/item'
+STATES = A / 'blockstates'
+
+SIZE = 16
+FACES = ("up", "down", "north", "south", "east", "west")
+
+GOLD = (198, 158, 66)
+GOLD_DARK = (146, 112, 44)
+GOLD_LIGHT = (245, 214, 130)
+GOLD_EDGE = (94, 68, 26)
+VIOLET = (128, 84, 190)
+VIOLET_DARK = (74, 44, 116)
+VIOLET_LIGHT = (206, 168, 255)
+VIOLET_GLOW = (240, 222, 255)
+SLATE = (74, 74, 86)
+SLATE_DARK = (52, 52, 62)
+SLATE_LIGHT = (98, 98, 112)
+COPPER = (168, 104, 58)
+COPPER_DARK = (118, 68, 36)
+
+
+def noise(x, y, spread=6):
+    value = (x * 73856093) ^ (y * 19349663)
+    return (value % (2 * spread + 1)) - spread
+
+
+def shift(color, delta):
+    return tuple(max(0, min(255, channel + delta)) for channel in color)
+
+
+def blank():
+    return [[(0, 0, 0, 0)] * SIZE for _ in range(SIZE)]
+
+
+def ring(rows, cx, cy, radius, color, thickness=1):
+    for y in range(SIZE):
+        for x in range(SIZE):
+            distance = ((x - cx) ** 2 + (y - cy) ** 2) ** 0.5
+            if radius - thickness < distance <= radius:
+                rows[y][x] = (*color, 255)
+
+
+def disc(rows, cx, cy, radius, color):
+    for y in range(SIZE):
+        for x in range(SIZE):
+            if ((x - cx) ** 2 + (y - cy) ** 2) ** 0.5 <= radius:
+                rows[y][x] = (*color, 255)
+
+
+def write_png(path, rows):
+    height, width = len(rows), len(rows[0])
+    body = b''.join(b'\x00' + b''.join(bytes(px) for px in row) for row in rows)
+
+    def chunk(tag, data):
+        return struct.pack('>I', len(data)) + tag + data + struct.pack('>I', zlib.crc32(tag + data) & 0xffffffff)
+
+    header = struct.pack('>IIBBBBB', width, height, 8, 6, 0, 0, 0)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', header)
+                     + chunk(b'IDAT', zlib.compress(body)) + chunk(b'IEND', b''))
+
+
+# --- core ------------------------------------------------------------------------------------
+def core_side(lit):
+    rows = blank()
+    for y in range(SIZE):
+        for x in range(SIZE):
+            base = GOLD
+            if y in (0, 15) or x in (0, 15):
+                base = GOLD_EDGE
+            elif y in (1, 14) or x in (1, 14):
+                base = GOLD_DARK
+            elif y in (7, 8):
+                base = VIOLET_GLOW if lit else VIOLET
+            rows[y][x] = (*shift(base, noise(x, y)), 255)
+    for y in range(3, 13):
+        for x in range(5, 11):
+            if rows[y][x][:3] in (GOLD, GOLD_DARK, GOLD_EDGE):
+                continue
+    # Runic diamond in the middle of the band.
+    for step in range(3):
+        for x, y in ((7, 3 + step), (8, 3 + step), (7, 12 - step), (8, 12 - step),
+                     (7 - step, 7), (7 - step, 8), (8 + step, 7), (8 + step, 8)):
+            rows[y][x] = (*(VIOLET_GLOW if lit else VIOLET_LIGHT), 255)
+    for y in (2, 13):
+        for x in (2, 13):
+            rows[y][x] = (*GOLD_LIGHT, 255)
+    if lit:
+        for y in range(3, 13):
+            rows[y][5] = (*VIOLET, 255)
+            rows[y][10] = (*VIOLET, 255)
+    return rows
+
+
+def core_top(lit):
+    rows = blank()
+    for y in range(SIZE):
+        for x in range(SIZE):
+            base = GOLD
+            if x in (0, 15) or y in (0, 15):
+                base = GOLD_EDGE
+            elif x in (1, 14) or y in (1, 14):
+                base = GOLD_DARK
+            rows[y][x] = (*shift(base, noise(x, y)), 255)
+    ring(rows, 7.5, 7.5, 6.2, GOLD_DARK, 1.3)
+    ring(rows, 7.5, 7.5, 4.6, GOLD_EDGE if not lit else VIOLET, 1.0)
+    disc(rows, 7.5, 7.5, 3.2, VIOLET_DARK)
+    disc(rows, 7.5, 7.5, 2.3, VIOLET if not lit else VIOLET_LIGHT)
+    disc(rows, 7.5, 7.5, 1.0, VIOLET_GLOW)
+    for dx, dy in ((0, -5), (0, 5), (-5, 0), (5, 0)):
+        rows[7 + dy][7 + dx] = (*GOLD_LIGHT, 255)
+    return rows
+
+
+def core_bottom():
+    rows = blank()
+    for y in range(SIZE):
+        for x in range(SIZE):
+            base = GOLD_DARK if (x + y) % 2 else shift(GOLD_DARK, -12)
+            if x in (0, 15) or y in (0, 15):
+                base = GOLD_EDGE
+            rows[y][x] = (*shift(base, noise(x, y, 4)), 255)
+    disc(rows, 7.5, 7.5, 2.4, VIOLET_DARK)
+    return rows
+
+
+# --- pillar ----------------------------------------------------------------------------------
+def pillar_shaft(lit):
+    rows = blank()
+    for y in range(SIZE):
+        for x in range(SIZE):
+            base = SLATE
+            if x in (0, 15):
+                base = GOLD_EDGE
+            elif x in (1, 14):
+                base = GOLD_DARK
+            elif x in (6, 9):
+                base = VIOLET if not lit else VIOLET_LIGHT
+            elif x in (7, 8):
+                base = VIOLET_DARK if not lit else VIOLET
+            rows[y][x] = (*shift(base, noise(x, y, 4)), 255)
+    for y in (4, 9, 13):
+        for x in (6, 7, 8, 9):
+            rows[y][x] = (*((VIOLET_GLOW) if lit else GOLD), 255)
+    return rows
+
+
+def pillar_plinth(lit):
+    rows = blank()
+    for y in range(SIZE):
+        for x in range(SIZE):
+            base = GOLD
+            if x in (0, 15) or y in (0, 15):
+                base = GOLD_EDGE
+            elif x in (1, 14) or y in (1, 14):
+                base = GOLD_DARK
+            rows[y][x] = (*shift(base, noise(x, y)), 255)
+    for y in (4, 11):
+        for x in (4, 11):
+            rows[y][x] = (*GOLD_LIGHT, 255)
+    ring(rows, 7.5, 7.5, 4.4, VIOLET_LIGHT if lit else GOLD_DARK, 1.2)
+    disc(rows, 7.5, 7.5, 1.6, VIOLET_GLOW if lit else VIOLET)
+    return rows
+
+
+def pillar_cap(lit):
+    rows = blank()
+    for y in range(SIZE):
+        for x in range(SIZE):
+            base = GOLD
+            if x in (0, 15) or y in (0, 15):
+                base = GOLD_EDGE
+            rows[y][x] = (*shift(base, noise(x, y, 5)), 255)
+    ring(rows, 7.5, 7.5, 6.6, GOLD_EDGE, 1.2)
+    disc(rows, 7.5, 7.5, 4.6, VIOLET_DARK)
+    disc(rows, 7.5, 7.5, 3.0, VIOLET_LIGHT if lit else VIOLET)
+    for step, color in ((3, VIOLET_GLOW if lit else VIOLET_LIGHT), (2, (255, 250, 255))):
+        for x, y in ((7 - step, 7), (8 + step, 7), (7, 7 + step), (7, 7 - step),
+                     (8, 8 + step), (8, 8 - step), (7 - step, 8), (8 + step, 8)):
+            rows[y][x] = (*color, 255)
+    disc(rows, 7.5, 7.5, 1.0, (255, 255, 255))
+    return rows
+
+
+# --- brick -----------------------------------------------------------------------------------
+def brick(lit):
+    rows = blank()
+    for y in range(SIZE):
+        for x in range(SIZE):
+            row = y // 4
+            offset = 0 if row % 2 == 0 else 4
+            mortar = (y % 4 == 0) or ((x + offset) % 8 == 0)
+            base = COPPER_DARK if mortar else (SLATE if row % 2 == 0 else SLATE_DARK)
+            rows[y][x] = (*shift(base, noise(x, y, 5)), 255)
+    # Copper rune in the middle tile.
+    rune = VIOLET_GLOW if lit else COPPER
+    for x, y in ((7, 5), (8, 5), (6, 6), (9, 6), (7, 7), (8, 7), (6, 8), (9, 8), (7, 9), (8, 9)):
+        rows[y][x] = (*rune, 255)
+    if lit:
+        for x, y in ((5, 5), (10, 5), (5, 10), (10, 10)):
+            rows[y][x] = (*VIOLET_LIGHT, 255)
+    return rows
+
+
+write_png(BLOCK / 'matrix_core_side.png', core_side(False))
+write_png(BLOCK / 'matrix_core_side_lit.png', core_side(True))
+write_png(BLOCK / 'matrix_core_top.png', core_top(False))
+write_png(BLOCK / 'matrix_core_top_lit.png', core_top(True))
+write_png(BLOCK / 'matrix_core_bottom.png', core_bottom())
+write_png(BLOCK / 'matrix_pillar_shaft.png', pillar_shaft(False))
+write_png(BLOCK / 'matrix_pillar_shaft_lit.png', pillar_shaft(True))
+write_png(BLOCK / 'matrix_pillar_plinth.png', pillar_plinth(False))
+write_png(BLOCK / 'matrix_pillar_plinth_lit.png', pillar_plinth(True))
+write_png(BLOCK / 'matrix_pillar_cap.png', pillar_cap(False))
+write_png(BLOCK / 'matrix_pillar_cap_lit.png', pillar_cap(True))
+write_png(BLOCK / 'alchemical_brick.png', brick(False))
+write_png(BLOCK / 'alchemical_brick_lit.png', brick(True))
+
+
+# --- models ----------------------------------------------------------------------------------
+def cube_model(top, bottom, side):
+    faces = {}
+    for face in FACES:
+        ref = 'top' if face == 'up' else ('bottom' if face == 'down' else 'side')
+        faces[face] = {"texture": f"#{ref}", "uv": [0, 0, 16, 16], "cullface": face}
+    return {
+        "parent": "minecraft:block/block",
+        "textures": {
+            "top": f"alkahest:block/{top}",
+            "bottom": f"alkahest:block/{bottom}",
+            "side": f"alkahest:block/{side}",
+            "particle": f"alkahest:block/{side}",
+        },
+        "elements": [{"from": [0, 0, 0], "to": [16, 16, 16], "faces": faces}],
+    }
+
+
+def pillar_model(lit):
+    shaft = 'matrix_pillar_shaft_lit' if lit else 'matrix_pillar_shaft'
+    plinth = 'matrix_pillar_plinth_lit' if lit else 'matrix_pillar_plinth'
+    cap = 'matrix_pillar_cap_lit' if lit else 'matrix_pillar_cap'
+
+    def element(frm, to, mapping):
+        faces = {}
+        for face in FACES:
+            faces[face] = {"texture": f"#{mapping[face]}", "uv": [0, 0, 16, 16]}
+            if face in ("up", "down"):
+                faces[face]["cullface"] = face
+        return {"from": list(frm), "to": list(to), "faces": faces}
+
+    return {
+        "parent": "minecraft:block/block",
+        "textures": {
+            "shaft": f"alkahest:block/{shaft}",
+            "plinth": f"alkahest:block/{plinth}",
+            "cap": f"alkahest:block/{cap}",
+            "particle": f"alkahest:block/{shaft}",
+        },
+        "elements": [
+            element((0, 0, 0), (16, 3, 16),
+                    {face: "plinth" for face in FACES}),
+            element((2, 3, 2), (14, 14, 14),
+                    {"up": "cap", "down": "plinth", "north": "shaft", "south": "shaft",
+                     "east": "shaft", "west": "shaft"}),
+            element((0, 14, 0), (16, 16, 16),
+                    {"up": "cap", "down": "plinth", "north": "plinth", "south": "plinth",
+                     "east": "plinth", "west": "plinth"}),
+        ],
+    }
+
+
+MODELS.mkdir(parents=True, exist_ok=True)
+(MODELS / 'matrix_core.json').write_text(json.dumps(
+    cube_model('matrix_core_top', 'matrix_core_bottom', 'matrix_core_side'), indent=2) + "\n")
+(MODELS / 'matrix_core_lit.json').write_text(json.dumps(
+    cube_model('matrix_core_top_lit', 'matrix_core_bottom', 'matrix_core_side_lit'), indent=2) + "\n")
+(MODELS / 'matrix_pillar.json').write_text(json.dumps(pillar_model(False), indent=2) + "\n")
+(MODELS / 'matrix_pillar_lit.json').write_text(json.dumps(pillar_model(True), indent=2) + "\n")
+(MODELS / 'alchemical_brick.json').write_text(json.dumps(
+    cube_model('alchemical_brick', 'alchemical_brick', 'alchemical_brick'), indent=2) + "\n")
+(MODELS / 'alchemical_brick_lit.json').write_text(json.dumps(
+    cube_model('alchemical_brick_lit', 'alchemical_brick', 'alchemical_brick_lit'), indent=2) + "\n")
+
+(STATES / 'matrix_core.json').write_text(json.dumps({
+    "variants": {
+        "active=false": {"model": "alkahest:block/matrix_core"},
+        "active=true": {"model": "alkahest:block/matrix_core_lit"},
+    }
+}, indent=2) + "\n")
+(STATES / 'matrix_pillar.json').write_text(json.dumps({
+    "variants": {
+        "active=false": {"model": "alkahest:block/matrix_pillar"},
+        "active=true": {"model": "alkahest:block/matrix_pillar_lit"},
+    }
+}, indent=2) + "\n")
+(STATES / 'alchemical_brick.json').write_text(json.dumps({
+    "variants": {
+        "active=false": {"model": "alkahest:block/alchemical_brick"},
+        "active=true": {"model": "alkahest:block/alchemical_brick_lit"},
+    }
+}, indent=2) + "\n")
+
+ITEM_MODELS.mkdir(parents=True, exist_ok=True)
+for name in ('matrix_core', 'matrix_pillar', 'alchemical_brick'):
+    parent = name if name != 'matrix_pillar' else 'matrix_pillar'
+    (ITEM_MODELS / f'{name}.json').write_text(json.dumps(
+        {"parent": f"alkahest:block/{parent}"}, indent=2) + "\n")
+
+print('matrix assets written')

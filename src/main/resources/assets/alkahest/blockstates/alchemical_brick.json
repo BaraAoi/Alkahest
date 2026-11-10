@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "active=false": {
+      "model": "alkahest:block/alchemical_brick"
+    },
+    "active=true": {
+      "model": "alkahest:block/alchemical_brick_lit"
+    }
+  }
+}

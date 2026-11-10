@@ -13,6 +13,9 @@
     "alkahest:distillery_tier2",
     "alkahest:distillery_bellows",
     "alkahest:transmutator_core",
-    "alkahest:transmutator_pillar"
+    "alkahest:transmutator_pillar",
+    "alkahest:matrix_core",
+    "alkahest:matrix_pillar",
+    "alkahest:alchemical_brick"
   ]
 }

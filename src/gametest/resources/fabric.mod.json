@@ -19,7 +19,8 @@
       "net.alkahest.test.Tier2DistilleryGameTests",
       "net.alkahest.test.ElementalGameTests",
       "net.alkahest.test.AlkahestGameTests",
-      "net.alkahest.test.TransmutatorGameTests"
+      "net.alkahest.test.TransmutatorGameTests",
+      "net.alkahest.test.MatrixGameTests"
     ]
   },
   "depends": {

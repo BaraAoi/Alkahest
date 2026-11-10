@@ -38,6 +38,8 @@ public final class AlkahestClient implements ClientModInitializer {
             net.alkahest.client.gui.Tier2DistilleryScreen::new);
         net.minecraft.client.gui.screen.ingame.HandledScreens.register(net.alkahest.registry.ModScreenHandlers.TRANSMUTATOR,
             net.alkahest.client.gui.TransmutatorScreen::new);
+        net.minecraft.client.gui.screen.ingame.HandledScreens.register(net.alkahest.registry.ModScreenHandlers.MATRIX,
+            net.alkahest.client.gui.MatrixScreen::new);
         net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback.EVENT.register((context, tickCounter) ->
             net.alkahest.client.gui.MonocleHud.render(context));
         ClientPlayNetworking.registerGlobalReceiver(OpenJournalPayload.ID, (payload, context) ->
@@ -52,6 +54,8 @@ public final class AlkahestClient implements ClientModInitializer {
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.DISTILLERY_BELLOWS, RenderLayer.getCutout());
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.TRANSMUTATOR_PILLAR, RenderLayer.getCutout());
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.TRANSMUTATOR_CORE, RenderLayer.getCutout());
+        BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.MATRIX_CORE, RenderLayer.getCutout());
+        BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.MATRIX_PILLAR, RenderLayer.getCutout());
         net.minecraft.client.item.ModelPredicateProviderRegistry.register(ModBlocks.JAR.asItem(), Alkahest.id("fill"),
             (stack, world, entity, seed) -> net.alkahest.essence.JarVisuals.level(net.alkahest.item.custom.JarItem.contents(stack)) / 10.0f);
         ColorProviderRegistry.ITEM.register((stack, tint) -> tint == 0

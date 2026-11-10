@@ -8,6 +8,9 @@ import net.alkahest.block.custom.EssenceChargerBlock;
 import net.alkahest.block.custom.EssenceSeparatorBlock;
 import net.alkahest.block.custom.JarBlock;
 import net.alkahest.block.custom.Tier2DistilleryBlock;
+import net.alkahest.block.custom.AlchemicalBrickBlock;
+import net.alkahest.block.custom.MatrixCoreBlock;
+import net.alkahest.block.custom.MatrixPillarBlock;
 import net.alkahest.block.custom.TransmutatorCoreBlock;
 import net.alkahest.block.custom.TransmutatorPillarBlock;
 import net.alkahest.block.custom.DistilleryBellowsBlock;
@@ -47,6 +50,15 @@ public final class ModBlocks {
     public static final Block TRANSMUTATOR_PILLAR = register("transmutator_pillar", new TransmutatorPillarBlock(
         AbstractBlock.Settings.copy(Blocks.QUARTZ_BLOCK).nonOpaque().requiresTool().strength(2.5f, 5f)
             .luminance(state -> state.get(TransmutatorPillarBlock.CHARGED) ? 5 : 0)));
+    public static final Block MATRIX_CORE = register("matrix_core", new MatrixCoreBlock(
+        AbstractBlock.Settings.copy(Blocks.GOLD_BLOCK).nonOpaque().requiresTool().strength(4f, 8f)
+            .luminance(state -> state.get(MatrixCoreBlock.ACTIVE) ? 9 : 0)));
+    public static final Block MATRIX_PILLAR = register("matrix_pillar", new MatrixPillarBlock(
+        AbstractBlock.Settings.copy(Blocks.QUARTZ_BLOCK).nonOpaque().requiresTool().strength(3f, 6f)
+            .luminance(state -> state.get(MatrixPillarBlock.ACTIVE) ? 6 : 0)));
+    public static final Block ALCHEMICAL_BRICK = register("alchemical_brick", new AlchemicalBrickBlock(
+        AbstractBlock.Settings.copy(Blocks.DEEPSLATE_TILES).requiresTool().strength(2.5f, 6f)
+            .luminance(state -> state.get(AlchemicalBrickBlock.ACTIVE) ? 3 : 0)));
     public static final Block SALT_ORE = register("salt_ore", new Block(AbstractBlock.Settings.copy(Blocks.STONE).strength(3.0f, 3.0f).requiresTool()));
     public static final Block ALCHEMICAL_MOSS = register("alchemical_moss", new AlchemicalMossBlock(
         AbstractBlock.Settings.create().noCollision().nonOpaque().breakInstantly()

@@ -1,0 +1,36 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "minecraft:stone"
+    },
+    {
+      "item": "minecraft:stone"
+    },
+    {
+      "item": "minecraft:stone"
+    },
+    {
+      "item": "minecraft:stone"
+    },
+    {
+      "item": "minecraft:stone"
+    },
+    {
+      "item": "minecraft:stone"
+    },
+    {
+      "item": "minecraft:copper_ingot"
+    },
+    {
+      "item": "minecraft:copper_ingot"
+    },
+    {
+      "item": "minecraft:copper_ingot"
+    }
+  ],
+  "result": {
+    "id": "alkahest:alchemical_brick",
+    "count": 6
+  }
+}
