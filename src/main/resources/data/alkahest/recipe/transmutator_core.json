@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "QCQ",
+    "COC",
+    "QCQ"
+  ],
+  "key": {
+    "Q": {
+      "item": "minecraft:quartz"
+    },
+    "C": {
+      "item": "minecraft:copper_ingot"
+    },
+    "O": {
+      "item": "alkahest:crystal_ordo"
+    }
+  },
+  "result": {
+    "id": "alkahest:transmutator_core",
+    "count": 1
+  }
+}

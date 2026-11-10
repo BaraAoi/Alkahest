@@ -311,5 +311,19 @@
   "screen.alkahest.monocle.progress": "Прогресс: %s%%",
   "screen.alkahest.monocle.pipe_auto": "Автоматическая труба: %s",
   "screen.alkahest.monocle.pipe_flowing": "Сейчас движется: %s",
-  "message.alkahest.pipe_flowing": "Сейчас перекачивается: %s"
+  "message.alkahest.pipe_flowing": "Сейчас перекачивается: %s",
+  "block.alkahest.transmutator_core": "Трансмутатор",
+  "block.alkahest.transmutator_pillar": "Опора Трансмутатора",
+  "screen.alkahest.transmutator.title": "Трансмутатор",
+  "screen.alkahest.transmutator.ready": "Готов к превращению",
+  "screen.alkahest.transmutator.working": "Идёт превращение",
+  "screen.alkahest.transmutator.no_essence": "Ждёт эссенцию из банок",
+  "screen.alkahest.transmutator.blocked": "Выход занят",
+  "screen.alkahest.transmutator.unformed": "Нужны 8 Опор",
+  "screen.alkahest.transmutator.no_amulet": "Нужен амулет",
+  "screen.alkahest.transmutator.no_recipe": "Нет рецепта для этого предмета",
+  "message.alkahest.transmutator_unformed": "Ядро не собрано: поставьте 8 Опор в кольцо вокруг него",
+  "message.alkahest.pillar_status": "Опора: %s / %s эссенции",
+  "message.alkahest.pillar_empty": "Опора пуста: вмещает %s эссенции, забирает её из ближних банок",
+  "screen.alkahest.monocle.transmutator_core": "Трансмутатор: платформа 3×1×3"
 }

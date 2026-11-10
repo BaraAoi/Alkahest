@@ -311,5 +311,19 @@
   "screen.alkahest.monocle.progress": "Progress: %s%%",
   "screen.alkahest.monocle.pipe_auto": "Automatic pipe: %s",
   "screen.alkahest.monocle.pipe_flowing": "Moving now: %s",
-  "message.alkahest.pipe_flowing": "Carrying right now: %s"
+  "message.alkahest.pipe_flowing": "Carrying right now: %s",
+  "block.alkahest.transmutator_core": "Transmutator",
+  "block.alkahest.transmutator_pillar": "Transmutator Pillar",
+  "screen.alkahest.transmutator.title": "Transmutator",
+  "screen.alkahest.transmutator.ready": "Ready to transmute",
+  "screen.alkahest.transmutator.working": "Transmuting",
+  "screen.alkahest.transmutator.no_essence": "Waiting for essence from jars",
+  "screen.alkahest.transmutator.blocked": "Output is full",
+  "screen.alkahest.transmutator.unformed": "Needs 8 pillars",
+  "screen.alkahest.transmutator.no_amulet": "Needs an amulet",
+  "screen.alkahest.transmutator.no_recipe": "No recipe for this item",
+  "message.alkahest.transmutator_unformed": "Core is not assembled: place 8 pillars in a ring around it",
+  "message.alkahest.pillar_status": "Pillar: %s / %s essence",
+  "message.alkahest.pillar_empty": "Pillar is empty: holds %s essence, draws it from nearby jars",
+  "screen.alkahest.monocle.transmutator_core": "Transmutator: 3×1×3 platform"
 }

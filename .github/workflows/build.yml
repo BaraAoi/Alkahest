@@ -39,6 +39,8 @@ jobs:
         run: python3 scripts/check_distillery_model.py
       - name: Check pipe models and flow animation
         run: python3 scripts/check_pipe_model.py
+      - name: Check the transmutator assets
+        run: python3 scripts/check_transmutator_assets.py
       - name: Check laboratory assets
         run: python3 scripts/check_lab_assets.py
       - name: Server startup smoke test

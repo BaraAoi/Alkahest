@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "QCQ",
+    "CIC",
+    "QCQ"
+  ],
+  "key": {
+    "Q": {
+      "item": "minecraft:quartz"
+    },
+    "C": {
+      "item": "minecraft:copper_ingot"
+    },
+    "I": {
+      "item": "alkahest:crystal_herba"
+    }
+  },
+  "result": {
+    "id": "alkahest:transmutator_pillar",
+    "count": 4
+  }
+}

@@ -11,6 +11,8 @@
     "alkahest:stabilizer_core",
     "alkahest:stabilizer_crest",
     "alkahest:distillery_tier2",
-    "alkahest:distillery_bellows"
+    "alkahest:distillery_bellows",
+    "alkahest:transmutator_core",
+    "alkahest:transmutator_pillar"
   ]
 }

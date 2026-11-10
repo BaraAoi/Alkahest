@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "working=false": {
+      "model": "alkahest:block/transmutator_core"
+    },
+    "working=true": {
+      "model": "alkahest:block/transmutator_core_lit"
+    }
+  }
+}

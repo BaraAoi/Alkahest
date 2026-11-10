@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "charged=false": {
+      "model": "alkahest:block/transmutator_pillar"
+    },
+    "charged=true": {
+      "model": "alkahest:block/transmutator_pillar_charged"
+    }
+  }
+}

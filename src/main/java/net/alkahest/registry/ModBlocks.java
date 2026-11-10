@@ -8,6 +8,8 @@ import net.alkahest.block.custom.EssenceChargerBlock;
 import net.alkahest.block.custom.EssenceSeparatorBlock;
 import net.alkahest.block.custom.JarBlock;
 import net.alkahest.block.custom.Tier2DistilleryBlock;
+import net.alkahest.block.custom.TransmutatorCoreBlock;
+import net.alkahest.block.custom.TransmutatorPillarBlock;
 import net.alkahest.block.custom.DistilleryBellowsBlock;
 import net.alkahest.block.custom.StabilizerCoreBlock;
 import net.alkahest.block.custom.StabilizerCrestBlock;
@@ -39,6 +41,12 @@ public final class ModBlocks {
         AbstractBlock.Settings.copy(Blocks.COPPER_BLOCK).nonOpaque().luminance(state -> state.get(Tier2DistilleryBlock.WORKING) ? 6 : 0)));
     public static final Block DISTILLERY_BELLOWS = register("distillery_bellows",
         new DistilleryBellowsBlock(AbstractBlock.Settings.copy(Blocks.OAK_PLANKS).nonOpaque()));
+    public static final Block TRANSMUTATOR_CORE = register("transmutator_core", new TransmutatorCoreBlock(
+        AbstractBlock.Settings.copy(Blocks.COPPER_BLOCK).nonOpaque().requiresTool().strength(3.5f, 6f)
+            .luminance(state -> state.get(TransmutatorCoreBlock.WORKING) ? 7 : 0)));
+    public static final Block TRANSMUTATOR_PILLAR = register("transmutator_pillar", new TransmutatorPillarBlock(
+        AbstractBlock.Settings.copy(Blocks.QUARTZ_BLOCK).nonOpaque().requiresTool().strength(2.5f, 5f)
+            .luminance(state -> state.get(TransmutatorPillarBlock.CHARGED) ? 5 : 0)));
     public static final Block SALT_ORE = register("salt_ore", new Block(AbstractBlock.Settings.copy(Blocks.STONE).strength(3.0f, 3.0f).requiresTool()));
     public static final Block ALCHEMICAL_MOSS = register("alchemical_moss", new AlchemicalMossBlock(
         AbstractBlock.Settings.create().noCollision().nonOpaque().breakInstantly()
