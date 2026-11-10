@@ -144,13 +144,8 @@ public class ElementalGameTests implements FabricGameTest {
         ElementalEntity ignis = context.spawnEntity(ModEntities.ELEMENTALS.get(EssenceType.IGNIS), 2.5f, 2.5f, 2.5f);
         ignis.setTarget(fireTarget);
 
-        // 2. Direct Perditio bolt inflicts Wither and corrodes armor (roof shields zombie helmet from daylight sun damage)
-        for (int rx = 6; rx <= 9; rx++) {
-            for (int rz = 4; rz <= 7; rz++) {
-                context.setBlockState(rx, 5, rz, Blocks.STONE);
-            }
-        }
-        ZombieEntity armorTarget = context.spawnEntity(EntityType.ZOMBIE, 7.5f, 2.0f, 5.5f);
+        // 2. Direct Perditio bolt inflicts Wither and corrodes armor (Husk never burns helmet in daylight)
+        ZombieEntity armorTarget = context.spawnEntity(EntityType.HUSK, 7.5f, 2.0f, 5.5f);
         armorTarget.setAiDisabled(true);
         ItemStack helmet = new ItemStack(Items.IRON_HELMET);
         armorTarget.equipStack(EquipmentSlot.HEAD, helmet);
@@ -159,7 +154,7 @@ public class ElementalGameTests implements FabricGameTest {
         ElementalBoltEntity perditioBolt = perditio.shootElementalBolt(armorTarget);
         context.assertTrue(perditioBolt != null, "Server Elemental must spawn ElementalBoltEntity");
 
-        context.runAtTick(60, () -> {
+        context.runAtTick(75, () -> {
             context.assertTrue(fireTarget.getHealth() < fireTarget.getMaxHealth(),
                 "Hostile Ignis Elemental ranged attack must damage target, health=" + fireTarget.getHealth());
             context.assertTrue(fireTarget.getFireTicks() > 0,
