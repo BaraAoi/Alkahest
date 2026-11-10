@@ -147,18 +147,9 @@ check('matrix_ring_metal.png' in renderer, 'the rings are drawn with the forged 
 check('getEntitySolid' in renderer, 'the rings must read as solid metal, not glass')
 journal = (CLIENT / 'client/gui/JournalScreen.java').read_text()
 check('tri(' not in renderer, 'a QUADS layer cannot take three-vertex triangles')
-check('lining(' in renderer, 'the hollow cube needs a dark lining so the world cannot be seen through it')
-# A layer switch flushes the previous consumer in Minecraft's immediate provider. The metal
-# consumer must be acquired after drawing the void, not retained across the switch.
-lining_call = renderer.find('if (awake) lining(vertexConsumers.getBuffer(')
-metal_consumer = renderer.find('VertexConsumer buffer = vertexConsumers.getBuffer(RenderLayer.getEntitySolid(METAL))')
-check(lining_call >= 0 and metal_consumer > lining_call,
-      'acquire the metal consumer after the void lining, never across a layer switch')
-check('matrix_void.png' in renderer, 'the lining must use the flat void sprite, not the metal plate')
-void = A / 'textures/block/matrix_void.png'
-check(void.exists(), 'the void lining needs its texture')
-width, height, _depth, _kind = png_size(void)
-check((width, height) == (16, 16), 'the void lining is a 16x16 sprite')
+# The player requested a completely invisible shell, with no lining inside or below it.
+check('lining(' not in renderer and 'matrix_void.png' not in renderer,
+      'the Matrix must not draw a visible lining')
 core = (JAVA / 'block/entity/MatrixCoreBlockEntity.java').read_text()
 check('sendToAround' in core, 'the core must push its contents instead of leaving ghost items')
 pedestal = (JAVA / 'block/entity/MatrixPedestalBlockEntity.java').read_text()
