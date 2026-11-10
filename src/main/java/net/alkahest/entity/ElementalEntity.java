@@ -131,13 +131,11 @@ public class ElementalEntity extends PathAwareEntity {
     }
 
     @Override
-    public boolean canBreatheInWater() {
-        return essenceType == EssenceType.AQUA || super.canBreatheInWater();
-    }
-
-    @Override
     public void tick() {
         super.tick();
+        if (essenceType == EssenceType.AQUA && getAir() < getMaxAir()) {
+            setAir(getMaxAir());
+        }
         if (getWorld().isClient) {
             if (age % 2 == 0) {
                 DustParticleEffect dust = dustOf(essenceType.color(), 1.15f);
@@ -259,8 +257,8 @@ public class ElementalEntity extends PathAwareEntity {
     }
 
     @Override
-    public void readCustomDataToNbt(NbtCompound nbt) {
-        super.readCustomDataToNbt(nbt);
+    public void readCustomDataFromNbt(NbtCompound nbt) {
+        super.readCustomDataFromNbt(nbt);
         setBoundTicks(nbt.getInt("BoundTicks"));
     }
 
