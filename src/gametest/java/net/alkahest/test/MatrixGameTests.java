@@ -484,6 +484,10 @@ public class MatrixGameTests implements FabricGameTest {
         player.removeStatusEffect(net.alkahest.registry.ModEffects.MIDAS_TOUCH);
         player.setPosition(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
         c.assertFalse(net.alkahest.effect.MidasTouchEffect.nearby(List.of(player), pos), "Players without the effect do not boost");
+        var spectator = c.createMockPlayer(net.minecraft.world.GameMode.SPECTATOR);
+        spectator.setPosition(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
+        spectator.addStatusEffect(new net.minecraft.entity.effect.StatusEffectInstance(net.alkahest.registry.ModEffects.MIDAS_TOUCH, 3600));
+        c.assertFalse(net.alkahest.effect.MidasTouchEffect.nearby(List.of(spectator), pos), "Spectators do not boost");
         var creative = c.createMockPlayer(net.minecraft.world.GameMode.CREATIVE);
         ItemStack creativeElixir = new ItemStack(ModItems.MIDAS_ELIXIR);
         c.assertTrue(item.finishUsing(creativeElixir, c.getWorld(), creative) == creativeElixir && creativeElixir.getCount() == 1,
@@ -564,11 +568,21 @@ public class MatrixGameTests implements FabricGameTest {
     /** No essence around means no synthesis and no losses. */
     @GameTest(templateName = EMPTY_STRUCTURE)
     public void withoutEssenceNothingHappens(TestContext c) {
-        BlockPos pos = build(c);
-        wake(c);
-        var core = core(c);
+        // The shared GameTest world may contain jars in adjacent structures, within the 12-block
+        // pickup radius. Build this negative test well above the other structures instead.
+        int y = CY + 32;
+        c.setBlockState(CX, y, CZ, ModBlocks.MATRIX_CORE);
+        for (int dx = -1; dx <= 1; dx++) for (int dy = -1; dy <= 1; dy++) for (int dz = -1; dz <= 1; dz++) {
+            if (dx == 0 && dy == 0 && dz == 0) continue;
+            c.setBlockState(CX + dx, y + dy, CZ + dz,
+                dx != 0 && dy != 0 && dz != 0 ? ModBlocks.MATRIX_PILLAR : ModBlocks.ALCHEMICAL_BRICK);
+        }
+        BlockPos pos = c.getAbsolutePos(new BlockPos(CX, y, CZ));
+        var core = (MatrixCoreBlockEntity) c.getWorld().getBlockEntity(pos);
+        core.setAwake(c.getWorld(), pos, true);
         core.setStack(MatrixCoreBlockEntity.BASE, new ItemStack(Items.STRING, 2));
-        start(c);
+        c.assertTrue(core.startWith(new ItemStack(ModItems.ALKAHEST_AMULET),
+            c.createMockPlayer(net.minecraft.world.GameMode.CREATIVE)), "Focus starts synthesis");
         run(c.getWorld(), pos, MatrixCoreBlockEntity.DURATION * 2);
         c.assertTrue(core.getStack(MatrixCoreBlockEntity.OUTPUT).isEmpty(), "No essence, no product");
         c.assertTrue(core.getStack(MatrixCoreBlockEntity.BASE).getCount() == 2, "The base is untouched");
