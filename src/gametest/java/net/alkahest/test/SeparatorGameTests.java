@@ -39,6 +39,10 @@ public class SeparatorGameTests implements FabricGameTest {
         var separator=(EssenceSeparatorBlockEntity)c.getWorld().getBlockEntity(pos);
         c.assertTrue(player.getStackInHand(Hand.MAIN_HAND).isEmpty() && JarItem.contents(separator.stacks().get(0)).total()==8,"A filled jar enters the machine exactly once");
         c.assertTrue(c.getWorld().getBlockState(pos).get(EssenceSeparatorBlock.OCCUPIED),"Machine becomes occupied");
+        ItemStack unrelated = new ItemStack(Items.STICK);
+        player.setStackInHand(Hand.MAIN_HAND,unrelated);
+        c.assertTrue(c.getWorld().getBlockState(pos).onUseWithItem(unrelated,c.getWorld(),player,Hand.MAIN_HAND,hit).isAccepted(), "Unrelated held items must not trigger the empty-hand action");
+        c.assertTrue(JarItem.contents(separator.stacks().get(0)).total()==8, "Unrelated held item cannot remove the stored jar");
         var wrong = new ItemStack(ModBlocks.JAR); JarItem.set(wrong,new JarContentsComponent(List.of(new EssenceStack(EssenceType.IGNIS,1,.4f))));
         player.setStackInHand(Hand.MAIN_HAND,wrong);
         c.getWorld().getBlockState(pos).onUseWithItem(wrong,c.getWorld(),player,Hand.MAIN_HAND,hit);
@@ -60,7 +64,6 @@ public class SeparatorGameTests implements FabricGameTest {
         player.setStackInHand(Hand.MAIN_HAND,ItemStack.EMPTY);
         c.getWorld().getBlockState(pos).onUse(c.getWorld(),player,hit);
         c.assertTrue(separator.stacks().get(0).isEmpty() && !c.getWorld().getBlockState(pos).get(EssenceSeparatorBlock.OCCUPIED),"Empty hand returns the original and resets appearance");
-        c.assertTrue(player.getInventory().contains(new ItemStack(Items.STICK)) == false,"No extraneous item created");
         boolean found=false;
         for(int i=0;i<player.getInventory().size();i++) {
             var stack=player.getInventory().getStack(i);

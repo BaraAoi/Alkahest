@@ -147,5 +147,6 @@
   "message.alkahest.separator_finished": "Все эссенции извлечены; заберите пустую исходную банку рукой.",
   "message.alkahest.separator_extracted": "Извлечено: %s × %s.",
   "message.alkahest.separator_empty": "В разделителе нет банки.",
-  "message.alkahest.separator_returned": "Исходная банка возвращена."
+  "message.alkahest.separator_returned": "Исходная банка возвращена.",
+  "message.alkahest.separator_instruction": "Используйте банку или пустую руку."
 }

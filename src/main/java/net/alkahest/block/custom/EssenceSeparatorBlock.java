@@ -30,7 +30,11 @@ public class EssenceSeparatorBlock extends Block implements BlockEntityProvider 
     @Override protected VoxelShape getOutlineShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) { return SHAPE; }
     @Override protected VoxelShape getCollisionShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) { return SHAPE; }
     @Override protected ItemActionResult onUseWithItem(ItemStack stack, BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
-        if (!(stack.getItem() instanceof JarItem)) return ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        if (stack.isEmpty()) return ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        if (!(stack.getItem() instanceof JarItem)) {
+            if (!world.isClient) player.sendMessage(net.minecraft.text.Text.translatable("message.alkahest.separator_instruction"), true);
+            return ItemActionResult.success(world.isClient);
+        }
         if (!world.isClient && world.getBlockEntity(pos) instanceof EssenceSeparatorBlockEntity separator) separator.useJar(player, hand);
         return ItemActionResult.success(world.isClient);
     }

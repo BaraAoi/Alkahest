@@ -147,5 +147,6 @@
   "message.alkahest.separator_finished": "All essence extracted; take the empty source jar with an empty hand.",
   "message.alkahest.separator_extracted": "Extracted: %s × %s.",
   "message.alkahest.separator_empty": "There is no jar in the separator.",
-  "message.alkahest.separator_returned": "Source jar returned."
+  "message.alkahest.separator_returned": "Source jar returned.",
+  "message.alkahest.separator_instruction": "Use a jar or an empty hand."
 }
