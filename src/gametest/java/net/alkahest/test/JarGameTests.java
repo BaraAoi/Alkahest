@@ -26,7 +26,7 @@ public class JarGameTests implements FabricGameTest {
         JarItem.set(a, of(EssenceType.ORDO, 80, .25f)); JarItem.set(b, of(EssenceType.ORDO, 30, .75f));
         context.assertTrue(JarItem.pour(a,b), "Jar transfer should succeed");
         var result = JarItem.contents(b).contents().get(0);
-        context.assertTrue(result.amount() == 100 && Math.abs(result.stability() - .65f) < .0001, "Only accepted 70 units affect weighted stability");
+        context.assertTrue(result.amount() == 100 && Math.abs(result.stability() - .40f) < .0001, "Only accepted 70 units affect weighted stability");
         context.assertTrue(JarItem.contents(a).total() == 0, "Source jar must remain and become empty");
         JarItem.set(a, of(EssenceType.IGNIS, 2, .4f));
         ItemStack empty = new ItemStack(ModBlocks.JAR);
@@ -59,4 +59,43 @@ public class JarGameTests implements FabricGameTest {
             context.complete();
         });
     }
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void playerPlacementAndFilling(TestContext context) {
+        var player = context.createMockPlayer(net.minecraft.world.GameMode.SURVIVAL);
+        BlockPos base = context.getAbsolutePos(new BlockPos(4, 1, 4));
+        context.getWorld().setBlockState(base, net.minecraft.block.Blocks.STONE.getDefaultState());
+        ItemStack placed = new ItemStack(ModBlocks.JAR);
+        JarItem.set(placed, of(EssenceType.ORDO, 9, .3f));
+        player.setStackInHand(net.minecraft.util.Hand.MAIN_HAND, placed);
+        var hitBase = new net.minecraft.util.hit.BlockHitResult(net.minecraft.util.math.Vec3d.ofCenter(base), net.minecraft.util.math.Direction.UP, base, false);
+        var place = new net.minecraft.item.ItemPlacementContext(player, net.minecraft.util.Hand.MAIN_HAND, placed, hitBase);
+        context.assertTrue(((JarItem) ModBlocks.JAR.asItem()).place(place).isAccepted(), "Normal block-item placement should work");
+        BlockPos pos = base.up();
+        var jar = (JarBlockEntity) context.getWorld().getBlockEntity(pos);
+        context.assertTrue(jar != null && jar.contents().total() == 9, "Placed jar should retain its item component");
+        ItemStack crystal = new ItemStack(ModItems.CRYSTALS.get(EssenceType.IGNIS), 2);
+        crystal.set(ModDataComponents.ESSENCE_STABILITY, .2f);
+        player.setStackInHand(net.minecraft.util.Hand.MAIN_HAND, crystal);
+        var hitJar = new net.minecraft.util.hit.BlockHitResult(net.minecraft.util.math.Vec3d.ofCenter(pos), net.minecraft.util.math.Direction.UP, pos, false);
+        context.getWorld().getBlockState(pos).onUseWithItem(crystal, context.getWorld(), player, net.minecraft.util.Hand.MAIN_HAND, hitJar);
+        context.assertTrue(crystal.getCount() == 1 && jar.contents().total() == 10 && jar.contents().contents().size() == 2, "Using a crystal adds one essence and preserves the rest");
+        ItemStack donor = new ItemStack(ModBlocks.JAR); JarItem.set(donor, of(EssenceType.AQUA, 5, .5f));
+        player.setStackInHand(net.minecraft.util.Hand.MAIN_HAND, donor);
+        context.getWorld().getBlockState(pos).onUseWithItem(donor, context.getWorld(), player, net.minecraft.util.Hand.MAIN_HAND, hitJar);
+        context.assertTrue(jar.contents().total() == 15 && JarItem.contents(donor).total() == 0, "Using a jar on a placed jar pours into it");
+        context.complete();
+    }
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void playerInventoryPour(TestContext context) {
+        var player = context.createMockPlayer(net.minecraft.world.GameMode.SURVIVAL);
+        var receiver = new ItemStack(ModBlocks.JAR); JarItem.set(receiver, of(EssenceType.ORDO, 10, .5f));
+        var donor = new ItemStack(ModBlocks.JAR); JarItem.set(donor, of(EssenceType.IGNIS, 5, .5f));
+        player.getInventory().setStack(0, receiver);
+        var slot = new net.minecraft.screen.slot.Slot(player.getInventory(), 0, 0, 0);
+        context.assertFalse(donor.getItem().onStackClicked(donor, slot, net.minecraft.util.ClickType.LEFT, player), "Left click must not pour");
+        context.assertTrue(donor.getItem().onStackClicked(donor, slot, net.minecraft.util.ClickType.RIGHT, player), "Right-click should pour");
+        context.assertTrue(JarItem.contents(receiver).total() == 15 && JarItem.contents(donor).total() == 0, "Inventory pour must retain jars and contents");
+        context.complete();
+    }
+
 }

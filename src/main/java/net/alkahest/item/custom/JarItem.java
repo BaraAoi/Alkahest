@@ -42,6 +42,8 @@ public class JarItem extends BlockItem {
         if (overflow && !player.getWorld().isClient) {
             player.sendMessage(Text.translatable("message.alkahest.jar_overflow"), true);
             player.getWorld().playSound(null, player.getBlockPos(), SoundEvents.BLOCK_FIRE_EXTINGUISH, SoundCategory.PLAYERS, .7f, 1.1f);
+            if (player.getWorld() instanceof net.minecraft.server.world.ServerWorld world)
+                world.spawnParticles(net.minecraft.particle.ParticleTypes.SMOKE, player.getX(), player.getY() + 1, player.getZ(), 12, .2, .2, .2, .02);
         }
     }
     @Override public boolean onStackClicked(ItemStack stack, Slot slot, ClickType click, PlayerEntity player) {
