@@ -38,7 +38,7 @@ public class ThrownReagentEntity extends ThrownItemEntity {
         if (reagent.getItem() instanceof BindingSaltItem bindingSalt) {
             Entity owner = getOwner();
             EssenceType saltType = bindingSalt.essenceType();
-            float radius = 2.4f;
+            float radius = 2.75f;
             Set<LivingEntity> targets = new LinkedHashSet<>();
             if (hit instanceof EntityHitResult entityHit && entityHit.getEntity() instanceof LivingEntity direct && !direct.isSpectator()) {
                 targets.add(direct);
@@ -46,8 +46,7 @@ public class ThrownReagentEntity extends ThrownItemEntity {
             for (LivingEntity nearby : world.getEntitiesByClass(
                     LivingEntity.class,
                     new Box(hit.getPos(), hit.getPos()).expand(radius),
-                    entity -> !entity.isSpectator() && (owner == null || entity != owner)
-                        && entity.squaredDistanceTo(hit.getPos()) <= radius * radius)) {
+                    entity -> !entity.isSpectator() && (owner == null || entity != owner))) {
                 targets.add(nearby);
             }
             for (LivingEntity target : targets) {

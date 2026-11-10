@@ -83,20 +83,27 @@ public class ElementalGameTests implements FabricGameTest {
         zombie.setAiDisabled(true);
         double baseSpeed = zombie.getAttributeValue(EntityAttributes.GENERIC_MOVEMENT_SPEED);
 
-        // Spawn hovering Terra Elemental 3 blocks up in the air
+        // Spawn hovering Terra Elemental 3 blocks up in the air (with live AI!)
         ElementalEntity elemental = context.spawnEntity(ModEntities.ELEMENTALS.get(EssenceType.TERRA), 3.5f, 5.0f, 3.5f);
         context.assertTrue(elemental.hasNoGravity() && !elemental.isGroundedBySalt(),
             "Elemental must hover with levitation before salt impact");
         double startAirY = elemental.getY();
         double baseFlySpeed = elemental.getAttributeValue(EntityAttributes.GENERIC_FLYING_SPEED);
 
-        // Hit the hovering Elemental directly with Aer binding salt
-        ThrownReagentEntity projectile = context.spawnEntity(ModEntities.THROWN_REAGENT, 3.5f, 6.2f, 3.5f);
+        // Fire Aer binding salt horizontally straight into the hovering Elemental's torso on tick 1
+        ThrownReagentEntity projectile = context.spawnEntity(ModEntities.THROWN_REAGENT, 2.3f, 5.7f, 3.5f);
         projectile.setItem(new ItemStack(ModItems.CHARGED_BINDING_SALTS.get(EssenceType.AER)));
-        projectile.setVelocity(0, -0.65, 0);
+        projectile.setVelocity(1.2, 0.0, 0.0);
 
-        // Also hit the ground zombie with base binding salt
-        ThrownReagentEntity zombieSalt = context.spawnEntity(ModEntities.THROWN_REAGENT, 2.5f, 3.6f, 2.5f);
+        // Also hit the ground zombie on a separate tile with base binding salt
+        context.setBlockState(7, 1, 2, Blocks.STONE);
+        zombie.refreshPositionAndAngles(
+            context.getAbsolutePos(new BlockPos(7, 2, 2)).getX() + 0.5,
+            context.getAbsolutePos(new BlockPos(7, 2, 2)).getY(),
+            context.getAbsolutePos(new BlockPos(7, 2, 2)).getZ() + 0.5,
+            0.0f, 0.0f
+        );
+        ThrownReagentEntity zombieSalt = context.spawnEntity(ModEntities.THROWN_REAGENT, 7.5f, 3.6f, 2.5f);
         zombieSalt.setItem(new ItemStack(ModItems.BINDING_SALT));
         zombieSalt.setVelocity(0, -0.7, 0);
 
