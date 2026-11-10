@@ -36,6 +36,7 @@ public final class JournalScreen extends Screen {
     private boolean guide;
     private Node selected;
     private int guidePage;
+    private int scroll, maxScroll;
     private double panX, panY;
     private boolean dragging;
     private int left, top, bookWidth, bookHeight;
@@ -137,7 +138,7 @@ public final class JournalScreen extends Screen {
         Text title = state.equals("locked") ? Text.translatable("screen.alkahest.journal.unknown") : label(node);
         c.drawText(textRenderer, title, x + 12, y + 11, 0xFF4F3520, false);
         c.fill(x + 12, y + 23, x + w - 12, y + 24, 0xFFB19A6E);
-        int line = y + 31;
+        int line = y + 31 - scroll;
         line += wrapped(c, Text.translatable(key + state), x + 12, line, w - 24, 0xFF30251C) + 6;
         if (state.equals("hypothesis")) {
             line += wrapped(c, Text.translatable(key + "instructions"), x + 12, line, w - 24, 0xFF594633) + 5;
@@ -147,8 +148,12 @@ public final class JournalScreen extends Screen {
                 c.drawText(textRenderer, choice, x + 16, line, failed ? 0xFF9F302C : 0xFF382B20, false);
                 line += 12;
             }
+            line += 4;
+            line += wrapped(c, Text.translatable("screen.alkahest.journal.experiment_note"), x + 12, line, w - 24, 0xFF594633);
         }
+        maxScroll = Math.max(0, line + scroll - (y + h - 9));
         c.disableScissor();
+        if (maxScroll > 0) c.drawTextWithShadow(textRenderer, Text.translatable("screen.alkahest.journal.scroll"), left + bookWidth - 100, top + bookHeight - 21, 0xFFD8C69D);
         button(c, left + 15, top + bookHeight - 25, 92, "screen.alkahest.journal.back");
     }
     private void renderGuide(DrawContext c) {
@@ -156,8 +161,10 @@ public final class JournalScreen extends Screen {
         panel(c, x, y, w, h);
         c.fill(x + 5, y + 5, x + w - 5, y + h - 5, 0xF4E7D4A7);
         c.enableScissor(x + 7, y + 7, x + w - 7, y + h - 7);
-        wrapped(c, Text.translatable("screen.alkahest.journal.page." + guidePage), x + 12, y + 12, w - 24, 0xFF30251C);
+        int contentHeight = wrapped(c, Text.translatable("screen.alkahest.journal.page." + guidePage), x + 12, y + 12 - scroll, w - 24, 0xFF30251C);
+        maxScroll = Math.max(0, contentHeight - (h - 21));
         c.disableScissor();
+        if (maxScroll > 0) c.drawTextWithShadow(textRenderer, Text.translatable("screen.alkahest.journal.scroll"), left + bookWidth / 2 - 45, top + bookHeight - 34, 0xFFD8C69D);
         button(c, left + 15, top + bookHeight - 25, 44, "screen.alkahest.journal.prev");
         button(c, left + bookWidth - 59, top + bookHeight - 25, 44, "screen.alkahest.journal.next");
         c.drawCenteredTextWithShadow(textRenderer, (guidePage + 1) + " / " + GUIDE_PAGES, left + bookWidth / 2, top + bookHeight - 21, 0xFFD8C69D);
@@ -169,15 +176,15 @@ public final class JournalScreen extends Screen {
     }
     @Override public boolean mouseClicked(double x, double y, int button) {
         if (button != 0) return super.mouseClicked(x, y, button);
-        if (within(x, y, left + 14, top + 32, left + 130, top + 52)) { guide = false; selected = null; return true; }
-        if (within(x, y, left + 134, top + 32, left + 234, top + 52)) { guide = true; selected = null; return true; }
+        if (within(x, y, left + 14, top + 32, left + 130, top + 52)) { guide = false; selected = null; scroll = 0; return true; }
+        if (within(x, y, left + 134, top + 32, left + 234, top + 52)) { guide = true; selected = null; scroll = 0; return true; }
         if (guide) {
-            if (within(x, y, left + 15, top + bookHeight - 25, left + 59, top + bookHeight - 9)) { guidePage = Math.floorMod(guidePage - 1, GUIDE_PAGES); return true; }
-            if (within(x, y, left + bookWidth - 59, top + bookHeight - 25, left + bookWidth - 15, top + bookHeight - 9)) { guidePage = (guidePage + 1) % GUIDE_PAGES; return true; }
+            if (within(x, y, left + 15, top + bookHeight - 25, left + 59, top + bookHeight - 9)) { guidePage = Math.floorMod(guidePage - 1, GUIDE_PAGES); scroll = 0; return true; }
+            if (within(x, y, left + bookWidth - 59, top + bookHeight - 25, left + bookWidth - 15, top + bookHeight - 9)) { guidePage = (guidePage + 1) % GUIDE_PAGES; scroll = 0; return true; }
         } else if (selected != null) {
-            if (within(x, y, left + 15, top + bookHeight - 25, left + 107, top + bookHeight - 9)) { selected = null; return true; }
+            if (within(x, y, left + 15, top + bookHeight - 25, left + 107, top + bookHeight - 9)) { selected = null; scroll = 0; return true; }
         } else if (within(x, y, mapX(), mapY(), mapX() + mapW(), mapY() + mapH())) {
-            for (Node node : NODES) if (!state(node).equals("hidden") && hitNode(node, x, y)) { selected = node; return true; }
+            for (Node node : NODES) if (!state(node).equals("hidden") && hitNode(node, x, y)) { selected = node; scroll = 0; return true; }
             dragging = true; return true;
         }
         return super.mouseClicked(x, y, button);
@@ -193,6 +200,13 @@ public final class JournalScreen extends Screen {
     @Override public boolean mouseReleased(double x, double y, int button) {
         if (button == 0 && dragging) { dragging = false; return true; }
         return super.mouseReleased(x, y, button);
+    }
+    @Override public boolean mouseScrolled(double x, double y, double horizontalAmount, double verticalAmount) {
+        if ((guide || selected != null) && within(x, y, mapX(), mapY(), mapX() + mapW(), mapY() + mapH())) {
+            scroll = MathHelper.clamp(scroll - (int)(verticalAmount * 18), 0, maxScroll);
+            return true;
+        }
+        return super.mouseScrolled(x, y, horizontalAmount, verticalAmount);
     }
     @Override public boolean shouldPause() { return false; }
 }
