@@ -12,6 +12,11 @@ import net.minecraft.block.BlockEntityProvider;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.ShapeContext;
 import net.minecraft.block.entity.BlockEntity;
+import net.minecraft.block.entity.BlockEntityTicker;
+import net.minecraft.block.entity.BlockEntityType;
+import net.minecraft.state.StateManager;
+import net.minecraft.state.property.IntProperty;
+import net.alkahest.registry.ModBlockEntities;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.particle.ParticleTypes;
@@ -30,8 +35,14 @@ import net.minecraft.world.World;
 import java.util.List;
 
 public class JarBlock extends Block implements BlockEntityProvider {
+    public static final IntProperty LEVEL = IntProperty.of("level", 0, 10);
     private static final VoxelShape SHAPE = Block.createCuboidShape(3, 0, 3, 13, 13, 13);
-    public JarBlock(Settings settings) { super(settings); }
+    public JarBlock(Settings settings) { super(settings); setDefaultState(getStateManager().getDefaultState().with(LEVEL, 0)); }
+    @Override protected void appendProperties(StateManager.Builder<Block, BlockState> builder) { builder.add(LEVEL); }
+    // Also repairs the display of jars saved before the level property existed.
+    @Override public <T extends BlockEntity> BlockEntityTicker<T> getTicker(World world, BlockState state, BlockEntityType<T> type) {
+        return !world.isClient && type == ModBlockEntities.JAR ? (w, p, s, be) -> ((JarBlockEntity)be).updateLevel() : null;
+    }
     @Override public BlockEntity createBlockEntity(BlockPos pos, BlockState state) { return new JarBlockEntity(pos, state); }
     @Override protected VoxelShape getOutlineShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) { return SHAPE; }
     @Override protected VoxelShape getCollisionShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) { return SHAPE; }

@@ -40,4 +40,22 @@ class EssenceTest {
         var bad = JsonParser.parseString("{\"contents\":[{\"type\":\"ordo\",\"amount\":501,\"stability\":0.5}]}");
         assertTrue(JarContentsComponent.CODEC.parse(JsonOps.INSTANCE, bad).error().isPresent());
     }
+    @Test void jarVisualLevelAndMixtureColor() {
+        var empty = JarContentsComponent.EMPTY;
+        assertEquals(0, JarVisuals.level(empty));
+        assertEquals(0xffffff, JarVisuals.color(empty));
+        var single = new JarContentsComponent(List.of(new EssenceStack(EssenceType.ORDO, 1, .5f)));
+        assertEquals(1, JarVisuals.level(single));
+        assertEquals(EssenceType.ORDO.color(), JarVisuals.color(single));
+        assertEquals(1, JarVisuals.level(new JarContentsComponent(List.of(new EssenceStack(EssenceType.IGNIS, 10, .5f)))));
+        assertEquals(2, JarVisuals.level(new JarContentsComponent(List.of(new EssenceStack(EssenceType.IGNIS, 11, .5f)))));
+        assertEquals(10, JarVisuals.level(new JarContentsComponent(List.of(new EssenceStack(EssenceType.IGNIS, 100, .5f)))));
+        assertEquals(10, JarVisuals.level(new JarContentsComponent(List.of(new EssenceStack(EssenceType.IGNIS, 500, .5f)))));
+        var mix = new JarContentsComponent(List.of(new EssenceStack(EssenceType.IGNIS, 1, .5f), new EssenceStack(EssenceType.AQUA, 3, .5f)));
+        int a = EssenceType.IGNIS.color(), b = EssenceType.AQUA.color();
+        int expected = ((((a >> 16 & 255) + 3 * (b >> 16 & 255)) / 4) << 16)
+            | ((((a >> 8 & 255) + 3 * (b >> 8 & 255)) / 4) << 8) | (((a & 255) + 3 * (b & 255)) / 4);
+        assertEquals(expected, JarVisuals.color(mix));
+    }
+
 }

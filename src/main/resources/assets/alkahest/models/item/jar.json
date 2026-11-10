@@ -1,3 +1,65 @@
 {
-  "parent": "alkahest:block/jar"
+  "parent": "alkahest:block/jar",
+  "overrides": [
+    {
+      "predicate": {
+        "alkahest:fill": 0.1
+      },
+      "model": "alkahest:block/jar_level_1"
+    },
+    {
+      "predicate": {
+        "alkahest:fill": 0.2
+      },
+      "model": "alkahest:block/jar_level_2"
+    },
+    {
+      "predicate": {
+        "alkahest:fill": 0.3
+      },
+      "model": "alkahest:block/jar_level_3"
+    },
+    {
+      "predicate": {
+        "alkahest:fill": 0.4
+      },
+      "model": "alkahest:block/jar_level_4"
+    },
+    {
+      "predicate": {
+        "alkahest:fill": 0.5
+      },
+      "model": "alkahest:block/jar_level_5"
+    },
+    {
+      "predicate": {
+        "alkahest:fill": 0.6
+      },
+      "model": "alkahest:block/jar_level_6"
+    },
+    {
+      "predicate": {
+        "alkahest:fill": 0.7
+      },
+      "model": "alkahest:block/jar_level_7"
+    },
+    {
+      "predicate": {
+        "alkahest:fill": 0.8
+      },
+      "model": "alkahest:block/jar_level_8"
+    },
+    {
+      "predicate": {
+        "alkahest:fill": 0.9
+      },
+      "model": "alkahest:block/jar_level_9"
+    },
+    {
+      "predicate": {
+        "alkahest:fill": 1.0
+      },
+      "model": "alkahest:block/jar_level_10"
+    }
+  ]
 }

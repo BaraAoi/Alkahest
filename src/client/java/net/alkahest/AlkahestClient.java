@@ -32,6 +32,13 @@ public final class AlkahestClient implements ClientModInitializer {
             context.client().execute(() -> context.client().setScreen(new JournalScreen(payload.flags()))));
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.NAPALM_FLAME, RenderLayer.getCutout());
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.JAR, RenderLayer.getCutout());
+        net.minecraft.client.item.ModelPredicateProviderRegistry.register(ModBlocks.JAR.asItem(), Alkahest.id("fill"),
+            (stack, world, entity, seed) -> net.alkahest.essence.JarVisuals.level(net.alkahest.item.custom.JarItem.contents(stack)) / 10.0f);
+        ColorProviderRegistry.ITEM.register((stack, tint) -> tint == 0
+            ? net.alkahest.essence.JarVisuals.color(net.alkahest.item.custom.JarItem.contents(stack)) : 0xffffff, ModBlocks.JAR);
+        ColorProviderRegistry.BLOCK.register((state, world, pos, tint) -> tint == 0 && world != null && pos != null
+            && world.getBlockEntity(pos) instanceof net.alkahest.block.entity.JarBlockEntity jar
+                ? net.alkahest.essence.JarVisuals.color(jar.contents()) : 0xffffff, ModBlocks.JAR);
         EntityRendererRegistry.register(ModEntities.THROWN_REAGENT, FlyingItemEntityRenderer::new);
         EntityRendererRegistry.register(ModEntities.REAGENT_ZONE, EmptyEntityRenderer::new);
         ColorProviderRegistry.BLOCK.register((state, world, pos, tintIndex) ->

@@ -1,6 +1,10 @@
 package net.alkahest.block.entity;
 
 import net.alkahest.essence.JarContentsComponent;
+import net.alkahest.essence.JarVisuals;
+import net.alkahest.block.custom.JarBlock;
+import net.minecraft.block.Block;
+import net.minecraft.network.packet.s2c.play.BlockEntityUpdateS2CPacket;
 import net.alkahest.item.custom.JarItem;
 import net.alkahest.registry.ModBlockEntities;
 import net.alkahest.registry.ModBlocks;
@@ -24,12 +28,35 @@ public class JarBlockEntity extends BlockEntity {
         return storage.get(0);
     }
     public JarContentsComponent contents() { return JarItem.contents(holder()); }
-    public void setContents(JarContentsComponent value) { JarItem.set(holder(), value); markDirty(); }
+    public void setContents(JarContentsComponent value) {
+        JarItem.set(holder(), value); markDirty();
+        if (world != null && !world.isClient && world.getBlockState(pos).isOf(ModBlocks.JAR)) {
+            updateLevel();
+            // Notify even if level did not change: a mixture may have changed color.
+            BlockState state = world.getBlockState(pos);
+            world.updateListeners(pos, state, state, Block.NOTIFY_LISTENERS);
+        }
+    }
+    public void updateLevel() {
+        if (world == null || world.isClient) return;
+        BlockState state = world.getBlockState(pos);
+        if (state.isOf(ModBlocks.JAR)) {
+            int level = JarVisuals.level(contents());
+            if (state.get(JarBlock.LEVEL) != level) world.setBlockState(pos, state.with(JarBlock.LEVEL, level), Block.NOTIFY_ALL);
+        }
+    }
+    @Override public BlockEntityUpdateS2CPacket toUpdatePacket() { return BlockEntityUpdateS2CPacket.create(this); }
+    @Override public NbtCompound toInitialChunkDataNbt(RegistryWrapper.WrapperLookup registries) { return createNbt(registries); }
     @Override protected void writeNbt(NbtCompound nbt, RegistryWrapper.WrapperLookup registries) {
         super.writeNbt(nbt, registries); Inventories.writeNbt(nbt, storage, registries);
     }
     @Override protected void readNbt(NbtCompound nbt, RegistryWrapper.WrapperLookup registries) {
         super.readNbt(nbt, registries); Inventories.readNbt(nbt, storage, registries);
+        // The color may change without changing the quantized level: rebuild the client mesh.
+        if (world != null && world.isClient) {
+            BlockState state = world.getBlockState(pos);
+            world.updateListeners(pos, state, state, Block.NOTIFY_LISTENERS);
+        }
     }
     @Override protected void addComponents(ComponentMap.Builder builder) {
         super.addComponents(builder); builder.add(ModDataComponents.JAR_CONTENTS, contents());

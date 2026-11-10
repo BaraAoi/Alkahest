@@ -98,4 +98,32 @@ public class JarGameTests implements FabricGameTest {
         context.complete();
     }
 
+    @GameTest(templateName = EMPTY_STRUCTURE, tickLimit = 40)
+    public void appearanceSyncAndLegacyMigration(TestContext context) {
+        BlockPos pos = context.getAbsolutePos(new BlockPos(3, 2, 3));
+        context.setBlockState(3, 2, 3, ModBlocks.JAR);
+        var jar = (JarBlockEntity) context.getWorld().getBlockEntity(pos);
+        jar.setContents(of(EssenceType.ORDO, 11, .5f));
+        context.assertTrue(context.getWorld().getBlockState(pos).get(net.alkahest.block.custom.JarBlock.LEVEL) == 2, "11 units should show second level");
+        var nbt = jar.toInitialChunkDataNbt(context.getWorld().getRegistryManager());
+        var clientCopy = new JarBlockEntity(pos, jar.getCachedState());
+        clientCopy.readComponentlessNbt(nbt, context.getWorld().getRegistryManager());
+        context.assertTrue(clientCopy.contents().equals(jar.contents()), "Initial chunk NBT must sync contents");
+        jar.setContents(of(EssenceType.AQUA, 11, .5f));
+        var packet = jar.toUpdatePacket();
+        context.assertTrue(packet != null && packet.getNbt() != null, "Color-only change has an update packet");
+        clientCopy.readComponentlessNbt(packet.getNbt(), context.getWorld().getRegistryManager());
+        context.assertTrue(clientCopy.contents().equals(jar.contents()), "Update packet must sync changes even at same level");
+        // Simulate the default level of a jar saved in 0.1.12 before this property existed.
+        context.getWorld().setBlockState(pos, context.getWorld().getBlockState(pos).with(net.alkahest.block.custom.JarBlock.LEVEL, 0));
+        context.runAtTick(5, () -> {
+            context.assertTrue(context.getWorld().getBlockState(pos).get(net.alkahest.block.custom.JarBlock.LEVEL) == 2, "Old jars must acquire their display level on load");
+            var kept = (JarBlockEntity) context.getWorld().getBlockEntity(pos);
+            context.assertTrue(kept.contents().total() == 11, "Migration must retain old contents");
+            kept.setContents(JarContentsComponent.EMPTY);
+            context.assertTrue(context.getWorld().getBlockState(pos).get(net.alkahest.block.custom.JarBlock.LEVEL) == 0, "Empty jar has no visible fill");
+            context.complete();
+        });
+    }
+
 }

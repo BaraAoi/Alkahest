@@ -2,7 +2,8 @@
   "textures": {
     "glass": "minecraft:block/glass",
     "rim": "minecraft:block/spruce_planks",
-    "particle": "minecraft:block/glass"
+    "particle": "minecraft:block/glass",
+    "essence": "alkahest:block/jar_essence"
   },
   "elements": [
     {
