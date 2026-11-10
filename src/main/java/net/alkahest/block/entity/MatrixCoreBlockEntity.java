@@ -46,7 +46,8 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
     public static final int DURATION = 160;
     public static final int BUFFER = 128;
     public static final int REACH = 12;
-    public static final int PEDESTAL_REACH = 5;
+    public static final int PEDESTAL_REACH = 8;
+    public static final int PEDESTAL_HEIGHT = 3;
     public static final int BASE = 0, OUTPUT = 1;
 
     public static final int STATUS_IDLE = 0, STATUS_WORKING = 1, STATUS_NO_ESSENCE = 2,
@@ -56,6 +57,7 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
     private JarContentsComponent buffer = JarContentsComponent.EMPTY;
     private int progress;
     private boolean awake;
+    private boolean missingEssenceReported;
 
     /** Essence streams that are still crossing the air; purely a visual, never saved. */
     private final List<EssenceFlight> flights = new ArrayList<>();
@@ -90,9 +92,10 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
     public List<MatrixPedestalBlockEntity> pedestals() {
         List<MatrixPedestalBlockEntity> result = new ArrayList<>();
         if (world == null) return result;
-        for (BlockPos candidate : BlockPos.iterate(pos.add(-PEDESTAL_REACH, -2, -PEDESTAL_REACH),
-            pos.add(PEDESTAL_REACH, 2, PEDESTAL_REACH))) {
-            if (candidate.getSquaredDistance(pos) > PEDESTAL_REACH * PEDESTAL_REACH) continue;
+        for (BlockPos candidate : BlockPos.iterate(pos.add(-PEDESTAL_REACH, -PEDESTAL_HEIGHT, -PEDESTAL_REACH),
+            pos.add(PEDESTAL_REACH, PEDESTAL_HEIGHT, PEDESTAL_REACH))) {
+            int dx = candidate.getX() - pos.getX(), dz = candidate.getZ() - pos.getZ();
+            if (dx * dx + dz * dz > PEDESTAL_REACH * PEDESTAL_REACH) continue;
             if (world.getBlockEntity(candidate) instanceof MatrixPedestalBlockEntity pedestal) result.add(pedestal);
         }
         return result;
@@ -107,7 +110,7 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
     }
 
     public MatrixRecipe recipe() {
-        if (world == null) return null;
+        if (world == null || stacks.get(BASE).isEmpty()) return null;
         return MatrixRecipe.find(stacks.get(BASE), pedestalItems());
     }
 
@@ -185,6 +188,7 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
         }
         MatrixRecipe recipe = self.awake ? self.recipe() : null;
         if (recipe == null || !self.canStoreOutput(recipe.output())) {
+            self.missingEssenceReported = false;
             if (self.progress != 0) { self.progress = 0; self.markDirty(); }
             setActive(world, pos, self, false);
             return;
@@ -197,14 +201,75 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
             return;
         }
         if (!self.pay(world, recipe.cost())) {
+            if (!self.missingEssenceReported && world instanceof ServerWorld server) {
+                self.reportMissingEssence(server, recipe);
+                self.missingEssenceReported = true;
+            }
             setActive(world, pos, self, false);
             return;
         }
+        self.missingEssenceReported = false;
         self.consumeItems(recipe);
         self.progress = 0;
         self.markDirty();
         self.sync();
         celebrate(world, pos);
+    }
+
+    /** Report why an otherwise valid synthesis is waiting instead of silently stopping. */
+    private void reportMissingEssence(ServerWorld server, MatrixRecipe recipe) {
+        StringBuilder missing = new StringBuilder();
+        for (Map.Entry<EssenceType, Integer> entry : recipe.cost().entrySet()) {
+            int deficit = entry.getValue() - stored(entry.getKey()) - jarsAround(server, entry.getKey());
+            if (deficit <= 0) continue;
+            if (!missing.isEmpty()) missing.append(", ");
+            missing.append(entry.getKey().displayName()).append(" ").append(deficit);
+        }
+        Text message = missing.isEmpty() ? Text.translatable("message.alkahest.matrix_wait_buffer")
+            : Text.translatable("message.alkahest.matrix_wait_essence", missing.toString());
+        for (PlayerEntity player : server.getPlayers()) {
+            if (player.squaredDistanceTo(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) <= 32 * 32)
+                player.sendMessage(message, false);
+        }
+    }
+
+    /** Explain which required parts are recognised; safe to call without removing the base. */
+    public void explainPedestals(PlayerEntity player) {
+        ItemStack base = stacks.get(BASE);
+        if (base.isEmpty()) return;
+        MatrixRecipe expected = MatrixRecipe.cheapestFor(base);
+        if (expected == null) {
+            player.sendMessage(Text.translatable("message.alkahest.matrix_unknown_base", base.getName()), false);
+            return;
+        }
+        if (expected.components().isEmpty()) return;
+        List<net.minecraft.item.Item> missing = expected.missingComponents(pedestalItems());
+        if (missing.isEmpty()) {
+            player.sendMessage(Text.translatable("message.alkahest.matrix_parts_ready"), false);
+        } else {
+            StringBuilder names = new StringBuilder();
+            for (var item : missing) {
+                if (!names.isEmpty()) names.append(", ");
+                names.append(item.getName().getString());
+            }
+            player.sendMessage(Text.translatable("message.alkahest.matrix_parts_missing", names.toString()), false);
+        }
+    }
+
+    /** Find the nearest formed Matrix that can actually reach this pedestal. */
+    public static MatrixCoreBlockEntity forPedestal(World world, BlockPos pedestal) {
+        MatrixCoreBlockEntity nearest = null;
+        double best = Double.MAX_VALUE;
+        for (BlockPos candidate : BlockPos.iterate(pedestal.add(-PEDESTAL_REACH, -PEDESTAL_HEIGHT, -PEDESTAL_REACH),
+            pedestal.add(PEDESTAL_REACH, PEDESTAL_HEIGHT, PEDESTAL_REACH))) {
+            int dx = candidate.getX() - pedestal.getX(), dz = candidate.getZ() - pedestal.getZ();
+            if (dx * dx + dz * dz > PEDESTAL_REACH * PEDESTAL_REACH) continue;
+            if (world.getBlockEntity(candidate) instanceof MatrixCoreBlockEntity core && core.formed()) {
+                double distance = candidate.getSquaredDistance(pedestal);
+                if (distance < best) { nearest = core; best = distance; }
+            }
+        }
+        return nearest;
     }
 
     /** Spends the base item and one copy of every part lying on the pedestals. */
@@ -472,6 +537,7 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
         }
         player.sendMessage(Text.translatable("message.alkahest.matrix_core_holds", stacks.get(BASE).getName()), true);
         if (!awake) player.sendMessage(Text.translatable("message.alkahest.matrix_awake_hint"), false);
+        explainPedestals(player);
         return true;
     }
 

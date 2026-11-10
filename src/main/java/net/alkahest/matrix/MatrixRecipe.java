@@ -47,13 +47,16 @@ public record MatrixRecipe(Item base, List<Item> components, ItemStack output,
     public static List<MatrixRecipe> all() { return ALL; }
 
     /** Components are a multiset: order does not matter, duplicates have to be paid for. */
-    public boolean accepts(List<ItemStack> given) {
+    public List<Item> missingComponents(List<ItemStack> given) {
         List<Item> pool = new ArrayList<>();
+        List<Item> missing = new ArrayList<>();
         for (ItemStack stack : given) if (!stack.isEmpty()) pool.add(stack.getItem());
-        for (Item component : components) {
-            if (!pool.remove(component)) return false;
-        }
-        return true;
+        for (Item component : components) if (!pool.remove(component)) missing.add(component);
+        return missing;
+    }
+
+    public boolean accepts(List<ItemStack> given) {
+        return missingComponents(given).isEmpty();
     }
 
     public static MatrixRecipe find(ItemStack base, List<ItemStack> given) {

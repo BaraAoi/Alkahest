@@ -196,6 +196,69 @@ public class MatrixGameTests implements FabricGameTest {
         c.complete();
     }
 
+    /** Use the real block interactions and server ticker, with a diagonal pedestal below the core. */
+    @GameTest(templateName = EMPTY_STRUCTURE, tickLimit = 240)
+    public void diamondUsesTwoClickedPedestalsOnRealTicks(TestContext c) {
+        BlockPos pos = build(c);
+        wake(c);
+        var core = core(c);
+        var player = c.createMockPlayer(net.minecraft.world.GameMode.SURVIVAL);
+        ItemStack coal = new ItemStack(Items.COAL);
+        MatrixCoreBlockEntity.interactNearby(c.getWorld(), pos, player, coal);
+        c.assertTrue(coal.isEmpty(), "A real core click inserts the base");
+        c.setBlockState(7, CY - 1, 7, ModBlocks.MATRIX_PEDESTAL);
+        c.setBlockState(0, CY - 1, CZ, ModBlocks.MATRIX_PEDESTAL);
+        BlockPos goldPos = c.getAbsolutePos(new BlockPos(7, CY - 1, 7));
+        BlockPos saltPos = c.getAbsolutePos(new BlockPos(0, CY - 1, CZ));
+        ItemStack gold = new ItemStack(Items.GOLD_INGOT);
+        ItemStack salt = new ItemStack(ModItems.SALT);
+        for (var entry : java.util.Map.of(goldPos, gold, saltPos, salt).entrySet()) {
+            BlockPos target = entry.getKey();
+            var hit = new net.minecraft.util.hit.BlockHitResult(net.minecraft.util.math.Vec3d.ofCenter(target),
+                net.minecraft.util.math.Direction.UP, target, false);
+            c.getWorld().getBlockState(target).onUseWithItem(entry.getValue(), c.getWorld(), player,
+                net.minecraft.util.Hand.MAIN_HAND, hit);
+        }
+        c.assertTrue(gold.isEmpty() && salt.isEmpty(), "Actual clicks place both ingredients");
+        c.assertTrue(MatrixCoreBlockEntity.forPedestal(c.getWorld(), goldPos) == core,
+            "Diagonal pedestal one level below is linked to the Matrix");
+        c.assertTrue(core.recipe() != null && core.recipe().output().isOf(Items.DIAMOND),
+            "Both components are recognised before work starts");
+        jar(c, 0, CY, 0, EssenceType.METALLUM, 8);
+        jar(c, 6, CY, 0, EssenceType.LUX, 6);
+        jar(c, 0, CY, 6, EssenceType.ORDO, 4);
+        c.runAtTick(180, () -> {
+            c.assertTrue(core.getStack(MatrixCoreBlockEntity.OUTPUT).isOf(Items.DIAMOND),
+                "The natural server ticker completes the diamond synthesis");
+            var goldPedestal = (net.alkahest.block.entity.MatrixPedestalBlockEntity) c.getWorld().getBlockEntity(goldPos);
+            var saltPedestal = (net.alkahest.block.entity.MatrixPedestalBlockEntity) c.getWorld().getBlockEntity(saltPos);
+            c.assertTrue(goldPedestal.isEmpty() && saltPedestal.isEmpty(), "Both real pedestal items were absorbed");
+            c.complete();
+        });
+    }
+
+    /** Missing essence stalls safely; once the missing jar arrives, the pedestal is consumed. */
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void lightningWaitsForEssenceBeforeTakingPedestalItem(TestContext c) {
+        BlockPos pos = build(c);
+        wake(c);
+        var core = core(c);
+        core.setStack(MatrixCoreBlockEntity.BASE, new ItemStack(Items.LIGHTNING_ROD));
+        pedestal(c, 7, CY - 1, 7, new ItemStack(Items.GLASS_BOTTLE));
+        BlockPos pedestalPos = c.getAbsolutePos(new BlockPos(7, CY - 1, 7));
+        var part = (net.alkahest.block.entity.MatrixPedestalBlockEntity) c.getWorld().getBlockEntity(pedestalPos);
+        jar(c, 0, CY, 0, EssenceType.IGNIS, 6);
+        run(c.getWorld(), pos, MatrixCoreBlockEntity.DURATION + 4);
+        c.assertTrue(core.status() == MatrixCoreBlockEntity.STATUS_NO_ESSENCE, "Missing Aer stops synthesis");
+        c.assertTrue(part.held().isOf(Items.GLASS_BOTTLE), "The pedestal item is not lost while waiting");
+        jar(c, 6, CY, 0, EssenceType.AER, 6);
+        run(c.getWorld(), pos, 3);
+        c.assertTrue(core.getStack(MatrixCoreBlockEntity.OUTPUT).isOf(ModItems.LIGHTNING_IN_A_BOTTLE),
+            "Adding Aer completes the recipe");
+        c.assertTrue(part.isEmpty(), "The bottle is absorbed exactly on successful completion");
+        c.complete();
+    }
+
     /** String becomes three binding salts, paid for with essence taken straight out of the jars. */
     @GameTest(templateName = EMPTY_STRUCTURE)
     public void synthesisesBindingSaltFromJars(TestContext c) {
