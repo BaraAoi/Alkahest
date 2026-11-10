@@ -135,6 +135,6 @@ public final class MatrixCoreRenderer implements BlockEntityRenderer<MatrixCoreB
             .texture(u, v)
             .overlay(OverlayTexture.DEFAULT_UV)
             .light(LightmapTextureManager.MAX_LIGHT_COORDINATE)
-            .normal(entry.getNormalMatrix(), 0f, 1f, 0f);
+            .normal(entry, 0f, 1f, 0f);
     }
 }
