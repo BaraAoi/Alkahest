@@ -4,6 +4,8 @@ import dev.emi.trinkets.api.TrinketsApi;
 import net.alkahest.block.custom.AlchemyPipeBlock;
 import net.alkahest.block.entity.AlchemyPipeBlockEntity;
 import net.alkahest.block.entity.JarBlockEntity;
+import net.alkahest.block.entity.CauldronBlockEntity;
+import net.alkahest.essence.EssenceType;
 import net.alkahest.item.custom.JarItem;
 import net.alkahest.registry.ModItems;
 import net.minecraft.client.MinecraftClient;
@@ -36,6 +38,19 @@ public final class MonocleHud {
                         .styled(style -> style.withColor(essence.type().color())));
                 }
                 if (contents.contents().size() > limit) lines.add(Text.translatable("screen.alkahest.monocle.more", contents.contents().size() - limit));
+            }
+        } else if (blockEntity instanceof CauldronBlockEntity cauldron) {
+            var contents = cauldron.essences();
+            lines.add(Text.translatable("screen.alkahest.monocle.cauldron"));
+            if (contents.isEmpty()) lines.add(Text.translatable("screen.alkahest.monocle.empty"));
+            else {
+                int shown = 0;
+                for (EssenceType type : EssenceType.values()) {
+                    int amount = contents.getOrDefault(type, 0);
+                    if (amount > 0 && shown++ < 4) lines.add(Text.literal("◆ " + type.displayName() + ": " + amount)
+                        .styled(style -> style.withColor(type.color())));
+                }
+                if (shown > 4) lines.add(Text.translatable("screen.alkahest.monocle.more", shown - 4));
             }
         } else if (blockEntity instanceof AlchemyPipeBlockEntity pipe && client.world.getBlockState(hit.getBlockPos()).getBlock() instanceof AlchemyPipeBlock) {
             var state = client.world.getBlockState(hit.getBlockPos());

@@ -1,6 +1,10 @@
 package net.alkahest.block.entity;
 
 import net.alkahest.registry.ModBlockEntities;
+import net.alkahest.registry.ModDataComponents;
+import net.alkahest.essence.EssenceType;
+import net.alkahest.essence.ItemEssenceMap;
+import net.alkahest.recipe.CauldronEssenceRecipes;
 import net.alkahest.research.EarlyResearch;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
@@ -33,10 +37,16 @@ import net.minecraft.world.World;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.EnumMap;
 
 public class CauldronBlockEntity extends BlockEntity {
     private final DefaultedList<ItemStack> stacks = DefaultedList.ofSize(6, ItemStack.EMPTY);
     private static final String RETURNED_ITEM_TAG = "alkahest_cauldron_returned";
+    public static final int MAX_PER_TYPE = 256;
+    public static final float RESIDUE_STABILITY = 0.05f;
+    private final EnumMap<EssenceType, Integer> essences = new EnumMap<>(EssenceType.class);
+    public Map<EssenceType, Integer> essences() { return Map.copyOf(essences); }
     private boolean water;
     private boolean dirtyWater;
     private int evaporation;
@@ -58,6 +68,7 @@ public class CauldronBlockEntity extends BlockEntity {
     }
     private boolean insertOne(ItemStack stack) {
         if (stack.isEmpty()) return false;
+        if (!water) return false;
         for (int i = 0; i < stacks.size(); i++) {
             if (stacks.get(i).isEmpty()) {
                 stacks.set(i, stack.copyWithCount(1));
@@ -70,14 +81,29 @@ public class CauldronBlockEntity extends BlockEntity {
     }
     public void add(PlayerEntity player, Hand hand) {
         ItemStack held = player.getStackInHand(hand);
+        if (!water) { message(player, "message.alkahest.need_water"); return; }
         if (insertOne(held)) {
-            held.decrementUnlessCreative(1, player);
+            if (!player.isCreative()) held.decrement(1);
             player.sendMessage(Text.translatable("message.alkahest.cauldron_added", stacks.stream().filter(s -> !s.isEmpty()).count()), true);
         } else message(player, "message.alkahest.cauldron_slots_full");
     }
+    /** Adds a single mapped item atomically; the caller owns and consumes the original item. */
+    public boolean dissolveOne(ItemStack stack) {
+        if (world == null || world.isClient || !water || !heated() || stack.isEmpty()) return false;
+        var values = ItemEssenceMap.get(stack);
+        var additions = new EnumMap<EssenceType, Integer>(EssenceType.class);
+        for (var entry : ModItems.CRYSTALS.entrySet()) if (stack.isOf(entry.getValue())) additions.put(entry.getKey(), 1);
+        for (var value : values) {
+            if (value.type() == EssenceType.VACUUM || !ModItems.CRYSTALS.containsKey(value.type())) return false;
+            additions.merge(value.type(), value.amount(), Integer::sum);
+        }
+        if (additions.isEmpty()) return false;
+        if (additions.entrySet().stream().anyMatch(e -> essences.getOrDefault(e.getKey(), 0) + e.getValue() > MAX_PER_TYPE)) return false;
+        additions.forEach((type, amount) -> essences.merge(type, amount, Integer::sum));
+        evaporation = 0; syncEssences(); return true;
+    }
     private void collectDroppedIngredients(World world, BlockPos pos) {
-        if (!water || stacks.stream().noneMatch(ItemStack::isEmpty)) return;
-        // The item's centre must be above the opening, not merely touching the outer walls.
+        if (!water || !heated()) return;
         Box opening = new Box(pos.getX() + 0.1875, pos.getY() + 0.25, pos.getZ() + 0.1875,
                               pos.getX() + 0.8125, pos.getY() + 1.0, pos.getZ() + 0.8125);
         for (ItemEntity entity : world.getEntitiesByClass(ItemEntity.class, opening,
@@ -86,11 +112,70 @@ public class CauldronBlockEntity extends BlockEntity {
                 entity.getZ() < opening.minZ || entity.getZ() > opening.maxZ ||
                 entity.getY() < opening.minY || entity.getY() > opening.maxY) continue;
             ItemStack dropped = entity.getStack();
-            while (insertOne(dropped)) dropped.decrement(1);
-            if (dropped.isEmpty()) entity.discard();
-            else entity.setStack(dropped);
+            if (dropped.isOf(ModItems.CRYSTALLIZATION_POWDER)) {
+                if (crystallize() > 0) dropped.decrement(1);
+            } else {
+                while (dissolveOne(dropped)) dropped.decrement(1);
+            }
+            if (dropped.isEmpty()) entity.discard(); else entity.setStack(dropped);
         }
     }
+    /** Convert all possible residue 1:1 into separately typed 5% crystals; no bank mixtures. */
+    public int crystallize() {
+        if (world == null || world.isClient) return 0;
+        int produced = 0;
+        for (EssenceType type : EssenceType.values()) {
+            int remaining = essences.getOrDefault(type, 0);
+            Item crystal = ModItems.CRYSTALS.get(type);
+            if (crystal == null || remaining <= 0) continue;
+            while (remaining > 0) {
+                int count = Math.min(64, remaining);
+                ItemStack result = new ItemStack(crystal, count);
+                result.set(ModDataComponents.ESSENCE_STABILITY, RESIDUE_STABILITY);
+                ItemEntity output = new ItemEntity(world, pos.getX()+.5, pos.getY()+1.15, pos.getZ()+.5, result, 0, .18, 0);
+                output.addCommandTag(RETURNED_ITEM_TAG);
+                output.setToDefaultPickupDelay();
+                if (!world.spawnEntity(output)) break;
+                remaining -= count; produced += count;
+                if (remaining == 0) essences.remove(type); else essences.put(type, remaining);
+            }
+        }
+        if (produced > 0) {
+            syncEssences();
+            world.playSound(null, pos, net.minecraft.sound.SoundEvents.BLOCK_AMETHYST_BLOCK_CHIME,
+                net.minecraft.sound.SoundCategory.BLOCKS, .8f, 1.2f);
+        }
+        return produced;
+    }
+    public boolean crystallizeWith(PlayerEntity player, Hand hand) {
+        if (!water) { message(player, "message.alkahest.need_water"); return false; }
+        if (!heated()) { message(player, "message.alkahest.need_heat"); return false; }
+        int amount = crystallize();
+        if (amount == 0) { message(player, "message.alkahest.cauldron_no_residue"); return false; }
+        if (!player.isCreative()) player.getStackInHand(hand).decrement(1);
+        player.sendMessage(Text.translatable("message.alkahest.cauldron_crystallized", amount), true);
+        return true;
+    }
+    public void describeEssences(PlayerEntity player) {
+        if (essences.isEmpty()) { message(player, "message.alkahest.cauldron_no_residue"); return; }
+        player.sendMessage(Text.translatable("message.alkahest.cauldron_contents"), false);
+        for (EssenceType type : EssenceType.values()) {
+            int amount = essences.getOrDefault(type, 0);
+            if (amount > 0) player.sendMessage(Text.literal("◆ " + type.displayName() + ": " + amount)
+                .styled(style -> style.withColor(type.color())), false);
+        }
+    }
+    private void syncEssences() {
+        markDirty();
+        if (world != null && !world.isClient) {
+            BlockState state = world.getBlockState(pos);
+            world.updateListeners(pos, state, state, Block.NOTIFY_LISTENERS);
+        }
+    }
+    @Override public net.minecraft.network.packet.s2c.play.BlockEntityUpdateS2CPacket toUpdatePacket() {
+        return net.minecraft.network.packet.s2c.play.BlockEntityUpdateS2CPacket.create(this);
+    }
+    @Override public NbtCompound toInitialChunkDataNbt(RegistryWrapper.WrapperLookup registries) { return createNbt(registries); }
     public void empty(PlayerEntity player) {
         for (int i = 0; i < stacks.size(); i++) {
             ItemStack stack = stacks.get(i);
@@ -127,9 +212,16 @@ public class CauldronBlockEntity extends BlockEntity {
                 return true;
             }
         }
-        ItemStack output = recipe(inputs);
-        if (output.isEmpty()) { message(player, "message.alkahest.no_recipe"); return false; }
-        stacks.replaceAll(ignored -> ItemStack.EMPTY); setWater(false); evaporation = 0; markDirty();
+        if (inputs.isEmpty()) { describeEssences(player); return false; }
+        if (inputs.size() != 1) { message(player, "message.alkahest.cauldron_one_catalyst"); return false; }
+        var recipe = CauldronEssenceRecipes.all().stream().filter(r -> r.matches(inputs.getFirst(), essences)).findFirst().orElse(null);
+        if (recipe == null) { message(player, "message.alkahest.cauldron_no_essence_recipe"); return false; }
+        recipe.cost().forEach((type, amount) -> {
+            int rest = essences.get(type) - amount;
+            if (rest == 0) essences.remove(type); else essences.put(type, rest);
+        });
+        ItemStack output = new ItemStack(recipe.result(), recipe.count());
+        stacks.replaceAll(ignored -> ItemStack.EMPTY); setWater(false); evaporation = 0; syncEssences();
         if (player instanceof ServerPlayerEntity researcher) {
             if (output.isOf(ModItems.PURIFIED_WATER)) EarlyResearch.discoverReactive(researcher, world, pos);
             if (output.isOf(ModItems.HERBAL_PASTE)) EarlyResearch.discoverRaw(researcher, world, pos);
@@ -137,26 +229,6 @@ public class CauldronBlockEntity extends BlockEntity {
         if (!player.giveItemStack(output)) player.dropItem(output, false);
         message(player, "message.alkahest.cauldron_success");
         return true;
-    }
-    private static ItemStack recipe(List<ItemStack> inputs) {
-        List<Item> items = new ArrayList<>(); inputs.forEach(s -> items.add(s.getItem()));
-        if (items.size() == 2 && items.contains(Items.GLASS_BOTTLE) && (items.contains(Items.COAL) || items.contains(Items.CHARCOAL))) return new ItemStack(ModItems.PURIFIED_WATER);
-        if (items.size() == 3 && inputs.stream().filter(s -> s.isIn(FLOWERS)).count() == 2 && inputs.stream().filter(s -> s.contains(DataComponentTypes.FOOD) && !s.isIn(FLOWERS)).count() == 1) return new ItemStack(ModItems.HERBAL_PASTE, 2);
-        // Gunpowder is an additional early-game recipe; the specification's blaze-powder recipe remains valid.
-        if (items.size() == 2 && items.contains(Items.REDSTONE) && (items.contains(Items.BLAZE_POWDER) || items.contains(Items.GUNPOWDER))) return new ItemStack(ModItems.FIRE_DUST, 2);
-        if (items.size() == 2 && items.contains(Items.SPIDER_EYE) && items.contains(Items.CACTUS)) return new ItemStack(ModItems.CAUSTIC_SLIME, 2);
-        // Temporary pre-Matrix recipes: items are usable before their future research and multiblock.
-        if (items.size() == 3 && items.contains(Items.GLASS_BOTTLE) &&
-            items.contains(ModItems.CRYSTALS.get(net.alkahest.essence.EssenceType.IGNIS)) &&
-            items.contains(ModItems.CRYSTALS.get(net.alkahest.essence.EssenceType.AER))) return new ItemStack(ModItems.LIGHTNING_IN_A_BOTTLE);
-        if (items.size() == 3 && items.contains(Items.GLASS_BOTTLE) && items.contains(ModItems.CAUSTIC_SLIME) &&
-            items.contains(ModItems.CRYSTALS.get(net.alkahest.essence.EssenceType.MORTUUS))) return new ItemStack(ModItems.MIASMA);
-        if (items.size() == 3 && items.contains(ModItems.SALT) && items.contains(ModItems.CRYSTALS.get(net.alkahest.essence.EssenceType.ORDO)) && items.contains(Items.STRING)) return new ItemStack(ModItems.BINDING_SALT, 2);
-        // The original three-ingredient recipe stays available; the researched pair can also be repeated for a monocle.
-        if ((items.size() == 2 || (items.size() == 3 && items.contains(Items.GOLD_INGOT))) &&
-            items.contains(Items.GLASS_PANE) && items.contains(ModItems.CRYSTALS.get(net.alkahest.essence.EssenceType.ORDO)))
-            return new ItemStack(ModItems.ALCHEMISTS_MONOCLE);
-        return ItemStack.EMPTY;
     }
     private void setWater(boolean value) {
         water = value;
@@ -177,7 +249,7 @@ public class CauldronBlockEntity extends BlockEntity {
         // Old worlds saved the water only in NBT. Restore the visual state after loading.
         self.syncWaterState();
         self.collectDroppedIngredients(world, pos);
-        if (self.water && self.heated() && self.stacks.stream().allMatch(ItemStack::isEmpty)) {
+        if (self.water && self.heated() && self.essences.isEmpty() && self.stacks.stream().allMatch(ItemStack::isEmpty)) {
             if (++self.evaporation >= 400) {
                 self.setWater(false); self.evaporation = 0;
                 ItemScatterer.spawn(world, pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5, new ItemStack(ModItems.SALT, 2));
@@ -188,8 +260,14 @@ public class CauldronBlockEntity extends BlockEntity {
     private void message(PlayerEntity player, String key) { player.sendMessage(Text.translatable(key), true); }
     @Override protected void writeNbt(NbtCompound nbt, RegistryWrapper.WrapperLookup registries) {
         super.writeNbt(nbt, registries); Inventories.writeNbt(nbt, stacks, registries); nbt.putBoolean("Water", water); nbt.putBoolean("DirtyWater", dirtyWater); nbt.putInt("Evaporation", evaporation);
+        NbtCompound stored = new NbtCompound(); essences.forEach((type, amount) -> stored.putInt(type.asString(), amount)); nbt.put("Essences", stored);
     }
     @Override protected void readNbt(NbtCompound nbt, RegistryWrapper.WrapperLookup registries) {
-        super.readNbt(nbt, registries); Inventories.readNbt(nbt, stacks, registries); water = nbt.getBoolean("Water"); dirtyWater = water && nbt.getBoolean("DirtyWater"); evaporation = nbt.getInt("Evaporation");
+        super.readNbt(nbt, registries); stacks.clear(); Inventories.readNbt(nbt, stacks, registries); water = nbt.getBoolean("Water"); dirtyWater = water && nbt.getBoolean("DirtyWater"); evaporation = nbt.getInt("Evaporation");
+        essences.clear(); NbtCompound stored = nbt.getCompound("Essences");
+        for (EssenceType type : EssenceType.values()) {
+            int amount = stored.getInt(type.asString());
+            if (amount > 0 && type != EssenceType.VACUUM) essences.put(type, Math.min(amount, MAX_PER_TYPE));
+        }
     }
 }

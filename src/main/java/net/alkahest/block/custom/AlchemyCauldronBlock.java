@@ -65,6 +65,7 @@ public class AlchemyCauldronBlock extends Block implements BlockEntityProvider {
             if (stack.getItem() instanceof CrystalWandItem wand) {
                 if (cauldron.activate(player)) wand.consumeUse(player, hand);
             } else if (stack.isOf(Items.WATER_BUCKET)) cauldron.fill(player, hand);
+            else if (stack.isOf(net.alkahest.registry.ModItems.CRYSTALLIZATION_POWDER)) cauldron.crystallizeWith(player, hand);
             else cauldron.add(player, hand);
         }
         return ItemActionResult.success(world.isClient);
@@ -77,8 +78,10 @@ public class AlchemyCauldronBlock extends Block implements BlockEntityProvider {
         return ActionResult.success(world.isClient);
     }
     @Override protected void onStateReplaced(BlockState state, World world, BlockPos pos, BlockState newState, boolean moved) {
-        if (!state.isOf(newState.getBlock()) && world.getBlockEntity(pos) instanceof CauldronBlockEntity cauldron)
+        if (!state.isOf(newState.getBlock()) && world.getBlockEntity(pos) instanceof CauldronBlockEntity cauldron) {
+            if (!world.isClient) cauldron.crystallize();
             ItemScatterer.spawn(world, pos, cauldron.stacks());
+        }
         super.onStateReplaced(state, world, pos, newState, moved);
     }
 }

@@ -30,6 +30,7 @@ public final class ModItems {
     public static final Item LIGHTNING_IN_A_BOTTLE = item("lightning_in_a_bottle", new ReagentItem(new Item.Settings()));
     public static final Item MIASMA = item("miasma", new ReagentItem(new Item.Settings()));
     public static final Item BINDING_SALT = item("binding_salt", new Item(new Item.Settings()));
+    public static final Item CRYSTALLIZATION_POWDER = item("crystallization_powder", new Item(new Item.Settings()));
     public static final Item ASH = item("ash", new Item(new Item.Settings()));
     public static final Map<EssenceType, Item> CRYSTALS = crystals();
     public static final Map<EssenceType, Item> WANDS = wands();
@@ -47,7 +48,7 @@ public final class ModItems {
                 entries.add(ALCHEMICAL_JOURNAL);
                 entries.add(ALCHEMISTS_MONOCLE);
                 entries.add(SALT); entries.add(PURIFIED_WATER); entries.add(HERBAL_PASTE);
-                entries.add(FIRE_DUST); entries.add(CAUSTIC_SLIME); entries.add(NAPALM); entries.add(ACID_BOMB); entries.add(LIGHTNING_IN_A_BOTTLE); entries.add(MIASMA); entries.add(BINDING_SALT); entries.add(ASH);
+                entries.add(FIRE_DUST); entries.add(CAUSTIC_SLIME); entries.add(NAPALM); entries.add(ACID_BOMB); entries.add(LIGHTNING_IN_A_BOTTLE); entries.add(MIASMA); entries.add(BINDING_SALT); entries.add(CRYSTALLIZATION_POWDER); entries.add(ASH);
                 for (EssenceType type : EssenceType.values()) {
                     Item item = CRYSTALS.get(type);
                     if (item != null) entries.add(item);
