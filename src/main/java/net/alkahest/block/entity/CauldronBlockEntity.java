@@ -45,7 +45,6 @@ public class CauldronBlockEntity extends BlockEntity {
     public static final int MAX_PER_TYPE = 256;
     public static final float RESIDUE_STABILITY = 0.05f;
     private static final String RETURNED_ITEM_TAG = "alkahest_cauldron_returned";
-    private static final String REJECTED_HYPOTHESIS_TAG = "alkahest_cauldron_rejected";
 
     private final EnumMap<EssenceType, Integer> essences = new EnumMap<>(EssenceType.class);
     // Only used to safely eject items left in cauldrons saved in <= 0.1.24; no items are ever stored here anymore.
@@ -300,13 +299,6 @@ public class CauldronBlockEntity extends BlockEntity {
         return false;
     }
 
-    private ServerPlayerEntity findActor(ItemEntity entity) {
-        if (entity.getOwner() instanceof ServerPlayerEntity owner) return owner;
-        if (world == null) return null;
-        PlayerEntity near = world.getClosestPlayer(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, 5.0, false);
-        return near instanceof ServerPlayerEntity sp ? sp : null;
-    }
-
     private void spawnOutputAbove(ItemStack output) {
         if (world == null || world.isClient || output.isEmpty()) return;
         ItemEntity result = new ItemEntity(world, pos.getX() + 0.5, pos.getY() + 1.15, pos.getZ() + 0.5, output, 0, 0.2, 0);
@@ -315,6 +307,7 @@ public class CauldronBlockEntity extends BlockEntity {
         world.spawnEntity(result);
     }
 
+    /** Dropped items only dissolve into essences (or precipitate residue with crystallization dust); catalysts require right-click. */
     private void collectDroppedIngredients(World world, BlockPos pos) {
         if (!water || !isHeated()) return;
         Box opening = new Box(pos.getX() + 0.1875, pos.getY() + 0.25, pos.getZ() + 0.1875,
@@ -329,54 +322,10 @@ public class CauldronBlockEntity extends BlockEntity {
             if (dropped.isOf(ModItems.CRYSTALLIZATION_POWDER)) {
                 if (crystallize() > 0) dropped.decrement(1);
             } else {
-                ServerPlayerEntity researcher = findActor(entity);
                 boolean dissolvedAny = false;
-                while (!dropped.isEmpty() && water) {
-                    if (researcher != null && world instanceof ServerWorld serverWorld
-                        && !entity.getCommandTags().contains(REJECTED_HYPOTHESIS_TAG)) {
-                        var attempt = EarlyResearch.identify(EarlyResearch.flags(researcher), essences, dropped);
-                        if (attempt == EarlyResearch.Attempt.ALREADY_FAILED) {
-                            entity.addCommandTag(REJECTED_HYPOTHESIS_TAG);
-                            researcher.sendMessage(Text.translatable("message.alkahest.research.already_failed"), true);
-                            break;
-                        }
-                        if (attempt != EarlyResearch.Attempt.NONE) {
-                            if (!EarlyResearch.record(researcher, attempt, serverWorld, pos)) break;
-                            deductEssences(EarlyResearch.cost(attempt));
-                            dropped.decrement(1);
-                            if (attempt == EarlyResearch.Attempt.SAND) {
-                                dirtyWater = true;
-                                syncWaterState();
-                            }
-                            evaporation = 0;
-                            syncEssences();
-                            continue;
-                        }
-                    }
-
-                    var recipe = CauldronEssenceRecipes.all().stream()
-                        .filter(r -> r.matches(dropped, essences))
-                        .findFirst()
-                        .orElse(null);
-                    if (recipe != null) {
-                        deductEssences(recipe.cost());
-                        dropped.decrement(1);
-                        ItemStack output = new ItemStack(recipe.result(), recipe.count());
-                        setWater(false);
-                        evaporation = 0;
-                        syncEssences();
-                        playBrewFeedback();
-                        triggerBrewResearch(researcher, output);
-                        spawnOutputAbove(output);
-                        break;
-                    }
-
-                    if (dissolveOne(dropped)) {
-                        dropped.decrement(1);
-                        dissolvedAny = true;
-                    } else {
-                        break;
-                    }
+                while (!dropped.isEmpty() && dissolveOne(dropped)) {
+                    dropped.decrement(1);
+                    dissolvedAny = true;
                 }
                 if (dissolvedAny) playDissolveFeedback();
             }
