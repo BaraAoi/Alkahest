@@ -37,6 +37,7 @@ import org.joml.Matrix4f;
  */
 public final class MatrixCoreRenderer implements BlockEntityRenderer<MatrixCoreBlockEntity> {
     private static final Identifier METAL = Alkahest.id("textures/block/matrix_ring_metal.png");
+    private static final Identifier VOID = Alkahest.id("textures/block/matrix_void.png");
     private static final int SEGMENTS = 44;
     private static final int PYRAMIDS = 8;
     /** Rings are split into three radii with a gap between them, so no two rings can intersect. */
@@ -65,7 +66,7 @@ public final class MatrixCoreRenderer implements BlockEntityRenderer<MatrixCoreB
 
         matrices.push();
         matrices.translate(0.5f, 0.5f, 0.5f);
-        if (awake) lining(buffer, matrices.peek(), entity.getPos());
+        if (awake) lining(vertexConsumers.getBuffer(RenderLayer.getEntitySolid(VOID)), matrices.peek(), entity.getPos());
         if (!awake) {
             // Dormant: a tight coil hidden inside the core block. Nothing turns, nothing floats.
             for (int i = 0; i < RINGS.length; i++) {
@@ -149,10 +150,10 @@ public final class MatrixCoreRenderer implements BlockEntityRenderer<MatrixCoreB
                     quad[i][first] = corners[i][0] * half;
                     quad[i][second] = corners[i][1] * half;
                 }
-                vertexRgb(buffer, entry, quad[0], 0f, 1f, 96, 68, 132);
-                vertexRgb(buffer, entry, quad[1], 1f, 1f, 96, 68, 132);
-                vertexRgb(buffer, entry, quad[2], 1f, 0f, 84, 58, 118);
-                vertexRgb(buffer, entry, quad[3], 0f, 0f, 84, 58, 118);
+                vertexRgb(buffer, entry, quad[0], 0f, 1f, 255, 255, 255);
+                vertexRgb(buffer, entry, quad[1], 1f, 1f, 255, 255, 255);
+                vertexRgb(buffer, entry, quad[2], 1f, 0f, 224, 218, 236);
+                vertexRgb(buffer, entry, quad[3], 0f, 0f, 224, 218, 236);
             }
         }
     }

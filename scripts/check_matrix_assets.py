@@ -132,7 +132,8 @@ for lang in ('ru_ru', 'en_us'):
         check(key in strings, f'{lang} misses {key}')
     for key in ('screen.alkahest.matrix.index_from', 'screen.alkahest.matrix.index_cost',
                 'screen.alkahest.journal.recipes', 'message.alkahest.matrix_core_full',
-                'message.alkahest.matrix_core_holds', 'message.alkahest.matrix_price'):
+                'message.alkahest.matrix_core_holds', 'message.alkahest.matrix_price',
+                'message.alkahest.matrix_awake_hint'):
         check(key in strings, f'{lang} misses {key}')
 
 # --- client and tests ---------------------------------------------------------------------------
@@ -147,13 +148,21 @@ check('getEntitySolid' in renderer, 'the rings must read as solid metal, not gla
 journal = (CLIENT / 'client/gui/JournalScreen.java').read_text()
 check('tri(' not in renderer, 'a QUADS layer cannot take three-vertex triangles')
 check('lining(' in renderer, 'the hollow cube needs a dark lining so the world cannot be seen through it')
+check('matrix_void.png' in renderer, 'the lining must use the flat void sprite, not the metal plate')
+void = A / 'textures/block/matrix_void.png'
+check(void.exists(), 'the void lining needs its texture')
+width, height, _depth, _kind = png_size(void)
+check((width, height) == (16, 16), 'the void lining is a 16x16 sprite')
+core = (JAVA / 'block/entity/MatrixCoreBlockEntity.java').read_text()
+check('sendToAround' in core, 'the core must push its contents instead of leaving ghost items')
+pedestal = (JAVA / 'block/entity/MatrixPedestalBlockEntity.java').read_text()
+check('sendToAround' in pedestal, 'the pedestal must push its contents instead of leaving ghost items')
 for block in ('MatrixPillarBlock', 'AlchemicalBrickBlock', 'MatrixCoreBlock'):
     text = (JAVA / f'block/custom/{block}.java').read_text()
     check('interactNearby' in text, f'{block} must answer to the same click as the core')
 check('MatrixRecipe.all()' in journal, 'the journal must list the matrix syntheses')
 check('RECIPES_PAGE' in journal, 'the synthesis list needs its own page in the journal')
 check('recipe.cost()' in journal, 'the list must show what a synthesis costs in essence')
-core = (JAVA / 'block/entity/MatrixCoreBlockEntity.java').read_text()
 check('insertBase' in core and 'takeFromCore' in core, 'the core must accept and hand back items')
 check('launchFlight' in core and 'FLIGHT_TICKS' in core, 'the essence must fly as an animation')
 check('openHandledScreen' not in core, 'the matrix has no window any more')

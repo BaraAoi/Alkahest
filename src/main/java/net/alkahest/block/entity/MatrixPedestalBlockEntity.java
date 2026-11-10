@@ -7,7 +7,9 @@ import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.inventory.Inventories;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.network.packet.Packet;
 import net.minecraft.network.packet.s2c.play.BlockEntityUpdateS2CPacket;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.registry.RegistryWrapper;
 import net.minecraft.text.Text;
 import net.minecraft.util.collection.DefaultedList;
@@ -54,10 +56,20 @@ public class MatrixPedestalBlockEntity extends BlockEntity {
             held().getName(), held().getCount()), false);
     }
 
+    /**
+     * Pushes the pedestal to every nearby client. Updating the listeners is not enough on its own:
+     * taking the last item out changed nothing a listener reacts to, and the ghost of the item kept
+     * floating on clients that never received the new contents.
+     */
     private void sync() {
-        if (world == null) return;
+        if (!(world instanceof ServerWorld server)) return;
         BlockState state = world.getBlockState(pos);
-        world.updateListeners(pos, state, state, Block.NOTIFY_LISTENERS);
+        server.updateListeners(pos, state, state, Block.NOTIFY_ALL);
+        Packet<?> packet = toUpdatePacket();
+        if (packet != null) {
+            server.getPlayerManager().sendToAround(null, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
+                64.0, server.getRegistryKey(), packet);
+        }
     }
 
     @Override protected void writeNbt(NbtCompound nbt, RegistryWrapper.WrapperLookup registries) {

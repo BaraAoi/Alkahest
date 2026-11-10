@@ -266,6 +266,16 @@ def pedestal_top(lit):
     return rows
 
 
+def void_membrane():
+    """The lining of the hollow cube: flat soot-dark violet, only a whisper of grain so it never bands."""
+    rows = blank()
+    for y in range(SIZE):
+        for x in range(SIZE):
+            grain = (x * 5 + y * 11) % 3
+            rows[y][x] = (26 + grain, 18 + grain, 38 + grain, 255)
+    return rows
+
+
 def ring_metal():
     """A forged brass plate: warm metal bands, rivets and dark seams along the circumference."""
     rows = []
@@ -304,6 +314,7 @@ write_png(BLOCK / 'matrix_pedestal_side.png', pedestal_side(False))
 write_png(BLOCK / 'matrix_pedestal_side_lit.png', pedestal_side(True))
 write_png(BLOCK / 'matrix_pedestal_top.png', pedestal_top(False))
 write_png(BLOCK / 'matrix_ring_metal.png', ring_metal())
+write_png(BLOCK / 'matrix_void.png', void_membrane())
 
 
 # --- models ----------------------------------------------------------------------------------

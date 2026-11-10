@@ -17,6 +17,7 @@ import net.minecraft.inventory.Inventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtOps;
+import net.minecraft.network.packet.Packet;
 import net.minecraft.network.packet.s2c.play.BlockEntityUpdateS2CPacket;
 import net.minecraft.particle.DustParticleEffect;
 import net.minecraft.registry.RegistryWrapper;
@@ -195,6 +196,7 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
         self.consumeItems(recipe);
         self.progress = 0;
         self.markDirty();
+        self.sync();
         celebrate(world, pos);
     }
 
@@ -433,6 +435,7 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
                 pos.getX() + 0.5, pos.getY() + 1.05, pos.getZ() + 0.5, 12, 0.2, 0.2, 0.2, 0.02);
         }
         player.sendMessage(Text.translatable("message.alkahest.matrix_core_holds", stacks.get(BASE).getName()), true);
+        if (!awake) player.sendMessage(Text.translatable("message.alkahest.matrix_awake_hint"), false);
         return true;
     }
 
@@ -459,6 +462,9 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
             return true;
         }
         player.sendMessage(statusText(), true);
+        if (status() == STATUS_ASLEEP) {
+            player.sendMessage(Text.translatable("message.alkahest.matrix_awake_hint"), false);
+        }
         MatrixRecipe recipe = recipe();
         if (recipe != null && !recipe.cost().isEmpty()) {
             StringBuilder price = new StringBuilder();
@@ -475,10 +481,16 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
         if (!player.getInventory().insertStack(stack)) player.dropItem(stack, false);
     }
 
+    /** Pushes the core contents to the clients, so no ghost item is left floating in the altar. */
     private void sync() {
-        if (world == null) return;
+        if (!(world instanceof ServerWorld server)) return;
         BlockState state = world.getBlockState(pos);
-        world.updateListeners(pos, state, state, Block.NOTIFY_LISTENERS);
+        server.updateListeners(pos, state, state, Block.NOTIFY_ALL);
+        Packet<?> packet = toUpdatePacket();
+        if (packet != null) {
+            server.getPlayerManager().sendToAround(null, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
+                64.0, server.getRegistryKey(), packet);
+        }
     }
 
     private static void celebrate(World world, BlockPos pos) {

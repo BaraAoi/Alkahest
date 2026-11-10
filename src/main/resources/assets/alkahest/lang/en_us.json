@@ -340,6 +340,7 @@
   "screen.alkahest.matrix.unformed": "Cube is not assembled",
   "screen.alkahest.matrix.no_recipe": "No synthesis for this base",
   "screen.alkahest.journal.recipes": "Matrix syntheses",
+  "message.alkahest.matrix_awake_hint": "The Matrix is asleep. Strike any of its blocks with a crystal wand to wake it.",
   "message.alkahest.matrix_core_full": "The core already holds %s ×%s",
   "message.alkahest.matrix_core_holds": "%s now floats inside the Matrix",
   "message.alkahest.matrix_price": "The synthesis needs: %s",
