@@ -8,7 +8,8 @@
     "fabric-gametest": [
       "net.alkahest.test.ReagentGameTests",
       "net.alkahest.test.CauldronGameTests",
-      "net.alkahest.test.ResearchGameTests"
+      "net.alkahest.test.ResearchGameTests",
+      "net.alkahest.test.DistilleryGameTests"
     ]
   },
   "depends": {
