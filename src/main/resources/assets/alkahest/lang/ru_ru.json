@@ -284,11 +284,12 @@
   "message.alkahest.stabilizer_activated": "Стабилизатор включён: он разделяет смеси по банкам и даёт стабильность 90%.",
   "message.alkahest.stabilizer_deactivated": "Стабилизатор выключен.",
   "message.alkahest.stabilizer_incomplete": "Башня не собрана: под ядром нужен приёмник, над ядром — навершие.",
-  "message.alkahest.stabilizer_occupied": "В приёмнике уже стоит банка.",
   "message.alkahest.stabilizer_needs_jar": "Нужна банка с эссенциями.",
-  "message.alkahest.stabilizer_inserted": "Банка установлена. ПКМ пустой рукой вернёт её.",
-  "message.alkahest.stabilizer_empty": "Приёмник пуст.",
-  "message.alkahest.stabilizer_returned": "Банка возвращена.",
-  "message.alkahest.stabilizer_instruction": "ПКМ банкой вставит её, пустая рука вернёт банку, Амулет включит башню.",
-  "message.alkahest.stabilizer_progress": "Во входной банке: %s ед. · прогресс %s%%"
+  "message.alkahest.stabilizer_instruction": "ПКМ банкой с эссенцией переливает её в приёмник; пустая рука показывает содержимое. Банка остаётся у вас в руке.",
+  "message.alkahest.stabilizer_needs_essence": "Нужна банка с эссенциями — пустую переливать нечего.",
+  "message.alkahest.stabilizer_invalid": "В приёмнике неподходящие данные; операция отменена.",
+  "message.alkahest.stabilizer_full": "Приёмник полон: 100 единиц.",
+  "message.alkahest.stabilizer_poured": "Перелито %s ед. Банка осталась у вас в руке пустой.",
+  "message.alkahest.stabilizer_pour_full": "Приёмник принял %s ед.; %s ед. осталось в вашей банке.",
+  "message.alkahest.stabilizer_contents": "В приёмнике: %s / %s ед. · прогресс %s%%"
 }

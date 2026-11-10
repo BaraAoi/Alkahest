@@ -21,6 +21,7 @@ import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.Hand;
+import net.minecraft.util.ItemScatterer;
 import net.minecraft.util.collection.DefaultedList;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
@@ -29,32 +30,40 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Early, working Stabilizer slice: it takes one jar (legacy mixture or single type),
- * sorts its essences one type at a time into nearby jars with free room and rewrites
- * their stability to 90%. Pipes are not required for this first version.
+ * Early, working Stabilizer slice. Essence is poured straight into the receiver as a liquid,
+ * the player's jar stays in hand (emptied, or with the part that did not fit). The activated
+ * tower then sorts the tank one essence type at a time into nearby jars at 90% stability.
+ * The tank is stored in the same NBT slot as 0.1.30, so old saves keep their contents.
  */
 public class StabilizerReceiverBlockEntity extends BlockEntity {
-    /** Spec: 200 ticks (10 seconds) per essence type in the input jar. */
+    /** Spec: 200 ticks (10 seconds) per essence type in the receiver. */
     public static final int TICKS_PER_TYPE = 200;
     /** Search area for empty/matching jars; keeps the mechanism simple and predictable. */
     public static final int RADIUS = 4;
+    public static final int CAPACITY = JarItem.CAPACITY;
     public static final float OUTPUT_STABILITY = 0.90f;
     private static final float LOSS_THRESHOLD = 0.20f;
     private static final float LOSS_CHANCE = 0.15f;
 
-    private final DefaultedList<ItemStack> slots = DefaultedList.ofSize(1, ItemStack.EMPTY);
+    /** Invisible container item: the single source of truth for the liquid, incl. NBT layout. */
+    private final DefaultedList<ItemStack> storage = DefaultedList.ofSize(1, ItemStack.EMPTY);
     private int progress;
 
     public StabilizerReceiverBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.STABILIZER_RECEIVER, pos, state);
     }
 
-    public DefaultedList<ItemStack> stacks() { return slots; }
-    public int progress() { return progress; }
-    public ItemStack stored() { return slots.get(0); }
+    private ItemStack tank() {
+        if (storage.get(0).isEmpty()) storage.set(0, new ItemStack(ModBlocks.JAR));
+        return storage.get(0);
+    }
 
-    public void setStored(ItemStack stack) {
-        slots.set(0, stack);
+    public JarContentsComponent contents() { return JarItem.contents(tank()); }
+    public int progress() { return progress; }
+
+    /** Used by tests and by the break handler; keeps the liquid exactly as it is. */
+    public void setContents(JarContentsComponent contents) {
+        JarItem.set(tank(), contents);
         progress = 0;
         changed();
     }
@@ -70,38 +79,70 @@ public class StabilizerReceiverBlockEntity extends BlockEntity {
         return world.getBlockEntity(pos.up()) instanceof StabilizerCoreBlockEntity core && core.isActivated();
     }
 
-    public JarContentsComponent inputContents() {
-        return slots.get(0).isEmpty() ? JarContentsComponent.EMPTY : JarItem.contents(slots.get(0));
-    }
-
-    public void insertJar(PlayerEntity player, Hand hand) {
+    /** Pour the held jar into the receiver. The jar item itself stays in the player's hand. */
+    public void pourJar(PlayerEntity player, Hand hand) {
         ItemStack held = player.getStackInHand(hand);
         if (!(held.getItem() instanceof JarItem)) return;
-        if (!slots.get(0).isEmpty()) { message(player, "message.alkahest.stabilizer_occupied"); return; }
-        JarContentsComponent contents = JarItem.contents(held);
-        if (!JarItem.allowed(contents) || contents.total() == 0) {
-            message(player, "message.alkahest.stabilizer_needs_jar");
+        JarContentsComponent incoming = JarItem.contents(held);
+        if (!JarItem.allowed(incoming) || incoming.total() == 0) {
+            message(player, "message.alkahest.stabilizer_needs_essence");
             return;
         }
-        slots.set(0, held.copyWithCount(1));
-        player.setStackInHand(hand, ItemStack.EMPTY);
-        progress = 0;
-        changed();
-        message(player, "message.alkahest.stabilizer_inserted");
+        JarContentsComponent current = contents();
+        if (!JarItem.allowed(current)) {
+            message(player, "message.alkahest.stabilizer_invalid");
+            return;
+        }
+        int free = CAPACITY - current.total();
+        if (free <= 0) {
+            message(player, "message.alkahest.stabilizer_full");
+            return;
+        }
+        List<EssenceStack> accepted = new ArrayList<>();
+        List<EssenceStack> remainder = new ArrayList<>();
+        int remaining = free;
+        for (EssenceStack stack : incoming.contents()) {
+            int take = Math.min(remaining, stack.amount());
+            if (take > 0) accepted.add(new EssenceStack(stack.type(), take, stack.stability()));
+            remaining -= take;
+            if (stack.amount() - take > 0)
+                remainder.add(new EssenceStack(stack.type(), stack.amount() - take, stack.stability()));
+        }
+        if (accepted.isEmpty()) { message(player, "message.alkahest.stabilizer_full"); return; }
+        JarContentsComponent addition = new JarContentsComponent(accepted);
+        setContents(current.merge(addition, CAPACITY));
+        // The jar is not consumed: it stays in hand, now empty or holding what did not fit.
+        JarItem.set(held, new JarContentsComponent(remainder));
+        if (remainder.isEmpty()) message(player, "message.alkahest.stabilizer_poured", addition.total());
+        else message(player, "message.alkahest.stabilizer_pour_full", addition.total(), new JarContentsComponent(remainder).total());
     }
 
-    public void takeJar(PlayerEntity player) {
-        if (slots.get(0).isEmpty()) { message(player, "message.alkahest.stabilizer_empty"); return; }
-        ItemStack returned = slots.get(0);
-        slots.set(0, ItemStack.EMPTY);
+    public void describe(PlayerEntity player) {
+        JarContentsComponent contents = contents();
+        player.sendMessage(Text.translatable("message.alkahest.stabilizer_status",
+            Text.translatable(structureFormed() ? "message.alkahest.stabilizer_formed" : "message.alkahest.stabilizer_not_formed"),
+            Text.translatable(active() ? "message.alkahest.stabilizer_running" : "message.alkahest.stabilizer_idle")), false);
+        player.sendMessage(Text.translatable("message.alkahest.stabilizer_contents",
+            contents.total(), CAPACITY, progress * 100 / TICKS_PER_TYPE), false);
+        for (EssenceStack stack : contents.contents())
+            player.sendMessage(Text.literal("◆ " + stack.type().displayName() + ": " + stack.amount()
+                + " · " + Math.round(stack.stability() * 100) + "%").styled(style -> style.withColor(stack.type().color())), false);
+    }
+
+    /** Drops whatever is left in the receiver as a filled jar when the block is broken. */
+    public void dropContents(World world, BlockPos pos) {
+        JarContentsComponent contents = contents();
+        storage.set(0, ItemStack.EMPTY);
         progress = 0;
-        if (!player.giveItemStack(returned)) player.dropItem(returned, false);
-        changed();
-        message(player, "message.alkahest.stabilizer_returned");
+        markDirty();
+        if (contents.total() == 0) return;
+        ItemStack jar = new ItemStack(ModBlocks.JAR);
+        JarItem.set(jar, contents);
+        ItemScatterer.spawn(world, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, jar);
     }
 
     private EssenceType currentType() {
-        for (EssenceStack stack : inputContents().contents()) {
+        for (EssenceStack stack : contents().contents()) {
             if (stack.type() != EssenceType.VACUUM && stack.amount() > 0) return stack.type();
         }
         return null;
@@ -131,7 +172,7 @@ public class StabilizerReceiverBlockEntity extends BlockEntity {
         if (type == null) return false;
         JarBlockEntity target = findTarget(type);
         if (target == null) return false;
-        JarContentsComponent contents = inputContents();
+        JarContentsComponent contents = contents();
         EssenceStack source = null;
         for (EssenceStack stack : contents.contents()) if (stack.type() == type) { source = stack; break; }
         if (source == null) return false;
@@ -157,8 +198,7 @@ public class StabilizerReceiverBlockEntity extends BlockEntity {
                 new JarContentsComponent(List.of(new EssenceStack(type, delivered, OUTPUT_STABILITY))),
                 JarItem.CAPACITY));
         }
-        JarItem.set(slots.get(0), new JarContentsComponent(remainder));
-        markDirty();
+        setContents(new JarContentsComponent(remainder));
 
         if (world instanceof ServerWorld serverWorld) {
             serverWorld.spawnParticles(ParticleTypes.ENCHANT,
@@ -171,7 +211,7 @@ public class StabilizerReceiverBlockEntity extends BlockEntity {
 
     public static void tick(World world, BlockPos pos, StabilizerReceiverBlockEntity be) {
         if (world.isClient) return;
-        if (!be.active() || be.inputContents().total() == 0) {
+        if (!be.active() || be.contents().total() == 0) {
             if (be.progress != 0) { be.progress = 0; be.markDirty(); }
             return;
         }
@@ -186,30 +226,30 @@ public class StabilizerReceiverBlockEntity extends BlockEntity {
         be.markDirty();
     }
 
-    private void message(PlayerEntity player, String key) { player.sendMessage(Text.translatable(key), true); }
+    private void message(PlayerEntity player, String key, Object... args) {
+        player.sendMessage(Text.translatable(key, args), true);
+    }
 
     private void changed() {
         markDirty();
         if (world == null || world.isClient) return;
         BlockState state = world.getBlockState(pos);
         if (!(state.getBlock() instanceof StabilizerReceiverBlock)) return;
-        boolean occupied = !slots.get(0).isEmpty();
+        boolean occupied = contents().total() > 0;
         if (state.get(StabilizerReceiverBlock.OCCUPIED) != occupied)
             world.setBlockState(pos, state.with(StabilizerReceiverBlock.OCCUPIED, occupied), Block.NOTIFY_ALL);
-        else {
-            world.updateListeners(pos, state, state, Block.NOTIFY_LISTENERS);
-        }
+        else world.updateListeners(pos, state, state, Block.NOTIFY_LISTENERS);
     }
 
     @Override protected void writeNbt(NbtCompound nbt, RegistryWrapper.WrapperLookup registries) {
         super.writeNbt(nbt, registries);
-        Inventories.writeNbt(nbt, slots, registries);
+        Inventories.writeNbt(nbt, storage, registries);
         nbt.putInt("Progress", progress);
     }
 
     @Override protected void readNbt(NbtCompound nbt, RegistryWrapper.WrapperLookup registries) {
         super.readNbt(nbt, registries);
-        Inventories.readNbt(nbt, slots, registries);
+        Inventories.readNbt(nbt, storage, registries);
         progress = nbt.getInt("Progress");
     }
 }

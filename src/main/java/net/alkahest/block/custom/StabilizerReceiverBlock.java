@@ -22,10 +22,10 @@ import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.World;
 
-/** Lower part of the 1x3x1 Stabilizer tower; holds the jar that is being sorted. */
+/** Lower part of the 1x3x1 Stabilizer tower; holds the essence liquid being sorted. */
 public class StabilizerReceiverBlock extends Block implements BlockEntityProvider {
     public static final BooleanProperty OCCUPIED = BooleanProperty.of("occupied");
-    private static final VoxelShape SHAPE = Block.createCuboidShape(2, 0, 2, 14, 12, 14);
+    private static final VoxelShape SHAPE = Block.createCuboidShape(2, 0, 2, 14, 16, 14);
 
     public StabilizerReceiverBlock(Settings settings) {
         super(settings);
@@ -43,24 +43,27 @@ public class StabilizerReceiverBlock extends Block implements BlockEntityProvide
     }
 
     @Override protected ItemActionResult onUseWithItem(ItemStack stack, BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
+        // An empty hand must fall through to onUse so the player can read the receiver status.
+        if (stack.isEmpty()) return ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
         if (!(stack.getItem() instanceof net.alkahest.item.custom.JarItem)) {
             if (!world.isClient) player.sendMessage(net.minecraft.text.Text.translatable("message.alkahest.stabilizer_instruction"), true);
             return ItemActionResult.success(world.isClient);
         }
         if (!world.isClient && world.getBlockEntity(pos) instanceof StabilizerReceiverBlockEntity receiver)
-            receiver.insertJar(player, hand);
+            receiver.pourJar(player, hand);
         return ItemActionResult.success(world.isClient);
     }
 
     @Override protected ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, BlockHitResult hit) {
         if (!world.isClient && world.getBlockEntity(pos) instanceof StabilizerReceiverBlockEntity receiver)
-            receiver.takeJar(player);
+            receiver.describe(player);
         return ActionResult.success(world.isClient);
     }
 
     @Override protected void onStateReplaced(BlockState state, World world, BlockPos pos, BlockState newState, boolean moved) {
-        if (!state.isOf(newState.getBlock()) && world.getBlockEntity(pos) instanceof StabilizerReceiverBlockEntity receiver)
-            net.minecraft.util.ItemScatterer.spawn(world, pos, receiver.stacks());
+        if (!state.isOf(newState.getBlock()) && !moved
+            && world.getBlockEntity(pos) instanceof StabilizerReceiverBlockEntity receiver)
+            receiver.dropContents(world, pos);
         super.onStateReplaced(state, world, pos, newState, moved);
     }
 }

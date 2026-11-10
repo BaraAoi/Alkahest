@@ -59,15 +59,14 @@ public class StabilizerCoreBlockEntity extends BlockEntity {
     }
 
     public void describe(PlayerEntity player) {
-        boolean formed = structureFormed();
-        player.sendMessage(Text.translatable("message.alkahest.stabilizer_status",
-            Text.translatable(formed ? "message.alkahest.stabilizer_formed" : "message.alkahest.stabilizer_not_formed"),
-            Text.translatable(activated ? "message.alkahest.stabilizer_running" : "message.alkahest.stabilizer_idle")), false);
-        if (formed && world != null && world.getBlockEntity(pos.down()) instanceof StabilizerReceiverBlockEntity receiver) {
-            player.sendMessage(Text.translatable("message.alkahest.stabilizer_progress",
-                receiver.inputContents().total(),
-                receiver.progress() * 100 / StabilizerReceiverBlockEntity.TICKS_PER_TYPE), false);
+        if (structureFormed() && world != null
+            && world.getBlockEntity(pos.down()) instanceof StabilizerReceiverBlockEntity receiver) {
+            receiver.describe(player);
+            return;
         }
+        player.sendMessage(Text.translatable("message.alkahest.stabilizer_status",
+            Text.translatable("message.alkahest.stabilizer_not_formed"),
+            Text.translatable(activated ? "message.alkahest.stabilizer_running" : "message.alkahest.stabilizer_idle")), false);
     }
 
     /** Recomputes FORMED/ACTIVE; an unfinished tower switches itself off. */

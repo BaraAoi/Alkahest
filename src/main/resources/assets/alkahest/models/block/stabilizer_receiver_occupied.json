@@ -2,7 +2,7 @@
   "textures": {
     "metal": "alkahest:block/distillery_copper",
     "glass": "minecraft:block/glass",
-    "core": "minecraft:block/gold_block",
+    "essence": "alkahest:block/jar_essence",
     "particle": "alkahest:block/distillery_copper"
   },
   "elements": [
@@ -14,7 +14,7 @@
       ],
       "to": [
         14,
-        3,
+        4,
         14
       ],
       "faces": {
@@ -41,12 +41,12 @@
     {
       "from": [
         4,
-        3,
+        4,
         4
       ],
       "to": [
         12,
-        10,
+        12,
         12
       ],
       "faces": {
@@ -78,39 +78,39 @@
       ],
       "to": [
         11,
-        9,
+        11,
         11
       ],
       "faces": {
         "north": {
-          "texture": "#core"
+          "texture": "#essence"
         },
         "south": {
-          "texture": "#core"
+          "texture": "#essence"
         },
         "east": {
-          "texture": "#core"
+          "texture": "#essence"
         },
         "west": {
-          "texture": "#core"
+          "texture": "#essence"
         },
         "up": {
-          "texture": "#core"
+          "texture": "#essence"
         },
         "down": {
-          "texture": "#core"
+          "texture": "#essence"
         }
       }
     },
     {
       "from": [
         3,
-        10,
+        12,
         3
       ],
       "to": [
         13,
-        12,
+        16,
         13
       ],
       "faces": {

@@ -284,11 +284,12 @@
   "message.alkahest.stabilizer_activated": "Stabilizer is on: it sorts mixtures into jars at 90% stability.",
   "message.alkahest.stabilizer_deactivated": "Stabilizer is off.",
   "message.alkahest.stabilizer_incomplete": "The tower is incomplete: receiver under the core, crest above it.",
-  "message.alkahest.stabilizer_occupied": "The receiver already holds a jar.",
   "message.alkahest.stabilizer_needs_jar": "A jar with essences is required.",
-  "message.alkahest.stabilizer_inserted": "Jar inserted. Use an empty hand to take it back.",
-  "message.alkahest.stabilizer_empty": "The receiver is empty.",
-  "message.alkahest.stabilizer_returned": "Jar returned.",
-  "message.alkahest.stabilizer_instruction": "Use a jar to insert it, an empty hand to take it back, the amulet to power the tower.",
-  "message.alkahest.stabilizer_progress": "Input jar: %s units · progress %s%%"
+  "message.alkahest.stabilizer_instruction": "Use a filled jar to pour essence into the receiver; an empty hand shows the contents. The jar stays in your hand.",
+  "message.alkahest.stabilizer_needs_essence": "A jar with essences is required; there is nothing to pour.",
+  "message.alkahest.stabilizer_invalid": "The receiver holds invalid data; the operation was cancelled.",
+  "message.alkahest.stabilizer_full": "The receiver is full: 100 units.",
+  "message.alkahest.stabilizer_poured": "Poured %s units. Your jar stayed in hand, now empty.",
+  "message.alkahest.stabilizer_pour_full": "The receiver took %s units; %s units remain in your jar.",
+  "message.alkahest.stabilizer_contents": "Receiver: %s / %s units · progress %s%%"
 }
