@@ -23,6 +23,7 @@ public class StabilizerGameTests implements FabricGameTest {
         c.setBlockState(2, 3, 2, ModBlocks.STABILIZER_CORE);
         c.setBlockState(2, 4, 2, ModBlocks.STABILIZER_CREST);
         c.setBlockState(5, 2, 2, ModBlocks.JAR);
+        c.setBlockState(5, 2, 4, ModBlocks.JAR);
     }
 
     private StabilizerReceiverBlockEntity receiver(TestContext c) {
@@ -35,6 +36,10 @@ public class StabilizerGameTests implements FabricGameTest {
 
     private JarBlockEntity target(TestContext c) {
         return (JarBlockEntity) c.getWorld().getBlockEntity(c.getAbsolutePos(new BlockPos(5, 2, 2)));
+    }
+
+    private JarBlockEntity secondTarget(TestContext c) {
+        return (JarBlockEntity) c.getWorld().getBlockEntity(c.getAbsolutePos(new BlockPos(5, 2, 4)));
     }
 
     private void tick(TestContext c, int times) {
@@ -76,7 +81,13 @@ public class StabilizerGameTests implements FabricGameTest {
         c.assertTrue(receiver.inputContents().total() == 3, "The other essence must stay in the input jar");
 
         tick(c, StabilizerReceiverBlockEntity.TICKS_PER_TYPE);
-        c.assertTrue(target.contents().total() == 8, "Both types must end up in the same jar");
+        // One type per jar: the second type must go to the other empty jar.
+        JarBlockEntity second = secondTarget(c);
+        c.assertTrue(second.contents().total() == 3, "Second type must go into the other empty jar");
+        c.assertTrue(second.contents().contents().getFirst().type() == AQUA, "Only Aqua may be sorted second");
+        c.assertTrue(Math.abs(second.contents().contents().getFirst().stability() - 0.90f) < 0.001f,
+            "Second jar must also receive 90% stability");
+        c.assertTrue(target.contents().total() == 5, "The first jar must keep its single type");
         c.assertTrue(receiver.inputContents().total() == 0, "Input jar must be empty at the end");
         c.assertTrue(!receiver.stored().isEmpty(), "The jar item itself must remain in the receiver");
         c.complete();
