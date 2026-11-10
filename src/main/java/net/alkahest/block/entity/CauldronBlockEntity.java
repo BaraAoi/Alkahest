@@ -72,7 +72,7 @@ public class CauldronBlockEntity extends BlockEntity {
         ItemStack held = player.getStackInHand(hand);
         if (insertOne(held)) {
             held.decrementUnlessCreative(1, player);
-            message(player, "message.alkahest.cauldron_added");
+            player.sendMessage(Text.translatable("message.alkahest.cauldron_added", stacks.stream().filter(s -> !s.isEmpty()).count()), true);
         } else message(player, "message.alkahest.cauldron_slots_full");
     }
     private void collectDroppedIngredients(World world, BlockPos pos) {
@@ -146,7 +146,10 @@ public class CauldronBlockEntity extends BlockEntity {
         if (items.size() == 2 && items.contains(Items.REDSTONE) && (items.contains(Items.BLAZE_POWDER) || items.contains(Items.GUNPOWDER))) return new ItemStack(ModItems.FIRE_DUST, 2);
         if (items.size() == 2 && items.contains(Items.SPIDER_EYE) && items.contains(Items.CACTUS)) return new ItemStack(ModItems.CAUSTIC_SLIME, 2);
         if (items.size() == 3 && items.contains(ModItems.SALT) && items.contains(ModItems.CRYSTALS.get(net.alkahest.essence.EssenceType.ORDO)) && items.contains(Items.STRING)) return new ItemStack(ModItems.BINDING_SALT, 2);
-        if (items.size() == 3 && items.contains(Items.GLASS_PANE) && items.contains(Items.GOLD_INGOT) && items.contains(ModItems.CRYSTALS.get(net.alkahest.essence.EssenceType.ORDO))) return new ItemStack(ModItems.ALCHEMISTS_MONOCLE);
+        // The original three-ingredient recipe stays available; the researched pair can also be repeated for a monocle.
+        if ((items.size() == 2 || (items.size() == 3 && items.contains(Items.GOLD_INGOT))) &&
+            items.contains(Items.GLASS_PANE) && items.contains(ModItems.CRYSTALS.get(net.alkahest.essence.EssenceType.ORDO)))
+            return new ItemStack(ModItems.ALCHEMISTS_MONOCLE);
         return ItemStack.EMPTY;
     }
     private void setWater(boolean value) {

@@ -179,9 +179,14 @@ public class ResearchGameTests implements FabricGameTest {
         context.assertTrue((EarlyResearch.flags(player) & expected) == expected, "Old and new research should survive save and reload");
         cauldron.stacks().set(0, new ItemStack(ModItems.CRYSTALS.get(EssenceType.ORDO)));
         cauldron.stacks().set(1, new ItemStack(Items.GLASS_PANE));
-        cauldron.stacks().set(2, new ItemStack(Items.GOLD_INGOT));
-        context.assertTrue(cauldron.activate(player), "Normal monocle recipe must still work");
+        context.assertTrue(cauldron.activate(player), "Repeating the sight hypothesis should make a monocle");
         context.assertTrue(player.getInventory().contains(new ItemStack(ModItems.ALCHEMISTS_MONOCLE)), "Monocle must be delivered");
+        player.setStackInHand(Hand.MAIN_HAND, new ItemStack(Items.WATER_BUCKET));
+        cauldron.fill(player, Hand.MAIN_HAND);
+        cauldron.stacks().set(0, new ItemStack(ModItems.CRYSTALS.get(EssenceType.ORDO)));
+        cauldron.stacks().set(1, new ItemStack(Items.GLASS_PANE));
+        cauldron.stacks().set(2, new ItemStack(Items.GOLD_INGOT));
+        context.assertTrue(cauldron.activate(player), "Original three-item monocle recipe must still work");
         context.complete();
     }
 }

@@ -1,6 +1,7 @@
 package net.alkahest.test;
 
 import net.alkahest.block.entity.CauldronBlockEntity;
+import net.alkahest.essence.EssenceType;
 import net.alkahest.registry.ModBlocks;
 import net.alkahest.block.custom.AlchemyCauldronBlock;
 import net.alkahest.registry.ModItems;
@@ -123,6 +124,35 @@ public class CauldronGameTests implements FabricGameTest {
             if (stack.isOf(ModItems.FIRE_DUST)) count += stack.getCount();
         }
         context.assertTrue(count == 4, "Both recipes should yield two each: " + count);
+        context.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void monocleCanBeCraftedWithoutResearch(TestContext context) {
+        CauldronBlockEntity cauldron = cauldron(context);
+        PlayerEntity player = fill(context, cauldron);
+        player.getInventory().selectedSlot = 8; // Keep test inputs away from the first free output slot.
+        player.setStackInHand(Hand.MAIN_HAND, new ItemStack(Items.GLASS_PANE, 2));
+        cauldron.add(player, Hand.MAIN_HAND);
+        context.assertTrue(player.getStackInHand(Hand.MAIN_HAND).getCount() == 1, "One pane must be inserted");
+        ItemStack named = new ItemStack(ModItems.CRYSTALS.get(EssenceType.ORDO));
+        named.set(DataComponentTypes.CUSTOM_NAME, Text.literal("Ordo sample"));
+        player.setStackInHand(Hand.MAIN_HAND, named);
+        cauldron.add(player, Hand.MAIN_HAND);
+        context.assertTrue(cauldron.activate(player), "Pane and Ordo must produce a monocle before research");
+        context.assertTrue(player.getInventory().contains(new ItemStack(ModItems.ALCHEMISTS_MONOCLE)), "Monocle reaches inventory");
+        context.assertTrue(cauldron.stacks().stream().allMatch(ItemStack::isEmpty), "Ingredients consumed");
+        BlockPos pos = context.getAbsolutePos(new BlockPos(3, 2, 3));
+        context.assertFalse(context.getWorld().getBlockState(pos).get(AlchemyCauldronBlock.FILLED), "Water consumed");
+        player.setStackInHand(Hand.MAIN_HAND, new ItemStack(Items.WATER_BUCKET));
+        cauldron.fill(player, Hand.MAIN_HAND);
+        player.setStackInHand(Hand.MAIN_HAND, new ItemStack(Items.GOLD_INGOT)); cauldron.add(player, Hand.MAIN_HAND);
+        player.setStackInHand(Hand.MAIN_HAND, new ItemStack(Items.GLASS_PANE)); cauldron.add(player, Hand.MAIN_HAND);
+        player.setStackInHand(Hand.MAIN_HAND, new ItemStack(ModItems.CRYSTALS.get(EssenceType.ORDO))); cauldron.add(player, Hand.MAIN_HAND);
+        context.assertTrue(cauldron.activate(player), "Original gold ingot recipe must also work");
+        int count = 0;
+        for (int i = 0; i < player.getInventory().size(); i++) if (player.getInventory().getStack(i).isOf(ModItems.ALCHEMISTS_MONOCLE)) count++;
+        context.assertTrue(count == 2, "Both recipes must produce one monocle each");
         context.complete();
     }
 
