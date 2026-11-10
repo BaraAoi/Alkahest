@@ -461,6 +461,8 @@ public class CauldronBlockEntity extends BlockEntity {
 
         var perItem = essencesOf(held);
         if (!perItem.isEmpty()) {
+            boolean wasSalt = held.isOf(ModItems.SALT);
+            boolean wasMoss = held.isOf(ModBlocks.ALCHEMICAL_MOSS.asItem());
             int limit = player.isSneaking() ? held.getCount() : 1;
             int dissolved = 0;
             while (dissolved < limit && dissolveOne(held)) {
@@ -471,6 +473,10 @@ public class CauldronBlockEntity extends BlockEntity {
                 return false;
             }
             if (!player.isCreative()) held.decrement(dissolved);
+            if (player instanceof ServerPlayerEntity researcher && world != null) {
+                if (wasSalt) EarlyResearch.discoverBinding(researcher, world, pos);
+                if (wasMoss) EarlyResearch.discoverAlkahest(researcher, world, pos);
+            }
             playDissolveFeedback();
             List<String> parts = new ArrayList<>();
             for (var entry : perItem.entrySet()) {

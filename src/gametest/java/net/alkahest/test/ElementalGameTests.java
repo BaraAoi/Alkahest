@@ -144,7 +144,12 @@ public class ElementalGameTests implements FabricGameTest {
         ElementalEntity ignis = context.spawnEntity(ModEntities.ELEMENTALS.get(EssenceType.IGNIS), 2.5f, 2.5f, 2.5f);
         ignis.setTarget(fireTarget);
 
-        // 2. Direct Perditio bolt inflicts Wither and corrodes armor
+        // 2. Direct Perditio bolt inflicts Wither and corrodes armor (roof shields zombie helmet from daylight sun damage)
+        for (int rx = 6; rx <= 9; rx++) {
+            for (int rz = 4; rz <= 7; rz++) {
+                context.setBlockState(rx, 5, rz, Blocks.STONE);
+            }
+        }
         ZombieEntity armorTarget = context.spawnEntity(EntityType.ZOMBIE, 7.5f, 2.0f, 5.5f);
         armorTarget.setAiDisabled(true);
         ItemStack helmet = new ItemStack(Items.IRON_HELMET);

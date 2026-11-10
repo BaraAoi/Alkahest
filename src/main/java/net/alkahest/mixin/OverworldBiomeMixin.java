@@ -34,21 +34,23 @@ public abstract class OverworldBiomeMixin {
             return;
         }
         biomeLookup.getOptional(ModWorldGen.ALCHEMICAL_WASTES).ifPresent(wastes -> {
-            var list = new ArrayList<>(this.entries.getEntries());
+            // Place narrow niche hypercubes ahead of full-coverage vanilla regions so R-tree distance-0 ties pick Wastes inside its niche only.
+            var merged = new ArrayList<Pair<MultiNoiseUtil.NoiseHypercube, RegistryEntry<Biome>>>();
             var temp = MultiNoiseUtil.ParameterRange.of(-0.15f, 0.25f);
-            var humidity = MultiNoiseUtil.ParameterRange.of(0.38f, 0.85f);
+            var humidity = MultiNoiseUtil.ParameterRange.of(0.40f, 0.85f);
             var continentalness = MultiNoiseUtil.ParameterRange.of(0.10f, 0.45f);
             var erosion = MultiNoiseUtil.ParameterRange.of(0.20f, 0.55f);
-            var posWeird = MultiNoiseUtil.ParameterRange.of(0.60f, 0.90f);
-            var negWeird = MultiNoiseUtil.ParameterRange.of(-0.90f, -0.60f);
+            var posWeird = MultiNoiseUtil.ParameterRange.of(0.65f, 0.88f);
+            var negWeird = MultiNoiseUtil.ParameterRange.of(-0.88f, -0.65f);
             for (float depth : new float[]{0.0f, 1.0f}) {
                 var depthRange = MultiNoiseUtil.ParameterRange.of(depth);
-                list.add(Pair.of(MultiNoiseUtil.createNoiseHypercube(
+                merged.add(Pair.of(MultiNoiseUtil.createNoiseHypercube(
                     temp, humidity, continentalness, erosion, depthRange, posWeird, 0.0f), wastes));
-                list.add(Pair.of(MultiNoiseUtil.createNoiseHypercube(
+                merged.add(Pair.of(MultiNoiseUtil.createNoiseHypercube(
                     temp, humidity, continentalness, erosion, depthRange, negWeird, 0.0f), wastes));
             }
-            this.entries = new MultiNoiseUtil.Entries<>(list);
+            merged.addAll(this.entries.getEntries());
+            this.entries = new MultiNoiseUtil.Entries<>(merged);
         });
     }
 }

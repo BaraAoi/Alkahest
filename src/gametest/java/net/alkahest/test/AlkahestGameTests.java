@@ -26,15 +26,18 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.recipe.RecipeType;
 import net.minecraft.recipe.input.CraftingRecipeInput;
+import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.RegistryKeys;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.test.GameTest;
 import net.minecraft.test.TestContext;
 import net.minecraft.util.Hand;
+import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.world.GameMode;
-import net.minecraft.world.World;
+import net.minecraft.world.biome.source.MultiNoiseBiomeSource;
+import net.minecraft.world.biome.source.util.MultiNoiseUtil;
 
 import java.util.List;
 
@@ -301,11 +304,18 @@ public class AlkahestGameTests implements FabricGameTest {
         c.assertTrue(wastes.get().getEffects().getFogColor() == 0x8A2BE2, "Wastes fog color matches #8A2BE2");
         c.assertTrue(wastes.get().getEffects().getGrassColor().orElse(0) == 0x5D3FD3, "Wastes grass color matches #5D3FD3");
 
-        var overworld = c.getWorld().getServer().getWorld(World.OVERWORLD);
-        c.assertTrue(overworld != null, "Overworld exists");
-        boolean inOverworldSource = overworld.getChunkManager().getChunkGenerator().getBiomeSource().getBiomes().stream()
+        var paramRegistry = c.getWorld().getRegistryManager().get(RegistryKeys.MULTI_NOISE_BIOME_SOURCE_PARAMETER_LIST);
+        var overworldKey = RegistryKey.of(RegistryKeys.MULTI_NOISE_BIOME_SOURCE_PARAMETER_LIST, Identifier.ofVanilla("overworld"));
+        var overworldEntry = paramRegistry.getEntry(overworldKey).orElseThrow();
+        MultiNoiseBiomeSource overworldSource = MultiNoiseBiomeSource.create(overworldEntry);
+        boolean inOverworldSource = overworldSource.getBiomes().stream()
             .anyMatch(entry -> entry.matchesKey(ModWorldGen.ALCHEMICAL_WASTES));
         c.assertTrue(inOverworldSource, "alkahest:alchemical_wastes must be injected into Overworld MultiNoiseBiomeSource");
+        var sampled = overworldSource.getBiomeAtPoint(
+            MultiNoiseUtil.createNoiseValuePoint(0.05f, 0.60f, 0.25f, 0.35f, 0.0f, 0.75f)
+        );
+        c.assertTrue(sampled.matchesKey(ModWorldGen.ALCHEMICAL_WASTES),
+            "Overworld MultiNoiseBiomeSource must sample alkahest:alchemical_wastes in its climate niche");
 
         c.setBlockState(3, 1, 3, Blocks.MOSS_BLOCK);
         c.setBlockState(3, 2, 3, ModBlocks.ALCHEMICAL_MOSS);
