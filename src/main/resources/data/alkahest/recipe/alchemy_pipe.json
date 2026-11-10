@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "minecraft:glass"
+    },
+    {
+      "item": "minecraft:copper_ingot"
+    },
+    {
+      "item": "alkahest:crystal_aer"
+    }
+  ],
+  "result": {
+    "id": "alkahest:alchemy_pipe",
+    "count": 8
+  }
+}

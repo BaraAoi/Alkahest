@@ -39,6 +39,7 @@ public final class ModItems {
                 entries.add(ModBlocks.DISTILLERY);
                 entries.add(ModBlocks.JAR);
                 entries.add(ModBlocks.ESSENCE_CHARGER);
+                entries.add(ModBlocks.ALCHEMY_PIPE);
                 entries.add(ModBlocks.SALT_ORE);
                 entries.add(ALCHEMICAL_JOURNAL);
                 entries.add(ALCHEMISTS_MONOCLE);

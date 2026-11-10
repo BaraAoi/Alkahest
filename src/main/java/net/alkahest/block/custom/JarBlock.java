@@ -41,7 +41,7 @@ import java.util.List;
 
 public class JarBlock extends Block implements BlockEntityProvider {
     public static final IntProperty LEVEL = IntProperty.of("level", 0, 10);
-    private static final VoxelShape SHAPE = Block.createCuboidShape(3, 0, 3, 13, 13, 13);
+    private static final VoxelShape SHAPE = Block.createCuboidShape(3, 0, 3, 13, 16, 13);
     public JarBlock(Settings settings) { super(settings); setDefaultState(getStateManager().getDefaultState().with(LEVEL, 0)); }
     @Override protected void appendProperties(StateManager.Builder<Block, BlockState> builder) { builder.add(LEVEL); }
     // Also repairs the display of jars saved before the level property existed.
@@ -53,6 +53,11 @@ public class JarBlock extends Block implements BlockEntityProvider {
     @Override protected VoxelShape getCollisionShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) { return SHAPE; }
     @Override protected ItemActionResult onUseWithItem(ItemStack stack, BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
         if (stack.isEmpty()) return ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        if (stack.isOf(ModBlocks.ALCHEMY_PIPE.asItem())) {
+            if (!world.isClient && !((BlockItem)stack.getItem()).place(new ItemPlacementContext(player, hand, stack, hit)).isAccepted())
+                player.sendMessage(Text.translatable("message.alkahest.pipe_no_space"), true);
+            return ItemActionResult.success(world.isClient);
+        }
         // A normal click with the charger places it on top instead of treating it as jar input.
         if (stack.isOf(ModBlocks.ESSENCE_CHARGER.asItem())) {
             if (!world.isClient) {

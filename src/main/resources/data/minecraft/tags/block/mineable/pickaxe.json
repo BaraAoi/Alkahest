@@ -1,6 +1,10 @@
 {
   "replace": false,
   "values": [
-    "alkahest:salt_ore"
+    "alkahest:salt_ore",
+    "alkahest:alchemy_cauldron",
+    "alkahest:distillery",
+    "alkahest:essence_charger",
+    "alkahest:alchemy_pipe"
   ]
 }

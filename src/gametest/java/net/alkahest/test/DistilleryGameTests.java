@@ -63,4 +63,16 @@ public class DistilleryGameTests implements FabricGameTest {
         context.complete();
     }
 
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void rawChickenCanYieldAer(TestContext context) {
+        context.setBlockState(3, 2, 3, ModBlocks.DISTILLERY);
+        var distillery = (DistilleryBlockEntity)context.getWorld().getBlockEntity(context.getAbsolutePos(new BlockPos(3,2,3)));
+        var player = context.createMockPlayer(GameMode.SURVIVAL);
+        player.setStackInHand(Hand.MAIN_HAND, new ItemStack(Items.CHICKEN));
+        distillery.insert(player, Hand.MAIN_HAND);
+        context.assertTrue(!distillery.stacks().get(0).isEmpty(), "Raw chicken is accepted as organic matter");
+        context.assertTrue(net.alkahest.essence.ItemEssenceMap.get(distillery.stacks().get(0)).stream().anyMatch(e -> e.type() == net.alkahest.essence.EssenceType.AER), "Aer is a possible crystal output");
+        context.complete();
+    }
+
 }
