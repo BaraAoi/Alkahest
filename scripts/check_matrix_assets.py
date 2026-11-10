@@ -129,6 +129,9 @@ for lang in ('ru_ru', 'en_us'):
                 'message.alkahest.pedestal_status',
                 'block.alkahest.matrix_pedestal'):
         check(key in strings, f'{lang} misses {key}')
+    for key in ('screen.alkahest.matrix.index_title', 'screen.alkahest.matrix.index_from',
+                'screen.alkahest.matrix.index_cost'):
+        check(key in strings, f'{lang} misses {key}')
 
 # --- client and tests ---------------------------------------------------------------------------
 client = (CLIENT / 'AlkahestClient.java').read_text()
@@ -140,6 +143,10 @@ check('ring(' in renderer and 'pyramid(' in renderer, 'the halo needs rings and 
 check('MatrixCoreBlock.AWAKE' in renderer, 'the halo must follow the awake state')
 check('matrix_ring_metal.png' in renderer, 'the rings are drawn with the forged metal texture')
 check('getEntitySolid' in renderer, 'the rings must read as solid metal, not glass')
+screen = (CLIENT / 'client/gui/MatrixScreen.java').read_text()
+check('MatrixRecipe.all()' in screen, 'the matrix screen must list the syntheses')
+check('screen.alkahest.matrix.index_title' in screen, 'the synthesis index needs its title')
+check('recipe.cost()' in screen, 'the index must show what a synthesis costs in essence')
 check('PYRAMID_ORBIT' in renderer, 'the pyramid orbit speed must stay an explicit constant')
 orbit = float(re.search(r'PYRAMID_ORBIT\s*=\s*([0-9.]+)f', renderer).group(1))
 check(orbit <= 0.05, f'the pyramids must glide, not spin ({orbit} rad/tick)')

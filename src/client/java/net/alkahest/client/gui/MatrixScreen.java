@@ -1,18 +1,38 @@
 package net.alkahest.client.gui;
 
 import net.alkahest.essence.EssenceStack;
+import net.alkahest.essence.EssenceType;
+import net.alkahest.matrix.MatrixRecipe;
 import net.alkahest.screen.MatrixScreenHandler;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
+import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.entity.player.PlayerInventory;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
 import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
-/** Drawn in code: a violet-and-gold panel with the star of slots, a progress bar and the price. */
+/**
+ * Drawn in code: a violet-and-gold panel with the star of slots, a progress bar and the price.
+ *
+ * <p>The question mark in the corner turns the panel into the index of syntheses, because the seven
+ * recipes of the Matrix live in code and are otherwise invisible in game: every row shows the base
+ * item, the parts it swallows, the result and the total essence price, with the full names and the
+ * per-essence breakdown in the tooltip.
+ */
 public final class MatrixScreen extends HandledScreen<MatrixScreenHandler> {
     private static final int WIDTH = 176, HEIGHT = 166;
     private static final int TRACK_X = 72, TRACK_Y = 34, TRACK_WIDTH = 40, TRACK_HEIGHT = 6;
+    private static final int INDEX_TOP = 22, INDEX_HEADER = 14, ROW_HEIGHT = 17;
+    private static final int ESCAPE_KEY = 256;
+
+    private boolean index;
+    private ButtonWidget indexButton;
 
     public MatrixScreen(MatrixScreenHandler handler, PlayerInventory inventory, Text title) {
         super(handler, inventory, title);
@@ -22,6 +42,18 @@ public final class MatrixScreen extends HandledScreen<MatrixScreenHandler> {
         titleY = 6;
         playerInventoryTitleX = 8;
         playerInventoryTitleY = 72;
+    }
+
+    @Override protected void init() {
+        super.init();
+        indexButton = ButtonWidget.builder(Text.literal("?"), button -> toggleIndex())
+            .dimensions(x + WIDTH - 17, y + 3, 13, 14).build();
+        addDrawableChild(indexButton);
+    }
+
+    private void toggleIndex() {
+        index = !index;
+        if (indexButton != null) indexButton.setMessage(Text.literal(index ? "×" : "?"));
     }
 
     private Text statusText() {
@@ -89,5 +121,113 @@ public final class MatrixScreen extends HandledScreen<MatrixScreenHandler> {
                 100, lineY, stack.type().color() | 0xFF000000);
             lineY += 10;
         }
+    }
+
+    @Override public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+        super.render(context, mouseX, mouseY, delta);
+        if (!index) return;
+        drawIndex(context);
+        drawIndexTooltip(context, mouseX, mouseY);
+    }
+
+    @Override public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (index && mouseX >= x + 2 && mouseX < x + WIDTH - 2
+            && mouseY >= y + INDEX_TOP && mouseY < y + HEIGHT - 2) {
+            toggleIndex();
+            return true;
+        }
+        return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    @Override public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (index && keyCode == ESCAPE_KEY) {
+            toggleIndex();
+            return true;
+        }
+        return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    /** The index page: one row per synthesis, icons only, names and prices live in the tooltip. */
+    private void drawIndex(DrawContext c) {
+        int left = x + 2, right = x + WIDTH - 2;
+        int top = y + INDEX_TOP, bottom = y + HEIGHT - 2;
+        c.fill(left - 1, top - 1, right + 1, bottom + 1, 0xFFB08A52);
+        c.fill(left, top, right, bottom, 0xFF120D1B);
+        c.fill(left, top, right, top + INDEX_HEADER, 0xFF241A38);
+        c.fill(left, top + INDEX_HEADER, right, top + INDEX_HEADER + 1, 0xFFB08A52);
+        c.drawTextWithShadow(textRenderer, Text.translatable("screen.alkahest.matrix.index_title"),
+            left + 5, top + 3, 0xFFE9D7A8);
+        String count = String.valueOf(MatrixRecipe.all().size());
+        c.drawTextWithShadow(textRenderer, count, right - 5 - textRenderer.getWidth(count), top + 3, 0xFF9C8FBF);
+
+        List<MatrixRecipe> recipes = MatrixRecipe.all();
+        for (int i = 0; i < recipes.size(); i++) {
+            int rowY = rowTop(i);
+            if (rowY + ROW_HEIGHT > bottom) break;
+            if (i % 2 == 0) c.fill(left + 1, rowY, right - 1, rowY + ROW_HEIGHT - 1, 0xFF1A1327);
+            drawRow(c, recipes.get(i), left + 5, rowY + 1);
+        }
+    }
+
+    private int rowTop(int position) {
+        return y + INDEX_TOP + INDEX_HEADER + 2 + position * ROW_HEIGHT;
+    }
+
+    private void drawRow(DrawContext c, MatrixRecipe recipe, int iconX, int iconY) {
+        int cursor = iconX;
+        c.drawItem(new ItemStack(recipe.base()), cursor, iconY);
+        cursor += 18;
+        for (Item component : recipe.components()) {
+            c.drawTextWithShadow(textRenderer, "+", cursor, iconY + 4, 0xFF9C8FBF);
+            cursor += 9;
+            c.drawItem(new ItemStack(component), cursor, iconY);
+            cursor += 18;
+        }
+        c.drawTextWithShadow(textRenderer, "→", cursor, iconY + 4, 0xFFB08A52);
+        cursor += 12;
+        ItemStack output = recipe.output();
+        c.drawItem(output, cursor, iconY);
+        if (output.getCount() > 1) {
+            String amount = String.valueOf(output.getCount());
+            c.drawTextWithShadow(textRenderer, amount,
+                cursor + 17 - textRenderer.getWidth(amount), iconY + 10, 0xFFFFFFFF);
+        }
+        String price = "◆ " + MatrixRecipe.price(recipe.cost());
+        c.drawTextWithShadow(textRenderer, price,
+            x + WIDTH - 8 - textRenderer.getWidth(price), iconY + 4, 0xFFD9B36B);
+    }
+
+    private void drawIndexTooltip(DrawContext c, int mouseX, int mouseY) {
+        if (mouseX < x + 2 || mouseX >= x + WIDTH - 2) return;
+        List<MatrixRecipe> recipes = MatrixRecipe.all();
+        for (int i = 0; i < recipes.size(); i++) {
+            int rowY = rowTop(i);
+            if (mouseY < rowY || mouseY >= rowY + ROW_HEIGHT - 1) continue;
+            c.drawTooltip(textRenderer, describe(recipes.get(i)), mouseX, mouseY);
+            return;
+        }
+    }
+
+    private List<Text> describe(MatrixRecipe recipe) {
+        List<Text> lines = new ArrayList<>();
+        ItemStack output = recipe.output();
+        lines.add(Text.literal(output.getName().getString() + (output.getCount() > 1 ? " ×" + output.getCount() : ""))
+            .formatted(Formatting.GOLD));
+        StringBuilder parts = new StringBuilder();
+        for (Item component : recipe.components()) {
+            if (parts.length() > 0) parts.append(" + ");
+            parts.append(new ItemStack(component).getName().getString());
+        }
+        lines.add(Text.literal(Text.translatable("screen.alkahest.matrix.index_from").getString() + ": "
+            + recipe.base().getName().getString() + (parts.length() > 0 ? " + " + parts : ""))
+            .formatted(Formatting.GRAY));
+        StringBuilder cost = new StringBuilder();
+        for (Map.Entry<EssenceType, Integer> entry : recipe.cost().entrySet()) {
+            if (cost.length() > 0) cost.append("  ");
+            cost.append(entry.getKey().displayName()).append(' ').append(entry.getValue());
+        }
+        lines.add(Text.literal(Text.translatable("screen.alkahest.matrix.index_cost").getString() + ": " + cost)
+            .formatted(Formatting.DARK_PURPLE));
+        return lines;
     }
 }
