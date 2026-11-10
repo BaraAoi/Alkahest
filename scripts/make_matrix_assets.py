@@ -266,16 +266,22 @@ def pedestal_top(lit):
     return rows
 
 
-def ring_texture():
-    """Radial alpha ramp: v=0 is the inner edge and v=1 the outer edge of the halo."""
+def ring_metal():
+    """A forged brass plate: warm metal bands, rivets and dark seams along the circumference."""
     rows = []
     for y in range(SIZE):
-        radial = 1.0 - abs(y - SIZE / 2) / (SIZE / 2)
-        alpha = int(255 * max(0.0, radial) ** 0.8)
         row = []
+        band = y % 8
+        base = GOLD if band < 5 else GOLD_DARK
+        if band in (0, 7):
+            base = GOLD_EDGE
         for x in range(SIZE):
-            shimmer = 18 if (x * 5 + y * 3) % 7 == 0 else 0
-            row.append((min(255, 210 + shimmer), min(255, 170 + shimmer), 255, alpha))
+            value = shift(base, noise(x, y, 9))
+            if x % 8 == 0:
+                value = shift(GOLD_EDGE, noise(x, y, 3))
+            if (x % 8 == 4) and band in (2, 5):
+                value = GOLD_LIGHT
+            row.append((*value, 255))
         rows.append(row)
     return rows
 
@@ -297,7 +303,7 @@ write_png(BLOCK / 'matrix_pedestal_base.png', pedestal_base(False))
 write_png(BLOCK / 'matrix_pedestal_side.png', pedestal_side(False))
 write_png(BLOCK / 'matrix_pedestal_side_lit.png', pedestal_side(True))
 write_png(BLOCK / 'matrix_pedestal_top.png', pedestal_top(False))
-write_png(BLOCK / 'matrix_ring.png', ring_texture())
+write_png(BLOCK / 'matrix_ring_metal.png', ring_metal())
 
 
 # --- models ----------------------------------------------------------------------------------
@@ -386,6 +392,11 @@ MODELS.mkdir(parents=True, exist_ok=True)
     cube_model('matrix_core_top_lit', 'matrix_core_bottom', 'matrix_core_side_lit'), indent=2) + "\n")
 (MODELS / 'matrix_pillar.json').write_text(json.dumps(pillar_model(False), indent=2) + "\n")
 (MODELS / 'matrix_pillar_lit.json').write_text(json.dumps(pillar_model(True), indent=2) + "\n")
+(MODELS / 'matrix_hidden.json').write_text(json.dumps({
+    "parent": "minecraft:block/block",
+    "textures": {"particle": "alkahest:block/matrix_pillar_body"},
+    "elements": [],
+}, indent=2) + "\n")
 (MODELS / 'matrix_pedestal.json').write_text(json.dumps(pedestal_model(False), indent=2) + "\n")
 (MODELS / 'matrix_pedestal_lit.json').write_text(json.dumps(pedestal_model(True), indent=2) + "\n")
 (MODELS / 'alchemical_brick.json').write_text(json.dumps(
@@ -397,7 +408,7 @@ MODELS.mkdir(parents=True, exist_ok=True)
     "variants": {
         "awake=false,active=false": {"model": "alkahest:block/matrix_core"},
         "awake=false,active=true": {"model": "alkahest:block/matrix_core"},
-        "awake=true,active=false": {"model": "alkahest:block/matrix_core"},
+        "awake=true,active=false": {"model": "alkahest:block/matrix_core_lit"},
         "awake=true,active=true": {"model": "alkahest:block/matrix_core_lit"},
     }
 }, indent=2) + "\n")
@@ -408,14 +419,18 @@ MODELS.mkdir(parents=True, exist_ok=True)
 }, indent=2) + "\n")
 (STATES / 'matrix_pillar.json').write_text(json.dumps({
     "variants": {
-        "active=false": {"model": "alkahest:block/matrix_pillar"},
-        "active=true": {"model": "alkahest:block/matrix_pillar_lit"},
+        "active=false,revealed=false": {"model": "alkahest:block/matrix_pillar"},
+        "active=true,revealed=false": {"model": "alkahest:block/matrix_pillar_lit"},
+        "active=false,revealed=true": {"model": "alkahest:block/matrix_hidden"},
+        "active=true,revealed=true": {"model": "alkahest:block/matrix_hidden"},
     }
 }, indent=2) + "\n")
 (STATES / 'alchemical_brick.json').write_text(json.dumps({
     "variants": {
-        "active=false": {"model": "alkahest:block/alchemical_brick"},
-        "active=true": {"model": "alkahest:block/alchemical_brick_lit"},
+        "active=false,revealed=false": {"model": "alkahest:block/alchemical_brick"},
+        "active=true,revealed=false": {"model": "alkahest:block/alchemical_brick_lit"},
+        "active=false,revealed=true": {"model": "alkahest:block/matrix_hidden"},
+        "active=true,revealed=true": {"model": "alkahest:block/matrix_hidden"},
     }
 }, indent=2) + "\n")
 

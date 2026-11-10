@@ -1,10 +1,16 @@
 {
   "variants": {
-    "active=false": {
+    "active=false,revealed=false": {
       "model": "alkahest:block/matrix_pillar"
     },
-    "active=true": {
+    "active=true,revealed=false": {
       "model": "alkahest:block/matrix_pillar_lit"
+    },
+    "active=false,revealed=true": {
+      "model": "alkahest:block/matrix_hidden"
+    },
+    "active=true,revealed=true": {
+      "model": "alkahest:block/matrix_hidden"
     }
   }
 }

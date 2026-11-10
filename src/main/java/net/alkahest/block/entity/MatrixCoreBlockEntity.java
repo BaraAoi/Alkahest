@@ -139,7 +139,10 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory, Nam
         return output.getCount() + product.getCount() <= output.getMaxCount();
     }
 
-    /** Wakes the cube up or puts it back to sleep; the block state follows immediately. */
+    /**
+     * Wakes the cube once and for all: the shell blocks stay in place but turn invisible, so the
+     * finished halo of the core is the only thing the player sees.
+     */
     public void setAwake(World world, BlockPos pos, boolean value) {
         if (awake == value) return;
         awake = value;
@@ -148,12 +151,33 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory, Nam
         if (state.getBlock() instanceof MatrixCoreBlock && state.get(MatrixCoreBlock.AWAKE) != value) {
             world.setBlockState(pos, state.with(MatrixCoreBlock.AWAKE, value), Block.NOTIFY_ALL);
         }
+        revealShell(world, pos, value);
         if (value) {
             wakeEffect(world, pos);
         } else {
             world.playSound(null, pos, SoundEvents.BLOCK_AMETHYST_BLOCK_BREAK, SoundCategory.BLOCKS, 0.7f, 0.8f);
         }
         markDirty();
+    }
+
+    /** Hides or restores the twenty-six blocks of the cube without removing them. */
+    private static void revealShell(World world, BlockPos pos, boolean revealed) {
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dy = -1; dy <= 1; dy++) {
+                for (int dz = -1; dz <= 1; dz++) {
+                    if (dx == 0 && dy == 0 && dz == 0) continue;
+                    BlockPos target = pos.add(dx, dy, dz);
+                    BlockState state = world.getBlockState(target);
+                    if (state.getBlock() instanceof MatrixPillarBlock) {
+                        if (state.get(MatrixPillarBlock.REVEALED) != revealed)
+                            world.setBlockState(target, state.with(MatrixPillarBlock.REVEALED, revealed), Block.NOTIFY_ALL);
+                    } else if (state.getBlock() instanceof AlchemicalBrickBlock) {
+                        if (state.get(AlchemicalBrickBlock.REVEALED) != revealed)
+                            world.setBlockState(target, state.with(AlchemicalBrickBlock.REVEALED, revealed), Block.NOTIFY_ALL);
+                    }
+                }
+            }
+        }
     }
 
     public static void tick(World world, BlockPos pos, MatrixCoreBlockEntity self) {
@@ -453,15 +477,17 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory, Nam
         return false;
     }
 
-    /** Wakes or sleeps the built Matrix next to a clicked shell block. */
-    public static boolean toggleAwakeNearby(World world, BlockPos clicked, PlayerEntity player) {
+    /** Wakes the built Matrix next to a clicked shell block. The awakening happens only once. */
+    public static boolean awakenNearby(World world, BlockPos clicked, PlayerEntity player) {
         if (world.isClient) return true;
         for (BlockPos candidate : BlockPos.iterate(clicked.add(-2, -2, -2), clicked.add(2, 2, 2))) {
             if (!(world.getBlockEntity(candidate) instanceof MatrixCoreBlockEntity core) || !core.formed()) continue;
-            boolean wake = !core.awake();
-            core.setAwake(world, candidate, wake);
-            player.sendMessage(Text.translatable(wake ? "message.alkahest.matrix_awake"
-                : "message.alkahest.matrix_asleep"), true);
+            if (core.awake()) {
+                player.sendMessage(Text.translatable("message.alkahest.matrix_already_awake"), true);
+                return true;
+            }
+            core.setAwake(world, candidate, true);
+            player.sendMessage(Text.translatable("message.alkahest.matrix_awake"), true);
             return true;
         }
         player.sendMessage(Text.translatable("message.alkahest.matrix_unformed"), true);

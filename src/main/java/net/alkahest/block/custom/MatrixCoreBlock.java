@@ -49,11 +49,11 @@ public class MatrixCoreBlock extends Block implements BlockEntityProvider {
             ? (w, p, s, be) -> MatrixCoreBlockEntity.tick(w, p, (MatrixCoreBlockEntity) be) : null;
     }
 
-    /** A wand wakes the cube; anything else opens the interface of a built cube. */
+    /** A wand wakes the cube once; anything else opens the interface of a built cube. */
     private void interact(World world, BlockPos pos, PlayerEntity player, ItemStack held) {
         if (world.isClient || player.isSneaking()) return;
         if (held.getItem() instanceof CrystalWandItem) {
-            MatrixCoreBlockEntity.toggleAwakeNearby(world, pos, player);
+            MatrixCoreBlockEntity.awakenNearby(world, pos, player);
             return;
         }
         if (MatrixCoreBlockEntity.nearbyCore(world, pos)) MatrixCoreBlockEntity.openNearby(world, pos, player);

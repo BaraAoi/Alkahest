@@ -7,7 +7,7 @@
       "model": "alkahest:block/matrix_core"
     },
     "awake=true,active=false": {
-      "model": "alkahest:block/matrix_core"
+      "model": "alkahest:block/matrix_core_lit"
     },
     "awake=true,active=true": {
       "model": "alkahest:block/matrix_core_lit"

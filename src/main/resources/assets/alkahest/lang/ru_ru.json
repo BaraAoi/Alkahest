@@ -343,5 +343,6 @@
   "message.alkahest.matrix_awake": "Матрица пробуждена: кольца пошли вращаться",
   "message.alkahest.matrix_asleep": "Матрица усыплена: кольца легли в ряд",
   "message.alkahest.pedestal_empty": "Пьедестал пуст: положите предмет в руке",
-  "message.alkahest.pedestal_status": "На пьедестале: %s × %s"
+  "message.alkahest.pedestal_status": "На пьедестале: %s × %s",
+  "message.alkahest.matrix_already_awake": "Матрица уже пробуждена"
 }

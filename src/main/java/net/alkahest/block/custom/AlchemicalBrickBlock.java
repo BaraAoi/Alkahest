@@ -17,18 +17,21 @@ import net.minecraft.world.World;
 /** The eighteen faces and edges of the Matrix cube; also a decent building block. */
 public class AlchemicalBrickBlock extends Block {
     public static final BooleanProperty ACTIVE = BooleanProperty.of("active");
+    public static final BooleanProperty REVEALED = BooleanProperty.of("revealed");
 
     public AlchemicalBrickBlock(Settings settings) {
         super(settings);
-        setDefaultState(getStateManager().getDefaultState().with(ACTIVE, false));
+        setDefaultState(getStateManager().getDefaultState().with(ACTIVE, false).with(REVEALED, false));
     }
 
-    @Override protected void appendProperties(StateManager.Builder<Block, BlockState> builder) { builder.add(ACTIVE); }
+    @Override protected void appendProperties(StateManager.Builder<Block, BlockState> builder) {
+        builder.add(ACTIVE, REVEALED);
+    }
 
     @Override protected ItemActionResult onUseWithItem(ItemStack stack, BlockState state, World world, BlockPos pos,
                                                        PlayerEntity player, Hand hand, BlockHitResult hit) {
         if (stack.getItem() instanceof net.alkahest.item.custom.CrystalWandItem) {
-            MatrixCoreBlockEntity.toggleAwakeNearby(world, pos, player);
+            MatrixCoreBlockEntity.awakenNearby(world, pos, player);
             return ItemActionResult.success(world.isClient);
         }
         if (!(stack.getItem() instanceof net.alkahest.item.custom.AlkahestAmuletItem)) {

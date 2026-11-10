@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:block/block",
+  "textures": {
+    "particle": "alkahest:block/matrix_pillar_body"
+  },
+  "elements": []
+}

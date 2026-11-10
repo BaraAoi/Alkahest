@@ -109,6 +109,42 @@ public class MatrixGameTests implements FabricGameTest {
         c.complete();
     }
 
+    /** Awakening hides the rough shell but keeps the blocks where they are. */
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void awakeningHidesTheShell(TestContext c) {
+        BlockPos pos = build(c);
+        BlockPos corner = c.getAbsolutePos(new BlockPos(CX + 1, CY + 1, CZ + 1));
+        BlockPos brick = c.getAbsolutePos(new BlockPos(CX + 1, CY, CZ));
+        c.assertFalse(c.getWorld().getBlockState(corner)
+            .get(net.alkahest.block.custom.MatrixPillarBlock.REVEALED), "A dormant cube shows its pyramids");
+        wake(c);
+        c.assertTrue(c.getWorld().getBlockState(corner)
+            .get(net.alkahest.block.custom.MatrixPillarBlock.REVEALED), "Awakening hides the corner pyramids");
+        c.assertTrue(c.getWorld().getBlockState(brick)
+            .get(net.alkahest.block.custom.AlchemicalBrickBlock.REVEALED), "Awakening hides the bricks");
+        c.assertTrue(c.getWorld().getBlockState(brick).getBlock() == ModBlocks.ALCHEMICAL_BRICK,
+            "Hidden blocks are still there and can be broken");
+        c.setBlockState(CX + 1, CY, CZ, Blocks.AIR);
+        MatrixCoreBlockEntity.tick(c.getWorld(), pos, core(c));
+        c.assertFalse(core(c).awake(), "Breaking the shell puts the Matrix back to its initial state");
+        c.assertFalse(c.getWorld().getBlockState(corner)
+            .get(net.alkahest.block.custom.MatrixPillarBlock.REVEALED), "The remaining pyramids come back");
+        c.complete();
+    }
+
+    /** Waking an already awakened cube changes nothing. */
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void awakeningHappensOnlyOnce(TestContext c) {
+        BlockPos pos = build(c);
+        wake(c);
+        wake(c);
+        c.assertTrue(core(c).awake(), "The Matrix stays awake");
+        c.assertTrue(core(c).status() != MatrixCoreBlockEntity.STATUS_UNFORMED, "The cube is still whole");
+        MatrixCoreBlockEntity.tick(c.getWorld(), pos, core(c));
+        c.assertTrue(core(c).awake(), "A second activation does not break anything");
+        c.complete();
+    }
+
     /** Parts for the synthesis lie on the pedestals around the cube, not in the interface. */
     @GameTest(templateName = EMPTY_STRUCTURE)
     public void pedestalPartsArePulledIntoTheSynthesis(TestContext c) {
@@ -225,6 +261,7 @@ public class MatrixGameTests implements FabricGameTest {
         run(c.getWorld(), pos, 2);
         c.assertTrue(core.progress() == 0, "Breaking a brick resets the progress");
         c.assertFalse(c.getWorld().getBlockState(pos).get(MatrixCoreBlock.ACTIVE), "The cube stops glowing");
+        c.assertFalse(core.awake(), "The Matrix falls back to its dormant form");
         c.assertTrue(core.getStack(MatrixCoreBlockEntity.BASE).getCount() == 1, "The base survives");
         c.complete();
     }

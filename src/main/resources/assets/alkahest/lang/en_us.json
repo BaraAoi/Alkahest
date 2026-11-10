@@ -343,5 +343,6 @@
   "message.alkahest.matrix_awake": "Matrix awakened: the rings begin to turn",
   "message.alkahest.matrix_asleep": "Matrix asleep: the rings settle into a row",
   "message.alkahest.pedestal_empty": "The pedestal is empty: hold an item to place it",
-  "message.alkahest.pedestal_status": "On the pedestal: %s × %s"
+  "message.alkahest.pedestal_status": "On the pedestal: %s × %s",
+  "message.alkahest.matrix_already_awake": "The Matrix is already awake"
 }
