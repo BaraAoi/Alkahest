@@ -178,6 +178,12 @@ check('new ItemStack(ModItems.MIASMA)' in recipe_source and 'Items.GLASS_BOTTLE,
 check('EssenceType.POTENTIA, 15, EssenceType.AER, 10' in recipe_source, 'the crystal lightning synthesis must retain its specification price')
 check('StartedRecipe' in core and 'startedRecipeKey' in core, 'an active synthesis must retain its recipe identity')
 check('uniqueForBase' in hud and 'matrix.recipe()' in hud, 'the monocle must use the matched recipe, not guess a shared base')
+check('new ItemStack(ModItems.MIDAS_ELIXIR)' in recipe_source and 'Items.GOLDEN_APPLE, List.of(ModItems.PURIFIED_WATER)' in recipe_source,
+      'Midas elixir must use the specification ingredients')
+check('MidasTouchEffect.progressStep' in core and 'before / 10 != self.progress / 10' in core,
+      'Midas speed must preserve every essence prefill crossing')
+check((A / 'textures/item/midas_elixir.png').exists() and (A / 'textures/mob_effect/midas_touch.png').exists(),
+      'Midas elixir and its effect need icons')
 check('RECIPES_PAGE' in journal, 'the synthesis list needs its own page in the journal')
 check('recipe.cost()' in journal, 'the list must show what a synthesis costs in essence')
 check('insertBase' in core and 'takeFromCore' in core, 'the core must accept and hand back items')

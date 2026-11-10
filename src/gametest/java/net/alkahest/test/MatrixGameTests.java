@@ -439,6 +439,95 @@ public class MatrixGameTests implements FabricGameTest {
         c.complete();
     }
 
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void midasElixirRecipeUsesSpecifiedIngredients(TestContext c) {
+        BlockPos pos = build(c);
+        wake(c);
+        var core = core(c);
+        core.setStack(MatrixCoreBlockEntity.BASE, new ItemStack(Items.GOLDEN_APPLE));
+        pedestal(c, 7, CY - 1, 7, new ItemStack(ModItems.PURIFIED_WATER));
+        BlockPos pedestalPos = c.getAbsolutePos(new BlockPos(7, CY - 1, 7));
+        var water = (net.alkahest.block.entity.MatrixPedestalBlockEntity) c.getWorld().getBlockEntity(pedestalPos);
+        var ordo = jar(c, 0, CY, 0, EssenceType.ORDO, 20);
+        var lux = jar(c, 6, CY, 0, EssenceType.LUX, 12);
+        var metallum = jar(c, 0, CY, 6, EssenceType.METALLUM, 7);
+        c.assertTrue(core.recipe() != null && core.recipe().output().isOf(ModItems.MIDAS_ELIXIR), "Golden apple and purified water select the elixir");
+        start(c);
+        run(c.getWorld(), pos, MatrixCoreBlockEntity.DURATION + 4);
+        c.assertTrue(core.getStack(MatrixCoreBlockEntity.OUTPUT).isOf(ModItems.MIDAS_ELIXIR), "The Matrix produces a Midas elixir");
+        c.assertTrue(water.isEmpty() && core.getStack(MatrixCoreBlockEntity.BASE).isEmpty(), "Both ingredients are consumed");
+        c.assertTrue(ordo.contents().total() == 5 && lux.contents().total() == 2 && metallum.contents().total() == 2,
+            "The exact price is Ordo 15, Lux 10, Metallum 5");
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void midasElixirDrinkingAndNearbyRange(TestContext c) {
+        var player = c.createMockPlayer(net.minecraft.world.GameMode.SURVIVAL);
+        var item = (net.alkahest.item.custom.MidasElixirItem) ModItems.MIDAS_ELIXIR;
+        ItemStack elixir = new ItemStack(ModItems.MIDAS_ELIXIR);
+        c.assertTrue(item.getMaxUseTime(elixir, player) == 32 && item.getUseAction(elixir) == net.minecraft.util.UseAction.DRINK,
+            "The elixir uses the normal 32 tick drinking animation");
+        ItemStack returned = item.finishUsing(elixir, c.getWorld(), player);
+        c.assertTrue(returned.isOf(Items.GLASS_BOTTLE) && elixir.isEmpty(), "Survival drinking returns one empty bottle");
+        var effect = player.getStatusEffect(net.alkahest.registry.ModEffects.MIDAS_TOUCH);
+        c.assertTrue(effect != null && effect.getDuration() == 3600, "Midas Touch lasts three minutes");
+        BlockPos pos = c.getAbsolutePos(new BlockPos(CX, CY, CZ));
+        player.setPosition(pos.getX() + 8.5, pos.getY() + 0.5, pos.getZ() + 0.5);
+        c.assertTrue(net.alkahest.effect.MidasTouchEffect.nearby(List.of(player), pos), "The eight-block boundary counts");
+        player.setPosition(pos.getX() + 8.51, pos.getY() + 0.5, pos.getZ() + 0.5);
+        c.assertFalse(net.alkahest.effect.MidasTouchEffect.nearby(List.of(player), pos), "Outside the radius gives no bonus");
+        player.removeStatusEffect(net.alkahest.registry.ModEffects.MIDAS_TOUCH);
+        player.setPosition(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
+        c.assertFalse(net.alkahest.effect.MidasTouchEffect.nearby(List.of(player), pos), "Players without the effect do not boost");
+        var creative = c.createMockPlayer(net.minecraft.world.GameMode.CREATIVE);
+        ItemStack creativeElixir = new ItemStack(ModItems.MIDAS_ELIXIR);
+        c.assertTrue(item.finishUsing(creativeElixir, c.getWorld(), creative) == creativeElixir && creativeElixir.getCount() == 1,
+            "Creative drinking does not consume the elixir");
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE, tickLimit = 200)
+    public void midasSpeedsRealMatrixTicks(TestContext c) {
+        BlockPos pos = build(c);
+        wake(c);
+        var core = core(c);
+        core.setStack(MatrixCoreBlockEntity.BASE, new ItemStack(Items.STRING));
+        jar(c, CX + 3, CY, CZ, EssenceType.ORDO, 10);
+        jar(c, CX - 3, CY, CZ, EssenceType.AQUA, 10);
+        var player = c.createMockCreativeServerPlayerInWorld();
+        player.setPosition(pos.getX() + 2.5, pos.getY() + 0.5, pos.getZ() + 0.5);
+        player.setNoGravity(true);
+        player.addStatusEffect(new net.minecraft.entity.effect.StatusEffectInstance(
+            net.alkahest.registry.ModEffects.MIDAS_TOUCH, 3600));
+        c.assertTrue(net.alkahest.effect.MidasTouchEffect.nearby(c.getWorld(), pos), "An actual nearby server player supplies the effect");
+        c.assertTrue(core.startWith(new ItemStack(ModItems.ALKAHEST_AMULET), player), "The focus starts the boosted synthesis");
+        c.runAtTick(130, () -> c.assertTrue(core.getStack(MatrixCoreBlockEntity.OUTPUT).isEmpty(),
+            "The accelerated operation still takes its full boosted duration"));
+        c.runAtTick(145, () -> {
+            c.assertTrue(core.getStack(MatrixCoreBlockEntity.OUTPUT).isOf(ModItems.BINDING_SALT),
+                "Real server ticks complete before the unboosted 160-tick duration");
+            c.complete();
+        });
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void midasProgressIsTwentyPercentFaster(TestContext c) {
+        int normal = 0, boosted = 0, normalTicks = 0, boostedTicks = 0, prefillCrossings = 0;
+        while (normal < MatrixCoreBlockEntity.DURATION) {
+            normal += net.alkahest.effect.MidasTouchEffect.progressStep(false, normalTicks++);
+        }
+        while (boosted < MatrixCoreBlockEntity.DURATION) {
+            int previous = boosted;
+            boosted = Math.min(MatrixCoreBlockEntity.DURATION,
+                boosted + net.alkahest.effect.MidasTouchEffect.progressStep(true, boostedTicks++));
+            if (previous / 10 != boosted / 10) prefillCrossings++;
+        }
+        c.assertTrue(normalTicks == 160 && boostedTicks == 134, "Midas gives one extra progress step per five ticks");
+        c.assertTrue(prefillCrossings == 16, "Accelerated steps never skip a ten-progress essence request");
+        c.complete();
+    }
+
     /** String becomes three binding salts, paid for with essence taken straight out of the jars. */
     @GameTest(templateName = EMPTY_STRUCTURE)
     public void synthesisesBindingSaltFromJars(TestContext c) {

@@ -39,7 +39,9 @@ public record MatrixRecipe(Item base, List<Item> components, ItemStack output,
             EssenceType.PERDITIO, 20, EssenceType.MORTUUS, 15, EssenceType.AQUA, 10),
         // The specification's alternative; the lightning-rod recipe stays available as well.
         synthesis(Items.GLASS_BOTTLE, List.of(ModItems.CRYSTALS.get(EssenceType.IGNIS), ModItems.CRYSTALS.get(EssenceType.AER)),
-            new ItemStack(ModItems.LIGHTNING_IN_A_BOTTLE), EssenceType.POTENTIA, 15, EssenceType.AER, 10)
+            new ItemStack(ModItems.LIGHTNING_IN_A_BOTTLE), EssenceType.POTENTIA, 15, EssenceType.AER, 10),
+        synthesis(Items.GOLDEN_APPLE, List.of(ModItems.PURIFIED_WATER), new ItemStack(ModItems.MIDAS_ELIXIR),
+            EssenceType.ORDO, 15, EssenceType.LUX, 10, EssenceType.METALLUM, 5)
     );
 
     private static MatrixRecipe synthesis(Item base, List<Item> components, ItemStack output, Object... essence) {

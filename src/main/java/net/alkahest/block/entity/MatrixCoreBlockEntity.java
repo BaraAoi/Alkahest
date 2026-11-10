@@ -3,6 +3,7 @@ package net.alkahest.block.entity;
 import net.alkahest.block.custom.AlchemicalBrickBlock;
 import net.alkahest.block.custom.MatrixCoreBlock;
 import net.alkahest.block.custom.MatrixPillarBlock;
+import net.alkahest.effect.MidasTouchEffect;
 import net.alkahest.essence.EssenceStack;
 import net.alkahest.essence.EssenceType;
 import net.alkahest.essence.JarContentsComponent;
@@ -215,8 +216,11 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
             return;
         }
         if (self.progress < DURATION) {
-            self.progress++;
-            if (self.progress % 10 == 0) {
+            int before = self.progress;
+            int increment = MidasTouchEffect.progressStep(MidasTouchEffect.nearby(world, pos), world.getTime());
+            self.progress = Math.min(DURATION, before + increment);
+            // Boosted steps can jump over a multiple of ten; never skip an essence request.
+            if (before / 10 != self.progress / 10) {
                 self.prefill(world, recipe.cost());
                 self.sync();
             }
