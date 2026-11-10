@@ -18,7 +18,9 @@ import net.minecraft.client.render.model.json.ModelTransformationMode;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.RotationAxis;
+import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 import org.joml.Matrix4f;
 
@@ -63,6 +65,7 @@ public final class MatrixCoreRenderer implements BlockEntityRenderer<MatrixCoreB
 
         matrices.push();
         matrices.translate(0.5f, 0.5f, 0.5f);
+        if (awake) lining(buffer, matrices.peek(), entity.getPos());
         if (!awake) {
             // Dormant: a tight coil hidden inside the core block. Nothing turns, nothing floats.
             for (int i = 0; i < RINGS.length; i++) {
@@ -119,6 +122,40 @@ public final class MatrixCoreRenderer implements BlockEntityRenderer<MatrixCoreB
     @Override public boolean rendersOutsideBoundingBox(MatrixCoreBlockEntity entity) { return true; }
 
     @Override public int getRenderDistance() { return 160; }
+
+    /**
+     * The altar is hollow once the shell turns invisible, and a hollow cube is a window: the world
+     * behind it, the ground below it, even the inside of the terrain shine straight through. To make
+     * the whole 3x3x3 behave like one big solid core, the far inner walls are painted with a dark
+     * lining. Only the walls that face away from the camera are drawn, so the near side stays open,
+     * the halo floats in front of the lining and nothing can be seen through the cube.
+     */
+    private static void lining(VertexConsumer buffer, MatrixStack.Entry entry, BlockPos pos) {
+        Vec3d camera = MinecraftClient.getInstance().gameRenderer.getCamera().getPos();
+        double camX = camera.x - (pos.getX() + 0.5);
+        double camY = camera.y - (pos.getY() + 0.5);
+        double camZ = camera.z - (pos.getZ() + 0.5);
+        float half = 1.5f;
+        int[][] corners = {{-1, -1}, {1, -1}, {1, 1}, {-1, 1}};
+        for (int axis = 0; axis < 3; axis++) {
+            int first = (axis + 1) % 3, second = (axis + 2) % 3;
+            for (int sign = -1; sign <= 1; sign += 2) {
+                double nx = axis == 0 ? sign : 0, ny = axis == 1 ? sign : 0, nz = axis == 2 ? sign : 0;
+                double dx = nx * half - camX, dy = ny * half - camY, dz = nz * half - camZ;
+                if (nx * dx + ny * dy + nz * dz < 0) continue; // the near wall stays open
+                float[][] quad = new float[4][3];
+                for (int i = 0; i < 4; i++) {
+                    quad[i][axis] = sign * half;
+                    quad[i][first] = corners[i][0] * half;
+                    quad[i][second] = corners[i][1] * half;
+                }
+                vertexRgb(buffer, entry, quad[0], 0f, 1f, 96, 68, 132);
+                vertexRgb(buffer, entry, quad[1], 1f, 1f, 96, 68, 132);
+                vertexRgb(buffer, entry, quad[2], 1f, 0f, 84, 58, 118);
+                vertexRgb(buffer, entry, quad[3], 0f, 0f, 84, 58, 118);
+            }
+        }
+    }
 
     /** A real metal ring: two faces and two walls, so it has visible thickness. */
     private static void ring(VertexConsumer buffer, MatrixStack.Entry entry, float inner, float outer, float half) {
@@ -180,6 +217,17 @@ public final class MatrixCoreRenderer implements BlockEntityRenderer<MatrixCoreB
         vertex(buffer, entry, base[1], 0.45f, 0.55f, 0.45f);
         vertex(buffer, entry, base[2], 0.45f, 0.95f, 0.45f);
         vertex(buffer, entry, base[3], 0.05f, 0.95f, 0.45f);
+    }
+
+    private static void vertexRgb(VertexConsumer buffer, MatrixStack.Entry entry, float[] position,
+                                  float u, float v, int red, int green, int blue) {
+        Matrix4f matrix = entry.getPositionMatrix();
+        buffer.vertex(matrix, position[0], position[1], position[2])
+            .color(red, green, blue, 255)
+            .texture(u, v)
+            .overlay(OverlayTexture.DEFAULT_UV)
+            .light(LightmapTextureManager.MAX_LIGHT_COORDINATE)
+            .normal(entry, 0f, 1f, 0f);
     }
 
     private static void vertex(VertexConsumer buffer, MatrixStack.Entry entry, float[] position, float u, float v, float shade) {

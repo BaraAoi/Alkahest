@@ -593,6 +593,26 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
         progress = 0;
     }
 
+    /**
+     * One click, one big core: every block of the finished cube responds to the same gesture, so
+     * the player never has to reach the block sitting in the middle of the multiblock. A wand wakes
+     * the cube, a held item is put inside, an empty hand takes what is there.
+     */
+    public static void interactNearby(World world, BlockPos clicked, PlayerEntity player, ItemStack held) {
+        if (world.isClient || player.isSneaking()) return;
+        if (held.getItem() instanceof net.alkahest.item.custom.CrystalWandItem) {
+            awakenNearby(world, clicked, player);
+            return;
+        }
+        MatrixCoreBlockEntity core = coreNearby(world, clicked);
+        if (core == null) {
+            player.sendMessage(Text.translatable("message.alkahest.matrix_unformed"), true);
+            return;
+        }
+        if (!held.isEmpty()) core.insertBase(held, player);
+        else core.takeFromCore(player);
+    }
+
     /** The built Matrix that owns a clicked shell block, or null when the cube is not complete. */
     public static MatrixCoreBlockEntity coreNearby(World world, BlockPos clicked) {
         for (BlockPos candidate : BlockPos.iterate(clicked.add(-2, -2, -2), clicked.add(2, 2, 2))) {

@@ -54,18 +54,7 @@ public class MatrixCoreBlock extends Block implements BlockEntityProvider {
      * floats there, and an empty hand takes the product (or the untouched base) back out.
      */
     private void interact(World world, BlockPos pos, PlayerEntity player, ItemStack held) {
-        if (world.isClient || player.isSneaking()) return;
-        if (held.getItem() instanceof CrystalWandItem) {
-            MatrixCoreBlockEntity.awakenNearby(world, pos, player);
-            return;
-        }
-        MatrixCoreBlockEntity core = MatrixCoreBlockEntity.coreNearby(world, pos);
-        if (core == null) {
-            player.sendMessage(net.minecraft.text.Text.translatable("message.alkahest.matrix_unformed"), true);
-            return;
-        }
-        if (!held.isEmpty()) core.insertBase(held, player);
-        else core.takeFromCore(player);
+        MatrixCoreBlockEntity.interactNearby(world, pos, player, held);
     }
 
     @Override protected ItemActionResult onUseWithItem(ItemStack stack, BlockState state, World world, BlockPos pos,

@@ -146,6 +146,10 @@ check('matrix_ring_metal.png' in renderer, 'the rings are drawn with the forged 
 check('getEntitySolid' in renderer, 'the rings must read as solid metal, not glass')
 journal = (CLIENT / 'client/gui/JournalScreen.java').read_text()
 check('tri(' not in renderer, 'a QUADS layer cannot take three-vertex triangles')
+check('lining(' in renderer, 'the hollow cube needs a dark lining so the world cannot be seen through it')
+for block in ('MatrixPillarBlock', 'AlchemicalBrickBlock', 'MatrixCoreBlock'):
+    text = (JAVA / f'block/custom/{block}.java').read_text()
+    check('interactNearby' in text, f'{block} must answer to the same click as the core')
 check('MatrixRecipe.all()' in journal, 'the journal must list the matrix syntheses')
 check('RECIPES_PAGE' in journal, 'the synthesis list needs its own page in the journal')
 check('recipe.cost()' in journal, 'the list must show what a synthesis costs in essence')
