@@ -327,7 +327,7 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
     /** Queues a slow, clearly visible stream from the jar mouth to the item waiting in the core. */
     private void launchFlight(World world, BlockPos from, EssenceType type, int units) {
         if (flights.size() >= 20) flights.remove(0);
-        flights.add(new EssenceFlight(from.immutable(), type, world.getTime(), units));
+        flights.add(new EssenceFlight(from.toImmutable(), type, world.getTime(), units));
     }
 
     /**
