@@ -1,11 +1,14 @@
 package net.alkahest.block.entity;
 
+import dev.emi.trinkets.api.TrinketsApi;
 import net.alkahest.essence.EssenceStack;
 import net.alkahest.essence.EssenceType;
 import net.alkahest.essence.JarContentsComponent;
+import net.alkahest.item.custom.AlkahestAmuletItem;
 import net.alkahest.item.custom.CrystalWandItem;
 import net.alkahest.registry.ModBlockEntities;
 import net.alkahest.registry.ModDataComponents;
+import net.alkahest.registry.ModItems;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.entity.player.PlayerEntity;
@@ -17,6 +20,7 @@ import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 import org.joml.Vector3f;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -40,13 +44,16 @@ public class EssenceChargerBlockEntity extends BlockEntity {
         var result = chargeNearby(jar, pos, world.getEntitiesByClass(PlayerEntity.class, bounds, p -> true));
         if (result != null) beam(server, pos, result.player(), result.essence());
     }
+
     /** Prefer the jar below; only fall back to the old arrangement if there is none below. */
     public static JarBlockEntity findJar(World world, BlockPos pos) {
         if (world.getBlockEntity(pos.down()) instanceof JarBlockEntity below) return below;
         if (world.getBlockEntity(pos.up()) instanceof JarBlockEntity above) return above;
         return null;
     }
+
     public record ChargeTarget(PlayerEntity player, EssenceType essence) { }
+
     public static ChargeTarget chargeNearby(JarBlockEntity jar, BlockPos charger, Iterable<? extends PlayerEntity> players) {
         Box bounds = Box.of(Vec3d.ofCenter(charger), 64, 64, 64);
         for (PlayerEntity player : players) {
@@ -56,27 +63,58 @@ public class EssenceChargerBlockEntity extends BlockEntity {
         }
         return null;
     }
+
+    private static EssenceType requiredEssenceFor(ItemStack stack) {
+        if (stack.getItem() instanceof CrystalWandItem wand) return wand.essenceType();
+        if (stack.getItem() instanceof AlkahestAmuletItem amulet) return amulet.rechargeType();
+        return null;
+    }
+
+    private static EssenceType applyJarCharge(JarBlockEntity jar, JarContentsComponent current, ItemStack stack) {
+        EssenceType needed = requiredEssenceFor(stack);
+        if (needed == null) return null;
+        int charge = stack.getOrDefault(ModDataComponents.ESSENCE_CHARGE, 0);
+        if (charge >= 100) return null;
+        EssenceStack source = current.contents().stream().filter(e -> e.type() == needed).findFirst().orElse(null);
+        if (source == null) return null;
+        List<EssenceStack> next = new ArrayList<>(current.contents());
+        next.remove(source);
+        if (source.amount() > 1) next.add(new EssenceStack(source.type(), source.amount() - 1, source.stability()));
+        jar.setContents(new JarContentsComponent(next));
+        int updated = Math.min(100, charge + 10);
+        stack.set(ModDataComponents.ESSENCE_CHARGE, updated);
+        if (updated >= 100 && stack.getItem() instanceof AlkahestAmuletItem) {
+            stack.set(ModDataComponents.AMULET_USES_STEP, 0);
+        }
+        return source.type();
+    }
+
     /** One successful charge consumes exactly one matching unit, or nothing on rejection. */
     public static EssenceType chargeFirst(JarBlockEntity jar, PlayerEntity player) {
         JarContentsComponent current = jar.contents();
         if (!net.alkahest.item.custom.JarItem.allowed(current)) return null;
         for (int i = 0; i < player.getInventory().size(); i++) {
             ItemStack stack = player.getInventory().getStack(i);
-            if (!(stack.getItem() instanceof CrystalWandItem wand)) continue;
-            int charge = stack.getOrDefault(ModDataComponents.ESSENCE_CHARGE, 0);
-            if (charge >= 100) continue;
-            EssenceStack source = current.contents().stream().filter(e -> e.type() == wand.essenceType()).findFirst().orElse(null);
-            if (source == null) continue;
-            List<EssenceStack> next = new ArrayList<>(current.contents());
-            next.remove(source);
-            if (source.amount() > 1) next.add(new EssenceStack(source.type(), source.amount() - 1, source.stability()));
-            jar.setContents(new JarContentsComponent(next));
-            stack.set(ModDataComponents.ESSENCE_CHARGE, Math.min(100, charge + 10));
-            player.getInventory().markDirty();
-            return source.type();
+            EssenceType used = applyJarCharge(jar, current, stack);
+            if (used != null) {
+                player.getInventory().markDirty();
+                return used;
+            }
+        }
+        var trinkets = TrinketsApi.getTrinketComponent(player).orElse(null);
+        if (trinkets != null) {
+            for (var equipped : trinkets.getEquipped(ModItems.ALKAHEST_AMULET)) {
+                ItemStack stack = equipped.getRight();
+                EssenceType used = applyJarCharge(jar, current, stack);
+                if (used != null) {
+                    equipped.getLeft().inventory().setStack(equipped.getLeft().index(), stack);
+                    return used;
+                }
+            }
         }
         return null;
     }
+
     private static void beam(ServerWorld world, BlockPos pos, PlayerEntity player, EssenceType essence) {
         int color = essence.color();
         var dust = new DustParticleEffect(new Vector3f(((color >> 16) & 255) / 255f, ((color >> 8) & 255) / 255f, (color & 255) / 255f), .8f);

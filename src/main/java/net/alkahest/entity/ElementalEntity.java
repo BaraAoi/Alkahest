@@ -106,7 +106,8 @@ public class ElementalEntity extends HostileEntity {
         if (world.getDifficulty() == Difficulty.PEACEFUL) {
             return false;
         }
-        if (reason == SpawnReason.NATURAL && type == ModEntities.ELEMENTALS.get(EssenceType.AER) && pos.getY() < 95) {
+        if (reason == SpawnReason.NATURAL && type == ModEntities.ELEMENTALS.get(EssenceType.AER)
+            && pos.getY() < 95 && !world.getBiome(pos).matchesKey(net.alkahest.registry.ModWorldGen.ALCHEMICAL_WASTES)) {
             return false;
         }
         boolean allowFluid = type == ModEntities.ELEMENTALS.get(EssenceType.AQUA);

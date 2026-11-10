@@ -17,28 +17,30 @@ import net.minecraft.util.math.MathHelper;
 /** An original arcane research map and field notes. Progress remains server-authoritative. */
 public final class JournalScreen extends Screen {
     private static final Identifier BACKGROUND = Alkahest.id("textures/gui/journal_background.png");
-    private static final int GUIDE_PAGES = 8;
-    private record Node(String key, int parents, int discovered, int completed, int x, int y,
-                        ItemStack icon, String[] choices, int[] failed) { }
+    private static final int GUIDE_PAGES = 9;
+    private record Node(String key, long parents, long discovered, long completed, int x, int y,
+                        ItemStack icon, String[] choices, long[] failed) { }
     private static final Node[] NODES = {
-        new Node("root", 0, EarlyResearch.ROOT, EarlyResearch.ROOT, 24, 0,
-            new ItemStack(ModItems.ALCHEMICAL_JOURNAL), new String[0], new int[0]),
+        new Node("root", 0L, EarlyResearch.ROOT, EarlyResearch.ROOT, 24, 0,
+            new ItemStack(ModItems.ALCHEMICAL_JOURNAL), new String[0], new long[0]),
         new Node("research", EarlyResearch.ROOT, EarlyResearch.DISCOVERED, EarlyResearch.COMPLETED, 96, 0,
-            new ItemStack(ModBlocks.ALCHEMY_CAULDRON), new String[]{"sand", "sugar", "coal"}, new int[]{EarlyResearch.FAILED_SAND, EarlyResearch.FAILED_SUGAR, 0}),
+            new ItemStack(ModBlocks.ALCHEMY_CAULDRON), new String[]{"sand", "sugar", "coal"}, new long[]{EarlyResearch.FAILED_SAND, EarlyResearch.FAILED_SUGAR, 0L}),
         new Node("reactive", EarlyResearch.COMPLETED, EarlyResearch.REACTIVE_DISCOVERED, EarlyResearch.REACTIVE_COMPLETED, 172, -40,
-            new ItemStack(ModItems.FIRE_DUST), new String[]{"feather", "redstone", "clay"}, new int[]{EarlyResearch.FAILED_FEATHER, 0, EarlyResearch.FAILED_CLAY}),
+            new ItemStack(ModItems.FIRE_DUST), new String[]{"feather", "redstone", "clay"}, new long[]{EarlyResearch.FAILED_FEATHER, 0L, EarlyResearch.FAILED_CLAY}),
         new Node("raw", EarlyResearch.COMPLETED, EarlyResearch.RAW_DISCOVERED, EarlyResearch.RAW_COMPLETED, 172, 40,
-            new ItemStack(ModBlocks.DISTILLERY), new String[]{"copper", "iron", "cobble"}, new int[]{0, EarlyResearch.FAILED_IRON, EarlyResearch.FAILED_COBBLE}),
+            new ItemStack(ModBlocks.DISTILLERY), new String[]{"copper", "iron", "cobble"}, new long[]{0L, EarlyResearch.FAILED_IRON, EarlyResearch.FAILED_COBBLE}),
         new Node("sight", EarlyResearch.RAW_COMPLETED | EarlyResearch.REACTIVE_COMPLETED, EarlyResearch.SIGHT_DISCOVERED, EarlyResearch.SIGHT_COMPLETED, 248, 0,
-            new ItemStack(ModItems.CRYSTALS.get(EssenceType.ORDO)), new String[]{"glass", "eye", "torch"}, new int[]{0, EarlyResearch.FAILED_EYE, EarlyResearch.FAILED_TORCH}),
+            new ItemStack(ModItems.CRYSTALS.get(EssenceType.ORDO)), new String[]{"glass", "eye", "torch"}, new long[]{0L, EarlyResearch.FAILED_EYE, EarlyResearch.FAILED_TORCH}),
         new Node("chain_ignis", EarlyResearch.SIGHT_COMPLETED, EarlyResearch.IGNIS_DISCOVERED, EarlyResearch.IGNIS_COMPLETED, 324, -40,
-            new ItemStack(Items.BLAZE_ROD), new String[]{"cane", "feather", "coal"}, new int[]{EarlyResearch.FAILED_CANE, EarlyResearch.FAILED_IGNIS_FEATHER, 0}),
+            new ItemStack(Items.BLAZE_ROD), new String[]{"cane", "feather", "coal"}, new long[]{EarlyResearch.FAILED_CANE, EarlyResearch.FAILED_IGNIS_FEATHER, 0L}),
         new Node("chain_aqua", EarlyResearch.SIGHT_COMPLETED, EarlyResearch.AQUA_DISCOVERED, EarlyResearch.AQUA_COMPLETED, 324, 40,
-            new ItemStack(Items.PRISMARINE_SHARD), new String[]{"kelp", "sand", "ice"}, new int[]{0, EarlyResearch.FAILED_AQUA_SAND, EarlyResearch.FAILED_ICE}),
+            new ItemStack(Items.PRISMARINE_SHARD), new String[]{"kelp", "sand", "ice"}, new long[]{0L, EarlyResearch.FAILED_AQUA_SAND, EarlyResearch.FAILED_ICE}),
         new Node("binding", EarlyResearch.IGNIS_COMPLETED | EarlyResearch.AQUA_COMPLETED, EarlyResearch.BINDING_DISCOVERED, EarlyResearch.BINDING_COMPLETED, 400, 0,
-            new ItemStack(ModItems.BINDING_SALT), new String[]{"string", "slime", "bonemeal"}, new int[]{0, EarlyResearch.FAILED_SLIME, EarlyResearch.FAILED_BONE_MEAL})
+            new ItemStack(ModItems.BINDING_SALT), new String[]{"string", "slime", "bonemeal"}, new long[]{0L, EarlyResearch.FAILED_SLIME, EarlyResearch.FAILED_BONE_MEAL}),
+        new Node("the_alkahest", EarlyResearch.BINDING_COMPLETED, EarlyResearch.ALKAHEST_DISCOVERED, EarlyResearch.ALKAHEST_COMPLETED, 476, 0,
+            new ItemStack(ModItems.ALKAHEST_VIAL), new String[]{"diamond", "gold", "obsidian"}, new long[]{0L, EarlyResearch.FAILED_GOLD, EarlyResearch.FAILED_OBSIDIAN})
     };
-    private final int researchFlags;
+    private final long researchFlags;
     private boolean guide;
     private Node selected;
     private int guidePage;
@@ -47,7 +49,7 @@ public final class JournalScreen extends Screen {
     private boolean dragging;
     private int left, top, bookWidth, bookHeight;
 
-    public JournalScreen(int researchFlags) { super(Text.translatable("screen.alkahest.journal")); this.researchFlags = researchFlags; }
+    public JournalScreen(long researchFlags) { super(Text.translatable("screen.alkahest.journal")); this.researchFlags = researchFlags; }
 
     @Override protected void init() {
         bookWidth = Math.min(408, width - 12);
@@ -100,6 +102,7 @@ public final class JournalScreen extends Screen {
         link(c, NODES[2], NODES[4]); link(c, NODES[3], NODES[4]);
         link(c, NODES[4], NODES[5]); link(c, NODES[4], NODES[6]);
         link(c, NODES[5], NODES[7]); link(c, NODES[6], NODES[7]);
+        link(c, NODES[7], NODES[8]);
         for (Node node : NODES) if (!state(node).equals("hidden")) drawNode(c, node, mouseX, mouseY);
         c.disableScissor();
         c.drawCenteredTextWithShadow(textRenderer, Text.translatable("screen.alkahest.journal.map_hint"), left + bookWidth / 2, top + bookHeight - 24, 0xFFD4C4A0);
@@ -199,7 +202,7 @@ public final class JournalScreen extends Screen {
     }
     @Override public boolean mouseDragged(double x, double y, int button, double dx, double dy) {
         if (button == 0 && dragging && !guide && selected == null) {
-            panX = MathHelper.clamp(panX + dx, -220, 120);
+            panX = MathHelper.clamp(panX + dx, -300, 120);
             panY = MathHelper.clamp(panY + dy, -70, 70);
             return true;
         }

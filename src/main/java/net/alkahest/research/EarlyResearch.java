@@ -20,15 +20,16 @@ import java.util.Map;
 
 import static net.alkahest.essence.EssenceType.*;
 
-/** Server-owned early and Era II research, persisted per player by hidden vanilla advancements. */
+/** Server-owned early, Era II and Era III research, persisted per player by hidden vanilla advancements. */
 public final class EarlyResearch {
-    public static final int ROOT = 1, DISCOVERED = 2, FAILED_SAND = 4, FAILED_SUGAR = 8, COMPLETED = 16;
-    public static final int REACTIVE_DISCOVERED = 32, FAILED_FEATHER = 64, FAILED_CLAY = 128, REACTIVE_COMPLETED = 256;
-    public static final int RAW_DISCOVERED = 512, FAILED_IRON = 1024, FAILED_COBBLE = 2048, RAW_COMPLETED = 4096;
-    public static final int SIGHT_DISCOVERED = 8192, FAILED_EYE = 16384, FAILED_TORCH = 32768, SIGHT_COMPLETED = 65536;
-    public static final int IGNIS_DISCOVERED = 1 << 17, FAILED_CANE = 1 << 18, FAILED_IGNIS_FEATHER = 1 << 19, IGNIS_COMPLETED = 1 << 20;
-    public static final int AQUA_DISCOVERED = 1 << 21, FAILED_AQUA_SAND = 1 << 22, FAILED_ICE = 1 << 23, AQUA_COMPLETED = 1 << 24;
-    public static final int BINDING_DISCOVERED = 1 << 25, FAILED_SLIME = 1 << 26, FAILED_BONE_MEAL = 1 << 27, BINDING_COMPLETED = 1 << 28;
+    public static final long ROOT = 1L, DISCOVERED = 2L, FAILED_SAND = 4L, FAILED_SUGAR = 8L, COMPLETED = 16L;
+    public static final long REACTIVE_DISCOVERED = 32L, FAILED_FEATHER = 64L, FAILED_CLAY = 128L, REACTIVE_COMPLETED = 256L;
+    public static final long RAW_DISCOVERED = 512L, FAILED_IRON = 1024L, FAILED_COBBLE = 2048L, RAW_COMPLETED = 4096L;
+    public static final long SIGHT_DISCOVERED = 8192L, FAILED_EYE = 16384L, FAILED_TORCH = 32768L, SIGHT_COMPLETED = 65536L;
+    public static final long IGNIS_DISCOVERED = 1L << 17, FAILED_CANE = 1L << 18, FAILED_IGNIS_FEATHER = 1L << 19, IGNIS_COMPLETED = 1L << 20;
+    public static final long AQUA_DISCOVERED = 1L << 21, FAILED_AQUA_SAND = 1L << 22, FAILED_ICE = 1L << 23, AQUA_COMPLETED = 1L << 24;
+    public static final long BINDING_DISCOVERED = 1L << 25, FAILED_SLIME = 1L << 26, FAILED_BONE_MEAL = 1L << 27, BINDING_COMPLETED = 1L << 28;
+    public static final long ALKAHEST_DISCOVERED = 1L << 29, FAILED_GOLD = 1L << 30, FAILED_OBSIDIAN = 1L << 31, ALKAHEST_COMPLETED = 1L << 32;
 
     private static final String[] IDS = {
         "root", "cauldron_discovered", "cauldron_sand", "cauldron_sugar", "cauldron_complete",
@@ -37,16 +38,18 @@ public final class EarlyResearch {
         "sight_discovered", "sight_eye", "sight_torch", "sight_complete",
         "chain_ignis_discovered", "chain_ignis_cane", "chain_ignis_feather", "chain_ignis_complete",
         "chain_aqua_discovered", "chain_aqua_sand", "chain_aqua_ice", "chain_aqua_complete",
-        "binding_discovered", "binding_slime", "binding_bone_meal", "binding_complete"
+        "binding_discovered", "binding_slime", "binding_bone_meal", "binding_complete",
+        "alkahest_discovered", "alkahest_gold", "alkahest_obsidian", "alkahest_complete"
     };
-    private static final int[] BITS = {
+    private static final long[] BITS = {
         ROOT, DISCOVERED, FAILED_SAND, FAILED_SUGAR, COMPLETED,
         REACTIVE_DISCOVERED, FAILED_FEATHER, FAILED_CLAY, REACTIVE_COMPLETED,
         RAW_DISCOVERED, FAILED_IRON, FAILED_COBBLE, RAW_COMPLETED,
         SIGHT_DISCOVERED, FAILED_EYE, FAILED_TORCH, SIGHT_COMPLETED,
         IGNIS_DISCOVERED, FAILED_CANE, FAILED_IGNIS_FEATHER, IGNIS_COMPLETED,
         AQUA_DISCOVERED, FAILED_AQUA_SAND, FAILED_ICE, AQUA_COMPLETED,
-        BINDING_DISCOVERED, FAILED_SLIME, FAILED_BONE_MEAL, BINDING_COMPLETED
+        BINDING_DISCOVERED, FAILED_SLIME, FAILED_BONE_MEAL, BINDING_COMPLETED,
+        ALKAHEST_DISCOVERED, FAILED_GOLD, FAILED_OBSIDIAN, ALKAHEST_COMPLETED
     };
 
     public enum Attempt {
@@ -55,6 +58,7 @@ public final class EarlyResearch {
         IGNIS_CANE, IGNIS_FEATHER, IGNIS_COAL,
         AQUA_KELP, AQUA_SAND, AQUA_ICE,
         BINDING_STRING, BINDING_SLIME, BINDING_BONE_MEAL,
+        ALKAHEST_DIAMOND, ALKAHEST_GOLD, ALKAHEST_OBSIDIAN,
         ALREADY_FAILED
     }
 
@@ -65,6 +69,7 @@ public final class EarlyResearch {
     private static final Map<EssenceType, Integer> IGNIS_COST = Map.of(IGNIS, 8, POTENTIA, 4);
     private static final Map<EssenceType, Integer> AQUA_COST = Map.of(AQUA, 5, TERRA, 2);
     private static final Map<EssenceType, Integer> BINDING_COST = Map.of(ORDO, 2, TERRA, 1, AQUA, 1);
+    private static final Map<EssenceType, Integer> ALKAHEST_COST = Map.of(HERBA, 3, VITIUM, 2, ORDO, 2);
 
     private static AdvancementEntry entry(ServerPlayerEntity player, String name) {
         return player.getServer().getAdvancementLoader().get(Alkahest.id("research/" + name));
@@ -77,8 +82,8 @@ public final class EarlyResearch {
         var entry = entry(player, name);
         return entry != null && player.getAdvancementTracker().grantCriterion(entry, "done");
     }
-    public static int flags(ServerPlayerEntity player) {
-        int flags = 0;
+    public static long flags(ServerPlayerEntity player) {
+        long flags = 0L;
         for (int i = 0; i < IDS.length; i++) if (has(player, IDS[i])) flags |= BITS[i];
         return flags;
     }
@@ -124,6 +129,10 @@ public final class EarlyResearch {
             !has(player, "binding_discovered") && grant(player, "binding_discovered"))
             insight(player, world, pos);
     }
+    public static void discoverAlkahest(ServerPlayerEntity player, World world, BlockPos pos) {
+        if (has(player, "binding_complete") && !has(player, "alkahest_discovered") && grant(player, "alkahest_discovered"))
+            insight(player, world, pos);
+    }
 
     private static void insight(ServerPlayerEntity player, World world, BlockPos pos) {
         player.sendMessage(Text.translatable("message.alkahest.research.insight"), false);
@@ -135,7 +144,7 @@ public final class EarlyResearch {
     }
 
     /** Matches an active hypothesis when the subject's essences are dissolved and a candidate catalyst is applied. */
-    public static Attempt identify(int flags, Map<EssenceType, Integer> essences, ItemStack catalyst) {
+    public static Attempt identify(long flags, Map<EssenceType, Integer> essences, ItemStack catalyst) {
         if (catalyst.isEmpty()) return Attempt.NONE;
         if ((flags & DISCOVERED) != 0 && (flags & COMPLETED) == 0 && hasAll(essences, BASICS_COST)) {
             if (catalyst.isOf(Items.SAND)) return (flags & FAILED_SAND) == 0 ? Attempt.SAND : Attempt.ALREADY_FAILED;
@@ -172,6 +181,11 @@ public final class EarlyResearch {
             if (catalyst.isOf(Items.SLIME_BALL)) return (flags & FAILED_SLIME) == 0 ? Attempt.BINDING_SLIME : Attempt.ALREADY_FAILED;
             if (catalyst.isOf(Items.BONE_MEAL)) return (flags & FAILED_BONE_MEAL) == 0 ? Attempt.BINDING_BONE_MEAL : Attempt.ALREADY_FAILED;
         }
+        if ((flags & ALKAHEST_DISCOVERED) != 0 && (flags & ALKAHEST_COMPLETED) == 0 && hasAll(essences, ALKAHEST_COST)) {
+            if (catalyst.isOf(Items.DIAMOND)) return Attempt.ALKAHEST_DIAMOND;
+            if (catalyst.isOf(Items.GOLD_INGOT)) return (flags & FAILED_GOLD) == 0 ? Attempt.ALKAHEST_GOLD : Attempt.ALREADY_FAILED;
+            if (catalyst.isOf(Items.OBSIDIAN)) return (flags & FAILED_OBSIDIAN) == 0 ? Attempt.ALKAHEST_OBSIDIAN : Attempt.ALREADY_FAILED;
+        }
         return Attempt.NONE;
     }
 
@@ -184,6 +198,7 @@ public final class EarlyResearch {
             case IGNIS_CANE, IGNIS_FEATHER, IGNIS_COAL -> IGNIS_COST;
             case AQUA_KELP, AQUA_SAND, AQUA_ICE -> AQUA_COST;
             case BINDING_STRING, BINDING_SLIME, BINDING_BONE_MEAL -> BINDING_COST;
+            case ALKAHEST_DIAMOND, ALKAHEST_GOLD, ALKAHEST_OBSIDIAN -> ALKAHEST_COST;
             default -> Map.of();
         };
     }
@@ -202,6 +217,7 @@ public final class EarlyResearch {
             case IGNIS_CANE -> "chain_ignis_cane"; case IGNIS_FEATHER -> "chain_ignis_feather"; case IGNIS_COAL -> "chain_ignis_complete";
             case AQUA_KELP -> "chain_aqua_complete"; case AQUA_SAND -> "chain_aqua_sand"; case AQUA_ICE -> "chain_aqua_ice";
             case BINDING_STRING -> "binding_complete"; case BINDING_SLIME -> "binding_slime"; case BINDING_BONE_MEAL -> "binding_bone_meal";
+            case ALKAHEST_DIAMOND -> "alkahest_complete"; case ALKAHEST_GOLD -> "alkahest_gold"; case ALKAHEST_OBSIDIAN -> "alkahest_obsidian";
             default -> null;
         };
         if (id == null || !grant(player, id)) return false;
@@ -213,12 +229,13 @@ public final class EarlyResearch {
             case IGNIS_CANE -> "ignis_cane"; case IGNIS_FEATHER -> "ignis_feather"; case IGNIS_COAL -> "ignis_success";
             case AQUA_KELP -> "aqua_success"; case AQUA_SAND -> "aqua_sand"; case AQUA_ICE -> "aqua_ice";
             case BINDING_STRING -> "binding_success"; case BINDING_SLIME -> "binding_slime"; case BINDING_BONE_MEAL -> "binding_bone_meal";
+            case ALKAHEST_DIAMOND -> "alkahest_success"; case ALKAHEST_GOLD -> "alkahest_gold"; case ALKAHEST_OBSIDIAN -> "alkahest_obsidian";
             default -> throw new IllegalStateException("Unexpected attempt");
         };
         player.sendMessage(Text.translatable("message.alkahest.research." + result), false);
         boolean success = attempt == Attempt.COAL || attempt == Attempt.REDSTONE || attempt == Attempt.RAW_COPPER
             || attempt == Attempt.SIGHT_GLASS || attempt == Attempt.IGNIS_COAL || attempt == Attempt.AQUA_KELP
-            || attempt == Attempt.BINDING_STRING;
+            || attempt == Attempt.BINDING_STRING || attempt == Attempt.ALKAHEST_DIAMOND;
         world.spawnParticles(success ? ParticleTypes.TOTEM_OF_UNDYING : ParticleTypes.LARGE_SMOKE,
             pos.getX() + .5, pos.getY() + 1.15, pos.getZ() + .5, success ? 30 : 55, .32, .28, .32, .08);
         if (!success) {

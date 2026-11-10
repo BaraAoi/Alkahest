@@ -1,29 +1,33 @@
 package net.alkahest;
 
 import dev.emi.trinkets.api.TrinketsApi;
-import net.alkahest.essence.ItemEssenceMap;
-import net.alkahest.registry.ModItems;
-import net.alkahest.network.OpenJournalPayload;
-import net.alkahest.client.gui.JournalScreen;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.alkahest.registry.ModEntities;
-import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
-import net.minecraft.client.render.entity.FlyingItemEntityRenderer;
-import net.minecraft.client.render.entity.EmptyEntityRenderer;
-import net.alkahest.item.custom.CrystalWandItem;
-import net.alkahest.registry.ModBlocks;
 import net.alkahest.block.custom.AlchemyCauldronBlock;
-import net.fabricmc.fabric.api.client.rendering.v1.ColorProviderRegistry;
-import net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap;
-import net.minecraft.client.render.RenderLayer;
-import net.minecraft.client.color.world.BiomeColors;
+import net.alkahest.client.gui.JournalScreen;
+import net.alkahest.essence.ItemEssenceMap;
+import net.alkahest.item.custom.AlkahestAmuletItem;
+import net.alkahest.item.custom.AlkahestVialItem;
+import net.alkahest.item.custom.CrystalWandItem;
+import net.alkahest.network.OpenJournalPayload;
+import net.alkahest.registry.ModBlocks;
 import net.alkahest.registry.ModDataComponents;
+import net.alkahest.registry.ModEntities;
+import net.alkahest.registry.ModItems;
 import net.fabricmc.api.ClientModInitializer;
-import net.fabricmc.fabric.api.client.item.v1.ItemTooltipCallback;
+import net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
-import org.slf4j.LoggerFactory;
+import net.fabricmc.fabric.api.client.item.v1.ItemTooltipCallback;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.fabricmc.fabric.api.client.rendering.v1.ColorProviderRegistry;
+import net.fabricmc.fabric.api.client.rendering.v1.EntityModelLayerRegistry;
+import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.color.world.BiomeColors;
+import net.minecraft.client.render.RenderLayer;
+import net.minecraft.client.render.entity.EmptyEntityRenderer;
+import net.minecraft.client.render.entity.FlyingItemEntityRenderer;
 import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
+import org.slf4j.LoggerFactory;
 
 public final class AlkahestClient implements ClientModInitializer {
     @Override
@@ -35,6 +39,7 @@ public final class AlkahestClient implements ClientModInitializer {
         ClientPlayNetworking.registerGlobalReceiver(OpenJournalPayload.ID, (payload, context) ->
             context.client().execute(() -> context.client().setScreen(new JournalScreen(payload.flags()))));
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.NAPALM_FLAME, RenderLayer.getCutout());
+        BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.ALCHEMICAL_MOSS, RenderLayer.getCutout());
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.JAR, RenderLayer.getCutout());
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.ALCHEMY_PIPE, RenderLayer.getCutout());
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.ESSENCE_SEPARATOR, RenderLayer.getCutout());
@@ -47,15 +52,20 @@ public final class AlkahestClient implements ClientModInitializer {
                 ? net.alkahest.essence.JarVisuals.color(jar.contents()) : 0xffffff, ModBlocks.JAR);
         EntityRendererRegistry.register(ModEntities.THROWN_REAGENT, FlyingItemEntityRenderer::new);
         EntityRendererRegistry.register(ModEntities.REAGENT_ZONE, EmptyEntityRenderer::new);
-        net.fabricmc.fabric.api.client.rendering.v1.EntityModelLayerRegistry.registerModelLayer(
+        EntityModelLayerRegistry.registerModelLayer(
             net.alkahest.client.render.ElementalEntityModel.LAYER,
             net.alkahest.client.render.ElementalEntityModel::getTexturedModelData
         );
-        net.fabricmc.fabric.api.client.rendering.v1.EntityModelLayerRegistry.registerModelLayer(
+        EntityModelLayerRegistry.registerModelLayer(
             net.alkahest.client.render.ElementalBoltEntityRenderer.LAYER,
             net.alkahest.client.render.ElementalBoltEntityRenderer::getTexturedModelData
         );
+        EntityModelLayerRegistry.registerModelLayer(
+            net.alkahest.client.render.DissolvedEntityModel.LAYER,
+            net.alkahest.client.render.DissolvedEntityModel::getTexturedModelData
+        );
         EntityRendererRegistry.register(ModEntities.ELEMENTAL_BOLT, net.alkahest.client.render.ElementalBoltEntityRenderer::new);
+        EntityRendererRegistry.register(ModEntities.DISSOLVED, net.alkahest.client.render.DissolvedEntityRenderer::new);
         for (var elementalType : ModEntities.ELEMENTALS.values()) {
             EntityRendererRegistry.register(elementalType, net.alkahest.client.render.ElementalEntityRenderer::new);
         }
@@ -69,11 +79,21 @@ public final class AlkahestClient implements ClientModInitializer {
         }, ModBlocks.ALCHEMY_CAULDRON);
         ClientLifecycleEvents.CLIENT_STARTED.register(client -> LoggerFactory.getLogger("Alkahest").info("Alkahest client started"));
         ItemTooltipCallback.EVENT.register((stack, context, type, lines) -> {
-            if (stack.getItem() instanceof CrystalWandItem) lines.add(Text.translatable("message.alkahest.wand_charge", stack.getOrDefault(ModDataComponents.ESSENCE_CHARGE, 0)));
+            if (stack.getItem() instanceof CrystalWandItem) {
+                lines.add(Text.translatable("message.alkahest.wand_charge", stack.getOrDefault(ModDataComponents.ESSENCE_CHARGE, 0)));
+            }
+            if (stack.getItem() instanceof AlkahestAmuletItem) {
+                lines.add(Text.translatable("message.alkahest.amulet_charge", stack.getOrDefault(ModDataComponents.ESSENCE_CHARGE, 0))
+                    .formatted(Formatting.GOLD));
+            }
+            if (stack.getItem() instanceof AlkahestVialItem) {
+                lines.add(Text.translatable("message.alkahest.solvent_charges", AlkahestVialItem.charges(stack), AlkahestVialItem.MAX_CHARGES)
+                    .formatted(Formatting.LIGHT_PURPLE));
+            }
             if (stack.getItem() instanceof net.alkahest.item.custom.JarItem) {
                 var contents = net.alkahest.item.custom.JarItem.contents(stack);
                 lines.add(Text.translatable("message.alkahest.jar_total", contents.total()));
-                if (!net.alkahest.item.custom.JarItem.singleType(contents)) lines.add(Text.translatable("message.alkahest.jar_legacy").formatted(net.minecraft.util.Formatting.GOLD));
+                if (!net.alkahest.item.custom.JarItem.singleType(contents)) lines.add(Text.translatable("message.alkahest.jar_legacy").formatted(Formatting.GOLD));
                 for (var essence : contents.contents()) lines.add(Text.literal("◆ " + essence.type().displayName() + ": " + essence.amount() + " · " + Math.round(essence.stability() * 100) + "%")
                     .styled(style -> style.withColor(essence.type().color())));
             }

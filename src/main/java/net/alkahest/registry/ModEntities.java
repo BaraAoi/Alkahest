@@ -1,6 +1,7 @@
 package net.alkahest.registry;
 
 import net.alkahest.Alkahest;
+import net.alkahest.entity.DissolvedEntity;
 import net.alkahest.entity.ElementalBoltEntity;
 import net.alkahest.entity.ElementalEntity;
 import net.alkahest.entity.ReagentZoneEntity;
@@ -33,7 +34,21 @@ public final class ModEntities {
         Registries.ENTITY_TYPE, Alkahest.id("elemental_bolt"),
         FabricEntityTypeBuilder.<ElementalBoltEntity>create(SpawnGroup.MISC, ElementalBoltEntity::new)
             .dimensions(EntityDimensions.fixed(0.35f, 0.35f)).trackRangeBlocks(64).trackedUpdateRate(2).build());
+    public static final EntityType<DissolvedEntity> DISSOLVED = Registry.register(
+        Registries.ENTITY_TYPE, Alkahest.id("dissolved"),
+        FabricEntityTypeBuilder.<DissolvedEntity>create(SpawnGroup.MONSTER, DissolvedEntity::new)
+            .dimensions(EntityDimensions.fixed(0.75f, 1.75f)).trackRangeBlocks(64).trackedUpdateRate(3).build());
     public static final Map<EssenceType, EntityType<ElementalEntity>> ELEMENTALS = elementals();
+
+    static {
+        FabricDefaultAttributeRegistry.register(DISSOLVED, DissolvedEntity.createDissolvedAttributes());
+        SpawnRestriction.register(
+            DISSOLVED,
+            SpawnLocationTypes.ON_GROUND,
+            Heightmap.Type.MOTION_BLOCKING_NO_LEAVES,
+            DissolvedEntity::canSpawn
+        );
+    }
 
     private static Map<EssenceType, EntityType<ElementalEntity>> elementals() {
         Map<EssenceType, EntityType<ElementalEntity>> map = new EnumMap<>(EssenceType.class);

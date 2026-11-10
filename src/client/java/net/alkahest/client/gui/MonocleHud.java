@@ -44,6 +44,10 @@ public final class MonocleHud {
             lines.add(Text.translatable("screen.alkahest.monocle.cauldron"));
             if (!cauldron.hasWater()) lines.add(Text.translatable("screen.alkahest.monocle.cauldron_dry"));
             else if (!cauldron.isHeated()) lines.add(Text.translatable("screen.alkahest.monocle.cauldron_cold"));
+            if (cauldron.isMossStabilized()) {
+                lines.add(Text.translatable("screen.alkahest.monocle.cauldron_stabilized")
+                    .styled(style -> style.withColor(0xC084FC)));
+            }
             if (contents.isEmpty()) lines.add(Text.translatable("screen.alkahest.monocle.empty"));
             else {
                 int shown = 0;

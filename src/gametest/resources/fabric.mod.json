@@ -15,7 +15,8 @@
       "net.alkahest.test.PipeGameTests",
       "net.alkahest.test.MiningGameTests",
       "net.alkahest.test.SeparatorGameTests",
-      "net.alkahest.test.ElementalGameTests"
+      "net.alkahest.test.ElementalGameTests",
+      "net.alkahest.test.AlkahestGameTests"
     ]
   },
   "depends": {

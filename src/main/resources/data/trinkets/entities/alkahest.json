@@ -1,1 +1,4 @@
-{"entities": ["minecraft:player"], "slots": ["head/face"]}
+{
+  "entities": ["minecraft:player"],
+  "slots": ["head/face", "chest/necklace"]
+}

@@ -72,7 +72,7 @@ public class AlchemyPipeBlock extends Block implements BlockEntityProvider {
         return !world.isClient && type == ModBlockEntities.ALCHEMY_PIPE ? (w,p,s,be) -> AlchemyPipeBlockEntity.tick(w,p,s) : null;
     }
     @Override protected ItemActionResult onUseWithItem(ItemStack stack, BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
-        if (stack.getItem() instanceof CrystalWandItem) {
+        if (stack.getItem() instanceof CrystalWandItem || stack.getItem() instanceof net.alkahest.item.custom.AlkahestAmuletItem) {
             if (!world.isClient && world.getBlockEntity(pos) instanceof AlchemyPipeBlockEntity pipe) {
                 if (player.isSneaking()) pipe.nextFilter();
                 else {

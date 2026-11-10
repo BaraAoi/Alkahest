@@ -47,7 +47,14 @@ public final class ItemEssenceMap {
         e(Items.GOLD_INGOT, s(METALLUM, 4), s(ORDO, 6), s(LUX, 2)),
         e(Items.IRON_INGOT, s(METALLUM, 6), s(TERRA, 2)),
         e(Items.COPPER_INGOT, s(METALLUM, 4), s(POTENTIA, 1)),
+        e(Items.RAW_GOLD, s(METALLUM, 3), s(ORDO, 5), s(LUX, 1)),
+        e(Items.RAW_IRON, s(METALLUM, 5), s(TERRA, 2)),
+        e(Items.RAW_COPPER, s(METALLUM, 3), s(POTENTIA, 1)),
         e(Items.DIAMOND, s(TERRA, 15), s(ORDO, 15), s(LUX, 10)),
+        e(Items.EMERALD, s(ORDO, 8), s(TERRA, 6), s(LUX, 4)),
+        e(Items.LAPIS_LAZULI, s(ORDO, 3), s(LUX, 2)),
+        e(Items.QUARTZ, s(ORDO, 3), s(POTENTIA, 2)),
+        e(Items.OBSIDIAN, s(TERRA, 4), s(IGNIS, 2), s(PERDITIO, 2)),
         e(Items.ROTTEN_FLESH, s(MORTUUS, 4), s(PERDITIO, 3)),
         e(Items.BONE, s(MORTUUS, 4), s(TERRA, 2)),
         e(Items.SPIDER_EYE, s(VITIUM, 3), s(PERDITIO, 2)),
@@ -69,6 +76,12 @@ public final class ItemEssenceMap {
         }
         if (itemId.equals(Identifier.of("alkahest", "salt"))) {
             return List.of(s(ORDO, 2), s(TERRA, 1), s(AQUA, 1));
+        }
+        if (itemId.equals(Identifier.of("alkahest", "alchemical_moss"))) {
+            return List.of(s(HERBA, 3), s(VITIUM, 2), s(ORDO, 2));
+        }
+        if (itemId.equals(Identifier.of("alkahest", "caustic_slime"))) {
+            return List.of(s(VITIUM, 2), s(HERBA, 1));
         }
         List<EssenceStack> exact = VALUES.get(stack.getItem());
         if (exact != null) return exact;

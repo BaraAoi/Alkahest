@@ -1,6 +1,7 @@
 package net.alkahest.registry;
 
 import net.alkahest.Alkahest;
+import net.alkahest.block.custom.AlchemicalMossBlock;
 import net.alkahest.block.custom.AlchemyCauldronBlock;
 import net.alkahest.block.custom.DistilleryBlock;
 import net.alkahest.block.custom.EssenceChargerBlock;
@@ -15,6 +16,7 @@ import net.minecraft.item.BlockItem;
 import net.minecraft.item.Item;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.Registry;
+import net.minecraft.sound.BlockSoundGroup;
 
 public final class ModBlocks {
     public static final Block ALCHEMY_CAULDRON = register("alchemy_cauldron", new AlchemyCauldronBlock(AbstractBlock.Settings.copy(Blocks.CAULDRON)));
@@ -24,6 +26,9 @@ public final class ModBlocks {
     public static final Block ESSENCE_CHARGER = register("essence_charger", new EssenceChargerBlock(AbstractBlock.Settings.copy(Blocks.COPPER_BLOCK).nonOpaque()));
     public static final Block DISTILLERY = register("distillery", new DistilleryBlock(AbstractBlock.Settings.copy(Blocks.COPPER_BLOCK).nonOpaque().luminance(state -> state.get(DistilleryBlock.WORKING) ? 5 : 0)));
     public static final Block SALT_ORE = register("salt_ore", new Block(AbstractBlock.Settings.copy(Blocks.STONE).strength(3.0f, 3.0f).requiresTool()));
+    public static final Block ALCHEMICAL_MOSS = register("alchemical_moss", new AlchemicalMossBlock(
+        AbstractBlock.Settings.create().noCollision().nonOpaque().breakInstantly()
+            .sounds(BlockSoundGroup.MOSS_CARPET).luminance(state -> 7)));
     // Temporary visual flames; the zone entity owns their lifetime and damage.
     public static final Block NAPALM_FLAME = Registry.register(Registries.BLOCK, Alkahest.id("napalm_flame"),
         new Block(AbstractBlock.Settings.create().noCollision().nonOpaque().breakInstantly().dropsNothing()

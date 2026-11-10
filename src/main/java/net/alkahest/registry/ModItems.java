@@ -4,6 +4,8 @@ import dev.emi.trinkets.api.TrinketItem;
 import net.alkahest.Alkahest;
 import net.alkahest.essence.EssenceType;
 import net.alkahest.item.custom.AlchemicalJournalItem;
+import net.alkahest.item.custom.AlkahestAmuletItem;
+import net.alkahest.item.custom.AlkahestVialItem;
 import net.alkahest.item.custom.BindingSaltItem;
 import net.alkahest.item.custom.CrystalWandItem;
 import net.alkahest.item.custom.ReagentItem;
@@ -34,10 +36,16 @@ public final class ModItems {
     public static final Item BINDING_SALT = item("binding_salt", new BindingSaltItem(null, new Item.Settings()));
     public static final Map<EssenceType, Item> CHARGED_BINDING_SALTS = chargedBindingSalts();
     public static final Item CRYSTALLIZATION_POWDER = item("crystallization_powder", new Item(new Item.Settings()));
+    public static final Item ALKAHEST_VIAL = item("alkahest_vial", new AlkahestVialItem(new Item.Settings()));
+    public static final Item ALKAHEST_AMULET = item("alkahest_amulet", new AlkahestAmuletItem(new Item.Settings()));
     public static final Item ASH = item("ash", new Item(new Item.Settings()));
     public static final Map<EssenceType, Item> CRYSTALS = crystals();
     public static final Map<EssenceType, Item> WANDS = wands();
     public static final Map<EssenceType, Item> ELEMENTAL_SPAWN_EGGS = elementalSpawnEggs();
+    public static final Item DISSOLVED_SPAWN_EGG = item(
+        "dissolved_spawn_egg",
+        new SpawnEggItem(ModEntities.DISSOLVED, 0x3B1D5E, 0x7AE846, new Item.Settings())
+    );
 
     public static final ItemGroup GROUP = Registry.register(Registries.ITEM_GROUP, Alkahest.id("main"),
         FabricItemGroup.builder().displayName(Text.translatable("itemGroup.alkahest.main"))
@@ -50,8 +58,11 @@ public final class ModItems {
                 entries.add(ModBlocks.ESSENCE_SEPARATOR);
                 entries.add(ModBlocks.ALCHEMY_PIPE);
                 entries.add(ModBlocks.SALT_ORE);
+                entries.add(ModBlocks.ALCHEMICAL_MOSS);
                 entries.add(ALCHEMICAL_JOURNAL);
                 entries.add(ALCHEMISTS_MONOCLE);
+                entries.add(ALKAHEST_VIAL);
+                entries.add(ALKAHEST_AMULET);
                 entries.add(SALT); entries.add(PURIFIED_WATER); entries.add(HERBAL_PASTE);
                 entries.add(FIRE_DUST); entries.add(CAUSTIC_SLIME); entries.add(NAPALM); entries.add(ACID_BOMB);
                 entries.add(LIGHTNING_IN_A_BOTTLE); entries.add(MIASMA);
@@ -71,6 +82,7 @@ public final class ModItems {
                     Item egg = ELEMENTAL_SPAWN_EGGS.get(type);
                     if (egg != null) entries.add(egg);
                 }
+                entries.add(DISSOLVED_SPAWN_EGG);
             }).build());
 
     private static Map<EssenceType, Item> chargedBindingSalts() {

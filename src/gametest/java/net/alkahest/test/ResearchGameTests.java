@@ -33,7 +33,7 @@ public class ResearchGameTests implements FabricGameTest {
         var sugar = new ItemStack(Items.SUGAR);
         var basicsEssences = Map.of(EssenceType.IGNIS, 3, EssenceType.TERRA, 1);
         context.assertTrue(EarlyResearch.identify(0, basicsEssences, coal) == EarlyResearch.Attempt.NONE, "Locked research cannot trigger");
-        int f = EarlyResearch.DISCOVERED;
+        long f = EarlyResearch.DISCOVERED;
         context.assertTrue(EarlyResearch.identify(f, Map.of(EssenceType.IGNIS, 2), coal) == EarlyResearch.Attempt.NONE, "Insufficient subject essences must not trigger");
         context.assertTrue(EarlyResearch.identify(f, basicsEssences, coal) == EarlyResearch.Attempt.COAL, "Coal catalyst with charcoal essences must match");
         context.assertTrue(EarlyResearch.identify(f, basicsEssences, sand) == EarlyResearch.Attempt.SAND, "Sand must fail");
@@ -181,7 +181,7 @@ public class ResearchGameTests implements FabricGameTest {
 
         player.getAdvancementTracker().save();
         player.getAdvancementTracker().reload(context.getWorld().getServer().getAdvancementLoader());
-        int expected = EarlyResearch.REACTIVE_COMPLETED | EarlyResearch.RAW_COMPLETED | EarlyResearch.FAILED_IRON | EarlyResearch.FAILED_COBBLE | EarlyResearch.SIGHT_COMPLETED | EarlyResearch.FAILED_EYE | EarlyResearch.FAILED_TORCH;
+        long expected = EarlyResearch.REACTIVE_COMPLETED | EarlyResearch.RAW_COMPLETED | EarlyResearch.FAILED_IRON | EarlyResearch.FAILED_COBBLE | EarlyResearch.SIGHT_COMPLETED | EarlyResearch.FAILED_EYE | EarlyResearch.FAILED_TORCH;
         context.assertTrue((EarlyResearch.flags(player) & expected) == expected, "Old and new research survive save and reload");
 
         context.assertTrue(useOnCauldron(cauldron, player, new ItemStack(Items.AMETHYST_SHARD)), "Amethyst shard dissolves Ordo and Lux");
@@ -265,7 +265,7 @@ public class ResearchGameTests implements FabricGameTest {
         // Reload advancements and verify all Era II flags persist
         player.getAdvancementTracker().save();
         player.getAdvancementTracker().reload(context.getWorld().getServer().getAdvancementLoader());
-        int eraTwoFlags = EarlyResearch.IGNIS_COMPLETED | EarlyResearch.AQUA_COMPLETED | EarlyResearch.BINDING_COMPLETED
+        long eraTwoFlags = EarlyResearch.IGNIS_COMPLETED | EarlyResearch.AQUA_COMPLETED | EarlyResearch.BINDING_COMPLETED
             | EarlyResearch.FAILED_CANE | EarlyResearch.FAILED_AQUA_SAND | EarlyResearch.FAILED_SLIME;
         context.assertTrue((EarlyResearch.flags(player) & eraTwoFlags) == eraTwoFlags,
             "Era II research flags must survive save and reload");

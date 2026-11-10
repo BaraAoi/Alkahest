@@ -125,6 +125,16 @@ public class AlchemyCauldronBlock extends Block implements BlockEntityProvider {
     protected ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, BlockHitResult hit) {
         discover(world, pos, player);
         if (!world.isClient && world.getBlockEntity(pos) instanceof CauldronBlockEntity cauldron) {
+            if (player.isSneaking()) {
+                var trinketOpt = dev.emi.trinkets.api.TrinketsApi.getTrinketComponent(player);
+                if (trinketOpt.isPresent()) {
+                    for (var entry : trinketOpt.get().getEquipped(s -> s.getItem() instanceof net.alkahest.item.custom.AlkahestAmuletItem)) {
+                        if (cauldron.useAmulet(world, pos, state, player, entry.getRight())) {
+                            return ActionResult.success(false);
+                        }
+                    }
+                }
+            }
             cauldron.describeEssences(player);
         }
         return ActionResult.success(world.isClient);

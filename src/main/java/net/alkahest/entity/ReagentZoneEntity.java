@@ -34,7 +34,7 @@ import java.util.LinkedHashMap;
 /** Server-authoritative, saved zone. Only fire blocks created by this zone are removed at expiry. */
 public class ReagentZoneEntity extends Entity {
     public enum Kind {
-        FIRE(2.5f, 100), SLIME(3.0f, 120), NAPALM(3.5f, 200), MIASMA(4.0f, 240);
+        FIRE(2.5f, 100), SLIME(3.0f, 120), NAPALM(3.5f, 200), MIASMA(4.0f, 240), ACID_PUDDLE(1.8f, 80);
         final float radius; final int duration;
         Kind(float radius, int duration) { this.radius = radius; this.duration = duration; }
     }
@@ -46,6 +46,7 @@ public class ReagentZoneEntity extends Entity {
     private final Map<BlockPos, Integer> displacedWater = new LinkedHashMap<>();
 
     public ReagentZoneEntity(EntityType<? extends ReagentZoneEntity> type, World world) { super(type, world); noClip = true; }
+    public Kind kind() { return kind; }
     public static void spawn(ServerWorld world, Vec3d position, Kind kind) {
         ReagentZoneEntity zone = new ReagentZoneEntity(ModEntities.REAGENT_ZONE, world);
         zone.setPosition(position); zone.kind = kind; zone.remaining = kind.duration;
@@ -96,6 +97,10 @@ public class ReagentZoneEntity extends Entity {
             if (kind == Kind.MIASMA) {
                 var dust = new net.minecraft.particle.DustParticleEffect(new org.joml.Vector3f(.42f, .22f, .46f), 1.2f);
                 world.spawnParticles(dust, getX(), getY() + .45, getZ(), 18, kind.radius / 2, .35, kind.radius / 2, .01);
+            } else if (kind == Kind.ACID_PUDDLE) {
+                var acid = new net.minecraft.particle.DustParticleEffect(new org.joml.Vector3f(.48f, .88f, .26f), 0.95f);
+                world.spawnParticles(acid, getX(), getY() + 0.08, getZ(), 10, kind.radius / 2, 0.06, kind.radius / 2, 0.01);
+                world.spawnParticles(ParticleTypes.ITEM_SLIME, getX(), getY() + 0.12, getZ(), 4, kind.radius / 2, 0.05, kind.radius / 2, 0.01);
             } else world.spawnParticles(kind == Kind.SLIME ? ParticleTypes.ITEM_SLIME : ParticleTypes.FLAME,
                 getX(), getY() + 0.15, getZ(), 8, kind.radius / 2, 0.1, kind.radius / 2, 0.01);
         }
@@ -128,6 +133,16 @@ public class ReagentZoneEntity extends Entity {
                         target.addStatusEffect(new StatusEffectInstance(ModEffects.IN_NAPALM, 160, 0, false, true, true));
                         if (elapsed % 20 == 0)
                             target.damage(new DamageSource(world.getRegistryManager().get(RegistryKeys.DAMAGE_TYPE).entryOf(NAPALM_DAMAGE)), 3.0f);
+                    }
+                    case ACID_PUDDLE -> {
+                        if (!(target instanceof DissolvedEntity)) {
+                            target.addStatusEffect(new StatusEffectInstance(StatusEffects.SLOWNESS, 35, 0));
+                            if (elapsed % 20 == 0) {
+                                target.damage(world.getDamageSources().magic(), 2.0f);
+                                target.getEquippedStack(net.minecraft.entity.EquipmentSlot.FEET)
+                                    .damage(2, target, net.minecraft.entity.EquipmentSlot.FEET);
+                            }
+                        }
                     }
                 }
             }

@@ -1,0 +1,39 @@
+{
+  "ambientocclusion": false,
+  "textures": {
+    "particle": "alkahest:block/alchemical_moss",
+    "moss": "alkahest:block/alchemical_moss"
+  },
+  "elements": [
+    {
+      "from": [1, 0, 1],
+      "to": [15, 2, 15],
+      "faces": {
+        "up":    { "uv": [1, 1, 15, 15], "texture": "#moss" },
+        "down":  { "uv": [1, 1, 15, 15], "texture": "#moss" },
+        "north": { "uv": [1, 14, 15, 16], "texture": "#moss" },
+        "south": { "uv": [1, 14, 15, 16], "texture": "#moss" },
+        "west":  { "uv": [1, 14, 15, 16], "texture": "#moss" },
+        "east":  { "uv": [1, 14, 15, 16], "texture": "#moss" }
+      }
+    },
+    {
+      "from": [2, 0, 8],
+      "to": [14, 8, 8],
+      "shade": false,
+      "faces": {
+        "north": { "uv": [2, 4, 14, 12], "texture": "#moss" },
+        "south": { "uv": [2, 4, 14, 12], "texture": "#moss" }
+      }
+    },
+    {
+      "from": [8, 0, 2],
+      "to": [8, 8, 14],
+      "shade": false,
+      "faces": {
+        "west": { "uv": [2, 4, 14, 12], "texture": "#moss" },
+        "east": { "uv": [2, 4, 14, 12], "texture": "#moss" }
+      }
+    }
+  ]
+}

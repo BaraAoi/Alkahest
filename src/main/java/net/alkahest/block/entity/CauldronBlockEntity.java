@@ -1,12 +1,16 @@
 package net.alkahest.block.entity;
 
 import net.alkahest.block.custom.AlchemyCauldronBlock;
+import net.alkahest.entity.DissolvedEntity;
 import net.alkahest.essence.EssenceType;
 import net.alkahest.essence.ItemEssenceMap;
+import net.alkahest.item.custom.AlkahestAmuletItem;
 import net.alkahest.item.custom.CrystalWandItem;
 import net.alkahest.recipe.CauldronEssenceRecipes;
 import net.alkahest.registry.ModBlockEntities;
+import net.alkahest.registry.ModBlocks;
 import net.alkahest.registry.ModDataComponents;
+import net.alkahest.registry.ModEntities;
 import net.alkahest.registry.ModItems;
 import net.alkahest.research.EarlyResearch;
 import net.minecraft.block.Block;
@@ -46,11 +50,37 @@ public class CauldronBlockEntity extends BlockEntity {
     public static final float RESIDUE_STABILITY = 0.05f;
     private static final String RETURNED_ITEM_TAG = "alkahest_cauldron_returned";
 
+    /** Exact dissolved cost of 1x alchemical_moss + 1x ender_pearl + all 6 Prima crystals. */
+    public static final Map<EssenceType, Integer> ALKAHEST_BREW_COST = Map.ofEntries(
+        Map.entry(EssenceType.IGNIS, 1),
+        Map.entry(EssenceType.AQUA, 1),
+        Map.entry(EssenceType.TERRA, 1),
+        Map.entry(EssenceType.AER, 1),
+        Map.entry(EssenceType.ORDO, 3),
+        Map.entry(EssenceType.PERDITIO, 3),
+        Map.entry(EssenceType.HERBA, 3),
+        Map.entry(EssenceType.VITIUM, 2),
+        Map.entry(EssenceType.SPIRITUS, 6),
+        Map.entry(EssenceType.MOTUS, 6)
+    );
+
+    private static final List<EssenceType> PRIMA_TYPES = List.of(
+        EssenceType.IGNIS, EssenceType.AQUA, EssenceType.TERRA,
+        EssenceType.AER, EssenceType.ORDO, EssenceType.PERDITIO
+    );
+
+    private static final EssenceType[][] ANTIPODE_PAIRS = {
+        {EssenceType.IGNIS, EssenceType.AQUA},
+        {EssenceType.TERRA, EssenceType.AER},
+        {EssenceType.ORDO, EssenceType.PERDITIO}
+    };
+
     private final EnumMap<EssenceType, Integer> essences = new EnumMap<>(EssenceType.class);
     // Only used to safely eject items left in cauldrons saved in <= 0.1.24; no items are ever stored here anymore.
     private final DefaultedList<ItemStack> legacyItems = DefaultedList.ofSize(6, ItemStack.EMPTY);
     private boolean water;
     private boolean dirtyWater;
+    private boolean mossStabilized;
     private int evaporation;
 
     public CauldronBlockEntity(BlockPos pos, BlockState state) {
@@ -67,6 +97,10 @@ public class CauldronBlockEntity extends BlockEntity {
 
     public boolean isDirtyWater() {
         return water && dirtyWater;
+    }
+
+    public boolean isMossStabilized() {
+        return water && mossStabilized;
     }
 
     public boolean isHeated() {
@@ -128,6 +162,29 @@ public class CauldronBlockEntity extends BlockEntity {
         return false;
     }
 
+    public boolean useAmulet(PlayerEntity player, Hand hand, AlkahestAmuletItem amulet) {
+        ItemStack stack = player.getStackInHand(hand);
+        if (!water || dirtyWater) {
+            if (!amulet.canConsumeUse(stack, player)) {
+                message(player, "message.alkahest.amulet_depleted");
+                return false;
+            }
+            boolean cleaning = water && dirtyWater;
+            dirtyWater = false;
+            setWater(true);
+            evaporation = 0;
+            amulet.consumeUse(player, hand);
+            if (world != null) {
+                world.playSound(null, pos, SoundEvents.BLOCK_AMETHYST_BLOCK_CHIME, SoundCategory.BLOCKS, 0.8f, 1.2f);
+            }
+            markDirty();
+            message(player, cleaning ? "message.alkahest.cauldron_cleaned" : "message.alkahest.cauldron_filled");
+            return true;
+        }
+        describeEssences(player);
+        return false;
+    }
+
     public static EnumMap<EssenceType, Integer> essencesOf(ItemStack stack) {
         var additions = new EnumMap<EssenceType, Integer>(EssenceType.class);
         if (stack.isEmpty()) return additions;
@@ -156,12 +213,22 @@ public class CauldronBlockEntity extends BlockEntity {
             return false;
         }
         additions.forEach((type, amount) -> essences.merge(type, amount, Integer::sum));
+        if (stack.isOf(ModBlocks.ALCHEMICAL_MOSS.asItem())) {
+            mossStabilized = true;
+        }
         evaporation = 0;
         syncEssences();
-        if (stack.isOf(ModItems.SALT) && world instanceof ServerWorld serverWorld) {
-            for (ServerPlayerEntity researcher : serverWorld.getEntitiesByClass(
-                    ServerPlayerEntity.class, new Box(pos).expand(6.0), p -> !p.isSpectator())) {
-                EarlyResearch.discoverBinding(researcher, world, pos);
+        if (world instanceof ServerWorld serverWorld) {
+            if (stack.isOf(ModItems.SALT)) {
+                for (ServerPlayerEntity researcher : serverWorld.getEntitiesByClass(
+                        ServerPlayerEntity.class, new Box(pos).expand(6.0), p -> !p.isSpectator())) {
+                    EarlyResearch.discoverBinding(researcher, world, pos);
+                }
+            } else if (stack.isOf(ModBlocks.ALCHEMICAL_MOSS.asItem())) {
+                for (ServerPlayerEntity researcher : serverWorld.getEntitiesByClass(
+                        ServerPlayerEntity.class, new Box(pos).expand(6.0), p -> !p.isSpectator())) {
+                    EarlyResearch.discoverAlkahest(researcher, world, pos);
+                }
             }
         }
         return true;
@@ -197,6 +264,75 @@ public class CauldronBlockEntity extends BlockEntity {
         if (output.isOf(ModItems.HERBAL_PASTE)) EarlyResearch.discoverRaw(researcher, world, pos);
     }
 
+    private boolean hasAllPrima() {
+        return PRIMA_TYPES.stream().allMatch(t -> essences.getOrDefault(t, 0) >= 1);
+    }
+
+    private boolean hasAnyAntipodePair() {
+        for (EssenceType[] pair : ANTIPODE_PAIRS) {
+            if (essences.getOrDefault(pair[0], 0) > 0 && essences.getOrDefault(pair[1], 0) > 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean hasAllAlkahestEssences() {
+        return ALKAHEST_BREW_COST.entrySet().stream()
+            .allMatch(e -> essences.getOrDefault(e.getKey(), 0) >= e.getValue());
+    }
+
+    private void explodeIntoDissolved(ServerWorld serverWorld, PlayerEntity actor) {
+        essences.clear();
+        water = false;
+        dirtyWater = false;
+        mossStabilized = false;
+        evaporation = 0;
+        markDirty();
+
+        serverWorld.removeBlock(pos, false);
+        serverWorld.createExplosion(
+            null,
+            pos.getX() + 0.5,
+            pos.getY() + 0.5,
+            pos.getZ() + 0.5,
+            3.0f,
+            World.ExplosionSourceType.NONE
+        );
+        serverWorld.spawnParticles(ParticleTypes.WITCH,
+            pos.getX() + 0.5, pos.getY() + 0.8, pos.getZ() + 0.5, 35, 0.45, 0.45, 0.45, 0.08);
+
+        DissolvedEntity mutant = new DissolvedEntity(ModEntities.DISSOLVED, serverWorld);
+        mutant.refreshPositionAndAngles(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, serverWorld.random.nextFloat() * 360.0f, 0.0f);
+        serverWorld.spawnEntity(mutant);
+
+        if (actor != null) {
+            message(actor, "message.alkahest.cauldron_exploded");
+        }
+    }
+
+    private void annihilateOpposites(PlayerEntity actor) {
+        for (EssenceType[] pair : ANTIPODE_PAIRS) {
+            int a = essences.getOrDefault(pair[0], 0);
+            int b = essences.getOrDefault(pair[1], 0);
+            int cancel = Math.min(a, b);
+            if (cancel > 0) {
+                deductEssences(Map.of(pair[0], cancel, pair[1], cancel));
+            }
+        }
+        dirtyWater = true;
+        syncWaterState();
+        syncEssences();
+        if (world instanceof ServerWorld serverWorld) {
+            serverWorld.playSound(null, pos, SoundEvents.BLOCK_LAVA_EXTINGUISH, SoundCategory.BLOCKS, 0.95f, 0.85f);
+            serverWorld.spawnParticles(ParticleTypes.LARGE_SMOKE,
+                pos.getX() + 0.5, pos.getY() + 1.05, pos.getZ() + 0.5, 28, 0.28, 0.2, 0.28, 0.03);
+        }
+        if (actor != null) {
+            message(actor, "message.alkahest.cauldron_annihilation");
+        }
+    }
+
     /** Unified right-click interaction: brews with a ready catalyst, tests an active hypothesis, or dissolves essences directly. */
     public boolean useItem(PlayerEntity player, Hand hand) {
         ItemStack held = player.getStackInHand(hand);
@@ -210,6 +346,9 @@ public class CauldronBlockEntity extends BlockEntity {
         }
         if (held.getItem() instanceof CrystalWandItem wand) {
             return useWand(player, hand, wand);
+        }
+        if (held.getItem() instanceof AlkahestAmuletItem amulet) {
+            return useAmulet(player, hand, amulet);
         }
         if (held.isOf(ModItems.CRYSTALLIZATION_POWDER)) {
             return crystallizeWith(player, hand);
@@ -233,12 +372,62 @@ public class CauldronBlockEntity extends BlockEntity {
                 if (!EarlyResearch.record(researcher, attempt, serverWorld, pos)) return false;
                 deductEssences(EarlyResearch.cost(attempt));
                 if (!player.isCreative()) held.decrement(1);
-                if (attempt == EarlyResearch.Attempt.SAND) {
+                if (attempt == EarlyResearch.Attempt.ALKAHEST_GOLD) {
+                    explodeIntoDissolved(serverWorld, player);
+                    return true;
+                }
+                if (attempt == EarlyResearch.Attempt.SAND || attempt == EarlyResearch.Attempt.ALKAHEST_OBSIDIAN) {
                     dirtyWater = true;
                     syncWaterState();
                 }
+                if (attempt == EarlyResearch.Attempt.ALKAHEST_DIAMOND
+                    || attempt == EarlyResearch.Attempt.ALKAHEST_OBSIDIAN) {
+                    mossStabilized = false;
+                }
                 evaporation = 0;
                 syncEssences();
+                return true;
+            }
+        }
+
+        // Binary Alkahest synthesis & instability reactions when striking with a Diamond lattice
+        if (held.isOf(Items.DIAMOND) && world instanceof ServerWorld serverWorld) {
+            if (mossStabilized) {
+                if (hasAllAlkahestEssences()) {
+                    deductEssences(ALKAHEST_BREW_COST);
+                    if (!player.isCreative()) held.decrement(1);
+                    mossStabilized = false;
+                    setWater(false);
+                    evaporation = 0;
+                    syncEssences();
+                    serverWorld.playSound(null, pos, SoundEvents.BLOCK_AMETHYST_BLOCK_CHIME, SoundCategory.BLOCKS, 1.0f, 1.15f);
+                    serverWorld.playSound(null, pos, SoundEvents.BLOCK_BREWING_STAND_BREW, SoundCategory.BLOCKS, 0.9f, 1.2f);
+                    serverWorld.spawnParticles(ParticleTypes.TOTEM_OF_UNDYING,
+                        pos.getX() + 0.5, pos.getY() + 1.1, pos.getZ() + 0.5, 32, 0.3, 0.25, 0.3, 0.08);
+                    serverWorld.spawnParticles(ParticleTypes.END_ROD,
+                        pos.getX() + 0.5, pos.getY() + 1.1, pos.getZ() + 0.5, 18, 0.25, 0.2, 0.25, 0.04);
+                    ItemStack vial = new ItemStack(ModItems.ALKAHEST_VIAL);
+                    if (!player.giveItemStack(vial)) {
+                        ItemEntity dropped = player.dropItem(vial, false);
+                        if (dropped != null) dropped.addCommandTag(RETURNED_ITEM_TAG);
+                    }
+                    message(player, "message.alkahest.alkahest_brewed");
+                    return true;
+                }
+                List<String> missing = new ArrayList<>();
+                for (EssenceType type : EssenceType.values()) {
+                    int need = ALKAHEST_BREW_COST.getOrDefault(type, 0);
+                    int have = essences.getOrDefault(type, 0);
+                    if (need > have) missing.add(type.displayName() + " ×" + (need - have));
+                }
+                player.sendMessage(Text.translatable("message.alkahest.cauldron_missing_essences", String.join(", ", missing)), true);
+                return false;
+            } else if (hasAllPrima()) {
+                if (!player.isCreative()) held.decrement(1);
+                explodeIntoDissolved(serverWorld, player);
+                return true;
+            } else if (hasAnyAntipodePair()) {
+                annihilateOpposites(player);
                 return true;
             }
         }
@@ -362,6 +551,7 @@ public class CauldronBlockEntity extends BlockEntity {
                 else essences.put(type, remaining);
             }
         }
+        mossStabilized = false;
         if (produced > 0) {
             syncEssences();
             world.playSound(null, pos, SoundEvents.BLOCK_AMETHYST_BLOCK_CHIME, SoundCategory.BLOCKS, 0.8f, 1.2f);
@@ -394,6 +584,9 @@ public class CauldronBlockEntity extends BlockEntity {
             return;
         }
         player.sendMessage(Text.translatable("message.alkahest.cauldron_contents"), false);
+        if (mossStabilized) {
+            player.sendMessage(Text.translatable("message.alkahest.cauldron_moss_stabilized"), false);
+        }
         for (EssenceType type : EssenceType.values()) {
             int amount = essences.getOrDefault(type, 0);
             if (amount > 0) {
@@ -437,7 +630,10 @@ public class CauldronBlockEntity extends BlockEntity {
 
     private void setWater(boolean value) {
         water = value;
-        if (!water) dirtyWater = false;
+        if (!water) {
+            dirtyWater = false;
+            mossStabilized = false;
+        }
         syncWaterState();
         markDirty();
     }
@@ -481,6 +677,7 @@ public class CauldronBlockEntity extends BlockEntity {
         }
         nbt.putBoolean("Water", water);
         nbt.putBoolean("DirtyWater", dirtyWater);
+        nbt.putBoolean("MossStabilized", mossStabilized);
         nbt.putInt("Evaporation", evaporation);
         NbtCompound stored = new NbtCompound();
         essences.forEach((type, amount) -> stored.putInt(type.asString(), amount));
@@ -496,6 +693,7 @@ public class CauldronBlockEntity extends BlockEntity {
         }
         water = nbt.getBoolean("Water");
         dirtyWater = water && nbt.getBoolean("DirtyWater");
+        mossStabilized = water && nbt.getBoolean("MossStabilized");
         evaporation = nbt.getInt("Evaporation");
         essences.clear();
         NbtCompound stored = nbt.getCompound("Essences");

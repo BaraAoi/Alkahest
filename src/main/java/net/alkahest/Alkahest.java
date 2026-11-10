@@ -12,6 +12,7 @@ import net.alkahest.registry.ModWorldGen;
 import net.alkahest.research.EarlyResearch;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.entity.event.v1.ServerEntityCombatEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.minecraft.block.Blocks;
@@ -54,12 +55,26 @@ public final class Alkahest implements ModInitializer {
                 EarlyResearch.discoverBinding(serverPlayer, world, pos);
                 return;
             }
+            if (state.isOf(ModBlocks.ALCHEMICAL_MOSS)) {
+                EarlyResearch.discoverAlkahest(serverPlayer, world, pos);
+                return;
+            }
             if (EarlyResearch.hasMonocle(serverPlayer) && (
                     state.isOf(Blocks.PRISMARINE)
                     || state.isOf(Blocks.PRISMARINE_BRICKS)
                     || state.isOf(Blocks.DARK_PRISMARINE)
                     || state.isOf(Blocks.SEA_LANTERN))) {
                 EarlyResearch.discoverAqua(serverPlayer, world, pos);
+            }
+        });
+
+        ServerTickEvents.END_SERVER_TICK.register(server -> {
+            if (server.getTicks() % 40 != 0) return;
+            for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+                if (player.isSpectator()) continue;
+                if (player.getWorld().getBiome(player.getBlockPos()).matchesKey(ModWorldGen.ALCHEMICAL_WASTES)) {
+                    EarlyResearch.discoverAlkahest(player, player.getWorld(), player.getBlockPos());
+                }
             }
         });
 
