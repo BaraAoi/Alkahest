@@ -43,9 +43,8 @@ public class ChargerGameTests implements FabricGameTest {
     public void placementAndNearbySelection(TestContext context) {
         BlockPos pos = context.getAbsolutePos(new BlockPos(3, 2, 3));
         context.setBlockState(3, 2, 3, ModBlocks.ESSENCE_CHARGER);
-        var player = context.createMockCreativeServerPlayerInWorld();
-        // Vanilla's test player is deliberately removed from world tracking; inject it into the scan.
-        player.unsetRemoved();
+        // A mock player is not tracked by the world; inject it into the selection scan.
+        var player = context.createMockPlayer(GameMode.CREATIVE);
         player.setPosition(pos.getX() + 2.5, pos.getY(), pos.getZ() + .5);
         ItemStack jarItem = new ItemStack(ModBlocks.JAR);
         JarItem.set(jarItem, new JarContentsComponent(List.of(new EssenceStack(EssenceType.ORDO, 3, .5f))));
