@@ -153,5 +153,9 @@
   "message.alkahest.jar_legacy": "Старая смесь: разделите её на отдельные банки.",
   "screen.alkahest.distillery.title": "Перегонный куб",
   "screen.alkahest.distillery.input": "Вход",
-  "screen.alkahest.distillery.output": "Выход"
+  "screen.alkahest.distillery.output": "Выход",
+  "screen.alkahest.distillery.ready": "Ожидает сырьё",
+  "screen.alkahest.distillery.working": "Идёт перегонка",
+  "screen.alkahest.distillery.blocked": "Освободите выход",
+  "screen.alkahest.distillery.progress": "Перегонка: %s%%"
 }

@@ -43,16 +43,25 @@ public class DistilleryGameTests implements FabricGameTest {
         var p=c.createMockPlayer(GameMode.SURVIVAL); p.setPosition(pos.getX()+1,pos.getY(),pos.getZ());
         var h=(DistilleryScreenHandler)d.createMenu(1,p.getInventory(),p);
         c.assertTrue(h.canUse(p), "Nearby player can use interface");
+        c.assertTrue(h.status()==0, "Empty machine reports idle to screen");
+        c.assertTrue(h.getSlot(0).x==80 && h.getSlot(0).y==31, "Input hitbox matches the decorated frame");
+        for(int i=1;i<8;i++) c.assertTrue(h.getSlot(i).x==26+(i-1)*18 && h.getSlot(i).y==96, "Output hitbox matches its frame");
+        c.assertTrue(h.getSlot(8).x==8 && h.getSlot(8).y==132 && h.getSlot(35).y==190, "Inventory and hotbar match their frames");
+        var clientProperties=new net.minecraft.screen.ArrayPropertyDelegate(3);
+        var mirror=new DistilleryScreenHandler(2,p.getInventory(),new net.minecraft.inventory.SimpleInventory(DistilleryBlockEntity.SIZE),clientProperties);
+        clientProperties.set(0,600); clientProperties.set(1,1200); clientProperties.set(2,2);
+        c.assertTrue(mirror.progress()==600 && mirror.maxProgress()==1200 && mirror.status()==2, "Client property delegate exposes synced progress and state");
         c.assertFalse(h.getSlot(0).canInsert(new ItemStack(Items.STONE)), "Stone rejected");
         c.assertTrue(h.getSlot(0).canInsert(new ItemStack(Items.APPLE)) && h.getSlot(0).getMaxItemCount()>1, "Organic input accepts a stack");
         for(int i=1;i<8;i++) c.assertFalse(h.getSlot(i).canInsert(new ItemStack(Items.APPLE)), "Outputs reject insertion");
         p.getInventory().setStack(9,new ItemStack(Items.APPLE,8));
         c.assertFalse(h.quickMove(p,8).isEmpty(), "Shift-click loads the input stack");
         c.assertTrue(d.getStack(0).getCount()==8 && p.getInventory().getStack(9).isEmpty(), "All eight moved without loss");
+        c.assertTrue(h.status()==1, "Loaded machine reports working to screen");
         for(int i=0;i<37;i++) DistilleryBlockEntity.tick(c.getWorld(),pos,d);
         c.assertTrue(h.progress()==37 && h.maxProgress()==1200, "Progress visible to screen");
         c.assertFalse(h.quickMove(p,0).isEmpty(), "Shift-click can take input back");
-        c.assertTrue(d.getStack(0).isEmpty() && h.progress()==0, "Taking input cancels progress");
+        c.assertTrue(d.getStack(0).isEmpty() && h.progress()==0 && h.status()==0, "Taking input cancels progress and returns to idle");
         d.setStack(0,new ItemStack(Items.APPLE,3));
         var nbt=d.createNbt(c.getWorld().getRegistryManager()); nbt.putInt("Progress",1199);
         d.readComponentlessNbt(nbt,c.getWorld().getRegistryManager());
@@ -74,11 +83,14 @@ public class DistilleryGameTests implements FabricGameTest {
     public void blockedOutputPersistsAndRecovers(TestContext c) {
         c.setBlockState(3,2,3,ModBlocks.DISTILLERY); BlockPos pos=c.getAbsolutePos(new BlockPos(3,2,3));
         var d=(DistilleryBlockEntity)c.getWorld().getBlockEntity(pos);
+        var p=c.createMockPlayer(GameMode.SURVIVAL);
+        var screen=(DistilleryScreenHandler)d.createMenu(1,p.getInventory(),p);
         d.setStack(0,new ItemStack(Items.APPLE,2));
         for(int i=1;i<8;i++) d.setStack(i,new ItemStack(Items.STONE,64));
         var nbt=d.createNbt(c.getWorld().getRegistryManager()); nbt.putInt("Progress",1199); d.readComponentlessNbt(nbt,c.getWorld().getRegistryManager());
         DistilleryBlockEntity.tick(c.getWorld(),pos,d);
         c.assertTrue(d.getStack(0).getCount()==1 && !d.getStack(8).isEmpty(), "Blocked product is stored, not lost or rerolled");
+        c.assertTrue(screen.status()==2, "Blocked output is reported to screen");
         ItemStack pending=d.getStack(8).copy();
         var saved=d.createNbt(c.getWorld().getRegistryManager());
         var restored=new DistilleryBlockEntity(pos,d.getCachedState()); restored.readComponentlessNbt(saved,c.getWorld().getRegistryManager());
@@ -86,6 +98,7 @@ public class DistilleryGameTests implements FabricGameTest {
         DistilleryBlockEntity.tick(c.getWorld(),pos,d); c.assertTrue(ItemStack.areEqual(pending,d.getStack(8)) && d.getStack(0).getCount()==1, "Blocked machine waits without consuming or rerolling");
         d.removeStack(3); DistilleryBlockEntity.tick(c.getWorld(),pos,d);
         c.assertTrue(d.getStack(8).isEmpty() && ItemStack.areEqual(pending,d.getStack(3)), "Unblocking deposits the same saved result");
+        c.assertTrue(screen.status()==1, "Screen returns to working after unblocking");
         c.assertFalse(d.canExtract(8,pending,Direction.DOWN), "Hoppers cannot access pending slot");
         c.complete();
     }

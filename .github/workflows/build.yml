@@ -3,7 +3,7 @@ on:
   push:
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -33,6 +33,8 @@ jobs:
             python3 -c 'import pathlib; p=pathlib.Path("build/gametest-results.xml"); s=p.read_text() if p.exists() else pathlib.Path("gametest.log").read_text()[-3800:]; print("::error::" + s[:3900].replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A"))'
           fi
           exit "$result"
+      - name: Check distillery UI assets
+        run: python3 scripts/check_distillery_ui.py
       - name: Server startup smoke test
         run: python3 scripts/smoke_test.py server
       - name: Client startup smoke test
@@ -46,3 +48,11 @@ jobs:
             build/libs/*.jar
             !build/libs/*-sources.jar
           if-no-files-found: error
+      - name: Transfer verified JAR to workspace
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          jar=$(find build/libs -maxdepth 1 -name '*.jar' ! -name '*-sources.jar' -print -quit)
+          python3 -c 'import base64,json,sys; print(json.dumps({"content":base64.b64encode(open(sys.argv[1],"rb").read()).decode(),"encoding":"base64"}))' "$jar" > /tmp/alkahest-blob.json
+          sha=$(gh api --method POST "repos/${GITHUB_REPOSITORY}/git/blobs" --input /tmp/alkahest-blob.json --jq .sha)
+          echo "::notice title=Build blob::JAR_BLOB=$sha"

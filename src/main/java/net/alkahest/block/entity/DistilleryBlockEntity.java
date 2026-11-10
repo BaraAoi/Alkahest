@@ -39,9 +39,16 @@ public class DistilleryBlockEntity extends BlockEntity implements SidedInventory
     private final DefaultedList<ItemStack> stacks = DefaultedList.ofSize(SIZE, ItemStack.EMPTY);
     private int progress;
     private final PropertyDelegate properties = new PropertyDelegate() {
-        @Override public int get(int index) { return index == 0 ? progress : index == 1 ? 1200 : 0; }
+        @Override public int get(int index) {
+            return switch (index) {
+                case 0 -> progress;
+                case 1 -> 1200;
+                case 2 -> !stacks.get(PENDING).isEmpty() ? 2 : accepts(stacks.get(0)) ? 1 : 0;
+                default -> 0;
+            };
+        }
         @Override public void set(int index, int value) { if (index == 0) progress = value; }
-        @Override public int size() { return 2; }
+        @Override public int size() { return 3; }
     };
     public DistilleryBlockEntity(BlockPos pos, BlockState state) { super(ModBlockEntities.DISTILLERY, pos, state); }
     public DefaultedList<ItemStack> stacks() { return stacks; }

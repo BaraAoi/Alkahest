@@ -153,5 +153,9 @@
   "message.alkahest.jar_legacy": "Old mixture: separate it into individual jars.",
   "screen.alkahest.distillery.title": "Distillery",
   "screen.alkahest.distillery.input": "Input",
-  "screen.alkahest.distillery.output": "Output"
+  "screen.alkahest.distillery.output": "Output",
+  "screen.alkahest.distillery.ready": "Awaiting input",
+  "screen.alkahest.distillery.working": "Distilling",
+  "screen.alkahest.distillery.blocked": "Clear the output",
+  "screen.alkahest.distillery.progress": "Distillation: %s%%"
 }

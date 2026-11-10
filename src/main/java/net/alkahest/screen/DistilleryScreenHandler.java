@@ -17,14 +17,14 @@ public class DistilleryScreenHandler extends ScreenHandler {
     private final Inventory inventory;
     private final PropertyDelegate properties;
     public DistilleryScreenHandler(int syncId, PlayerInventory playerInventory) {
-        this(syncId, playerInventory, new SimpleInventory(DistilleryBlockEntity.SIZE), new ArrayPropertyDelegate(2));
+        this(syncId, playerInventory, new SimpleInventory(DistilleryBlockEntity.SIZE), new ArrayPropertyDelegate(3));
     }
     public DistilleryScreenHandler(int syncId, PlayerInventory playerInventory, Inventory inventory, PropertyDelegate properties) {
         super(ModScreenHandlers.DISTILLERY, syncId);
-        checkSize(inventory, DistilleryBlockEntity.SIZE); checkDataCount(properties, 2);
+        checkSize(inventory, DistilleryBlockEntity.SIZE); checkDataCount(properties, 3);
         this.inventory = inventory; this.properties = properties;
         inventory.onOpen(playerInventory.player);
-        addSlot(new Slot(inventory, 0, 80, 23) {
+        addSlot(new Slot(inventory, 0, 80, 31) {
             @Override public boolean canInsert(ItemStack stack) { return DistilleryBlockEntity.accepts(stack); }
             @Override public void onTakeItem(PlayerEntity player, ItemStack stack) {
                 if (inventory instanceof DistilleryBlockEntity distillery) distillery.cancelProgress();
@@ -32,7 +32,7 @@ public class DistilleryScreenHandler extends ScreenHandler {
             }
         });
         for (int i = 1; i < DistilleryBlockEntity.OUTPUT_END; i++) {
-            addSlot(new Slot(inventory, i, 26 + (i - 1) * 18, 65) {
+            addSlot(new Slot(inventory, i, 26 + (i - 1) * 18, 96) {
                 @Override public boolean canInsert(ItemStack stack) { return false; }
                 @Override public void onTakeItem(PlayerEntity player, ItemStack stack) {
                     if (inventory instanceof DistilleryBlockEntity distillery) distillery.discoverOutput(player, stack);
@@ -41,12 +41,13 @@ public class DistilleryScreenHandler extends ScreenHandler {
             });
         }
         for (int row=0; row<3; row++) for (int col=0; col<9; col++)
-            addSlot(new Slot(playerInventory, col + row * 9 + 9, 8 + col * 18, 108 + row * 18));
-        for (int col=0; col<9; col++) addSlot(new Slot(playerInventory, col, 8 + col * 18, 166));
+            addSlot(new Slot(playerInventory, col + row * 9 + 9, 8 + col * 18, 132 + row * 18));
+        for (int col=0; col<9; col++) addSlot(new Slot(playerInventory, col, 8 + col * 18, 190));
         addProperties(properties);
     }
     public int progress() { return properties.get(0); }
     public int maxProgress() { return properties.get(1); }
+    public int status() { return properties.get(2); }
     @Override public boolean canUse(PlayerEntity player) { return inventory.canPlayerUse(player); }
     @Override public void onClosed(PlayerEntity player) { super.onClosed(player); inventory.onClose(player); }
     @Override public ItemStack quickMove(PlayerEntity player, int index) {
