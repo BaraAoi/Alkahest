@@ -3,13 +3,15 @@ package net.alkahest.registry;
 import dev.emi.trinkets.api.TrinketItem;
 import net.alkahest.Alkahest;
 import net.alkahest.essence.EssenceType;
+import net.alkahest.item.custom.AlchemicalJournalItem;
+import net.alkahest.item.custom.BindingSaltItem;
 import net.alkahest.item.custom.CrystalWandItem;
 import net.alkahest.item.custom.ReagentItem;
-import net.alkahest.item.custom.AlchemicalJournalItem;
 import net.fabricmc.fabric.api.itemgroup.v1.FabricItemGroup;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemGroup;
 import net.minecraft.item.ItemStack;
+import net.minecraft.item.SpawnEggItem;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.Registry;
 import net.minecraft.text.Text;
@@ -29,11 +31,14 @@ public final class ModItems {
     public static final Item ACID_BOMB = item("acid_bomb", new ReagentItem(new Item.Settings()));
     public static final Item LIGHTNING_IN_A_BOTTLE = item("lightning_in_a_bottle", new ReagentItem(new Item.Settings()));
     public static final Item MIASMA = item("miasma", new ReagentItem(new Item.Settings()));
-    public static final Item BINDING_SALT = item("binding_salt", new Item(new Item.Settings()));
+    public static final Item BINDING_SALT = item("binding_salt", new BindingSaltItem(null, new Item.Settings()));
+    public static final Map<EssenceType, Item> CHARGED_BINDING_SALTS = chargedBindingSalts();
     public static final Item CRYSTALLIZATION_POWDER = item("crystallization_powder", new Item(new Item.Settings()));
     public static final Item ASH = item("ash", new Item(new Item.Settings()));
     public static final Map<EssenceType, Item> CRYSTALS = crystals();
     public static final Map<EssenceType, Item> WANDS = wands();
+    public static final Map<EssenceType, Item> ELEMENTAL_SPAWN_EGGS = elementalSpawnEggs();
+
     public static final ItemGroup GROUP = Registry.register(Registries.ITEM_GROUP, Alkahest.id("main"),
         FabricItemGroup.builder().displayName(Text.translatable("itemGroup.alkahest.main"))
             .icon(() -> new ItemStack(ALCHEMISTS_MONOCLE))
@@ -48,14 +53,35 @@ public final class ModItems {
                 entries.add(ALCHEMICAL_JOURNAL);
                 entries.add(ALCHEMISTS_MONOCLE);
                 entries.add(SALT); entries.add(PURIFIED_WATER); entries.add(HERBAL_PASTE);
-                entries.add(FIRE_DUST); entries.add(CAUSTIC_SLIME); entries.add(NAPALM); entries.add(ACID_BOMB); entries.add(LIGHTNING_IN_A_BOTTLE); entries.add(MIASMA); entries.add(BINDING_SALT); entries.add(CRYSTALLIZATION_POWDER); entries.add(ASH);
+                entries.add(FIRE_DUST); entries.add(CAUSTIC_SLIME); entries.add(NAPALM); entries.add(ACID_BOMB);
+                entries.add(LIGHTNING_IN_A_BOTTLE); entries.add(MIASMA);
+                entries.add(BINDING_SALT);
+                for (EssenceType type : EssenceType.values()) {
+                    Item charged = CHARGED_BINDING_SALTS.get(type);
+                    if (charged != null) entries.add(charged);
+                }
+                entries.add(CRYSTALLIZATION_POWDER); entries.add(ASH);
                 for (EssenceType type : EssenceType.values()) {
                     Item item = CRYSTALS.get(type);
                     if (item != null) entries.add(item);
                     Item wand = WANDS.get(type);
                     if (wand != null) entries.add(wand);
                 }
+                for (EssenceType type : EssenceType.values()) {
+                    Item egg = ELEMENTAL_SPAWN_EGGS.get(type);
+                    if (egg != null) entries.add(egg);
+                }
             }).build());
+
+    private static Map<EssenceType, Item> chargedBindingSalts() {
+        Map<EssenceType, Item> result = new EnumMap<>(EssenceType.class);
+        for (EssenceType type : EssenceType.values()) {
+            if (type.tier() == EssenceType.Tier.PRIMA) {
+                result.put(type, item("binding_salt_" + type.asString(), new BindingSaltItem(type, new Item.Settings())));
+            }
+        }
+        return Map.copyOf(result);
+    }
 
     private static Map<EssenceType, Item> crystals() {
         Map<EssenceType, Item> result = new EnumMap<>(EssenceType.class);
@@ -65,6 +91,7 @@ public final class ModItems {
         }
         return Map.copyOf(result);
     }
+
     private static Map<EssenceType, Item> wands() {
         Map<EssenceType, Item> result = new EnumMap<>(EssenceType.class);
         for (EssenceType type : EssenceType.values()) {
@@ -73,6 +100,29 @@ public final class ModItems {
         }
         return Map.copyOf(result);
     }
+
+    private static Map<EssenceType, Item> elementalSpawnEggs() {
+        Map<EssenceType, Item> result = new EnumMap<>(EssenceType.class);
+        for (EssenceType type : EssenceType.values()) {
+            if (type.tier() != EssenceType.Tier.PRIMA) continue;
+            int base = type.color();
+            int accent = switch (type) {
+                case IGNIS -> 0xFFE066;
+                case AQUA -> 0xA8F0FF;
+                case TERRA -> 0xC8A165;
+                case AER -> 0xA8C8E8;
+                case ORDO -> 0xFFF8DC;
+                case PERDITIO -> 0x1A002E;
+                default -> 0xFFFFFF;
+            };
+            result.put(type, item(
+                "elemental_" + type.asString() + "_spawn_egg",
+                new SpawnEggItem(ModEntities.ELEMENTALS.get(type), base, accent, new Item.Settings())
+            ));
+        }
+        return Map.copyOf(result);
+    }
+
     private static Item item(String name, Item item) { return Registry.register(Registries.ITEM, Alkahest.id(name), item); }
     public static void register() { }
     private ModItems() { }

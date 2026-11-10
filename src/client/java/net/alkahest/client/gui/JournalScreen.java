@@ -17,7 +17,7 @@ import net.minecraft.util.math.MathHelper;
 /** An original arcane research map and field notes. Progress remains server-authoritative. */
 public final class JournalScreen extends Screen {
     private static final Identifier BACKGROUND = Alkahest.id("textures/gui/journal_background.png");
-    private static final int GUIDE_PAGES = 7;
+    private static final int GUIDE_PAGES = 8;
     private record Node(String key, int parents, int discovered, int completed, int x, int y,
                         ItemStack icon, String[] choices, int[] failed) { }
     private static final Node[] NODES = {
@@ -30,7 +30,13 @@ public final class JournalScreen extends Screen {
         new Node("raw", EarlyResearch.COMPLETED, EarlyResearch.RAW_DISCOVERED, EarlyResearch.RAW_COMPLETED, 172, 40,
             new ItemStack(ModBlocks.DISTILLERY), new String[]{"copper", "iron", "cobble"}, new int[]{0, EarlyResearch.FAILED_IRON, EarlyResearch.FAILED_COBBLE}),
         new Node("sight", EarlyResearch.RAW_COMPLETED | EarlyResearch.REACTIVE_COMPLETED, EarlyResearch.SIGHT_DISCOVERED, EarlyResearch.SIGHT_COMPLETED, 248, 0,
-            new ItemStack(ModItems.CRYSTALS.get(EssenceType.ORDO)), new String[]{"glass", "eye", "torch"}, new int[]{0, EarlyResearch.FAILED_EYE, EarlyResearch.FAILED_TORCH})
+            new ItemStack(ModItems.CRYSTALS.get(EssenceType.ORDO)), new String[]{"glass", "eye", "torch"}, new int[]{0, EarlyResearch.FAILED_EYE, EarlyResearch.FAILED_TORCH}),
+        new Node("chain_ignis", EarlyResearch.SIGHT_COMPLETED, EarlyResearch.IGNIS_DISCOVERED, EarlyResearch.IGNIS_COMPLETED, 324, -40,
+            new ItemStack(Items.BLAZE_ROD), new String[]{"cane", "feather", "coal"}, new int[]{EarlyResearch.FAILED_CANE, EarlyResearch.FAILED_IGNIS_FEATHER, 0}),
+        new Node("chain_aqua", EarlyResearch.SIGHT_COMPLETED, EarlyResearch.AQUA_DISCOVERED, EarlyResearch.AQUA_COMPLETED, 324, 40,
+            new ItemStack(Items.PRISMARINE_SHARD), new String[]{"kelp", "sand", "ice"}, new int[]{0, EarlyResearch.FAILED_AQUA_SAND, EarlyResearch.FAILED_ICE}),
+        new Node("binding", EarlyResearch.IGNIS_COMPLETED | EarlyResearch.AQUA_COMPLETED, EarlyResearch.BINDING_DISCOVERED, EarlyResearch.BINDING_COMPLETED, 400, 0,
+            new ItemStack(ModItems.BINDING_SALT), new String[]{"string", "slime", "bonemeal"}, new int[]{0, EarlyResearch.FAILED_SLIME, EarlyResearch.FAILED_BONE_MEAL})
     };
     private final int researchFlags;
     private boolean guide;
@@ -92,6 +98,8 @@ public final class JournalScreen extends Screen {
         c.enableScissor(x + 2, y + 2, x + w - 2, y + h - 2);
         link(c, NODES[0], NODES[1]); link(c, NODES[1], NODES[2]); link(c, NODES[1], NODES[3]);
         link(c, NODES[2], NODES[4]); link(c, NODES[3], NODES[4]);
+        link(c, NODES[4], NODES[5]); link(c, NODES[4], NODES[6]);
+        link(c, NODES[5], NODES[7]); link(c, NODES[6], NODES[7]);
         for (Node node : NODES) if (!state(node).equals("hidden")) drawNode(c, node, mouseX, mouseY);
         c.disableScissor();
         c.drawCenteredTextWithShadow(textRenderer, Text.translatable("screen.alkahest.journal.map_hint"), left + bookWidth / 2, top + bookHeight - 24, 0xFFD4C4A0);
@@ -191,7 +199,7 @@ public final class JournalScreen extends Screen {
     }
     @Override public boolean mouseDragged(double x, double y, int button, double dx, double dy) {
         if (button == 0 && dragging && !guide && selected == null) {
-            panX = MathHelper.clamp(panX + dx, -120, 120);
+            panX = MathHelper.clamp(panX + dx, -220, 120);
             panY = MathHelper.clamp(panY + dy, -70, 70);
             return true;
         }

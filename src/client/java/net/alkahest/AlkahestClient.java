@@ -47,6 +47,9 @@ public final class AlkahestClient implements ClientModInitializer {
                 ? net.alkahest.essence.JarVisuals.color(jar.contents()) : 0xffffff, ModBlocks.JAR);
         EntityRendererRegistry.register(ModEntities.THROWN_REAGENT, FlyingItemEntityRenderer::new);
         EntityRendererRegistry.register(ModEntities.REAGENT_ZONE, EmptyEntityRenderer::new);
+        for (var elementalType : ModEntities.ELEMENTALS.values()) {
+            EntityRendererRegistry.register(elementalType, net.alkahest.client.render.ElementalEntityRenderer::new);
+        }
         ColorProviderRegistry.BLOCK.register((state, world, pos, tintIndex) -> {
             if (state.get(AlchemyCauldronBlock.DIRTY)) return 0x74552B;
             if (world != null && pos != null && world.getBlockEntity(pos) instanceof net.alkahest.block.entity.CauldronBlockEntity cauldron) {

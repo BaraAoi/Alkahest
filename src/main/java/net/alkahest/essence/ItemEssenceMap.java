@@ -63,8 +63,12 @@ public final class ItemEssenceMap {
     private static Map.Entry<Item, List<EssenceStack>> e(Item item, EssenceStack... values) { return Map.entry(item, List.of(values)); }
 
     public static List<EssenceStack> get(ItemStack stack) {
-        if (Registries.ITEM.getId(stack.getItem()).equals(Identifier.of("alkahest", "herbal_paste"))) {
+        Identifier itemId = Registries.ITEM.getId(stack.getItem());
+        if (itemId.equals(Identifier.of("alkahest", "herbal_paste"))) {
             return List.of(s(HERBA, 3), s(AQUA, 1));
+        }
+        if (itemId.equals(Identifier.of("alkahest", "salt"))) {
+            return List.of(s(ORDO, 2), s(TERRA, 1), s(AQUA, 1));
         }
         List<EssenceStack> exact = VALUES.get(stack.getItem());
         if (exact != null) return exact;

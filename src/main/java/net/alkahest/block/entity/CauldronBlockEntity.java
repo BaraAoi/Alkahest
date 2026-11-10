@@ -158,6 +158,12 @@ public class CauldronBlockEntity extends BlockEntity {
         additions.forEach((type, amount) -> essences.merge(type, amount, Integer::sum));
         evaporation = 0;
         syncEssences();
+        if (stack.isOf(ModItems.SALT) && world instanceof ServerWorld serverWorld) {
+            for (ServerPlayerEntity researcher : serverWorld.getEntitiesByClass(
+                    ServerPlayerEntity.class, new Box(pos).expand(6.0), p -> !p.isSpectator())) {
+                EarlyResearch.discoverBinding(researcher, world, pos);
+            }
+        }
         return true;
     }
 

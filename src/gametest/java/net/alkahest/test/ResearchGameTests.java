@@ -189,4 +189,86 @@ public class ResearchGameTests implements FabricGameTest {
         context.assertTrue(player.getInventory().contains(new ItemStack(ModItems.ALCHEMISTS_MONOCLE)), "Monocle must be delivered");
         context.complete();
     }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void eraTwoResearchProgression(TestContext context) {
+        context.setBlockState(3, 1, 3, Blocks.MAGMA_BLOCK);
+        context.setBlockState(3, 2, 3, ModBlocks.ALCHEMY_CAULDRON);
+        BlockPos pos = context.getAbsolutePos(new BlockPos(3, 2, 3));
+        var cauldron = (CauldronBlockEntity) context.getWorld().getBlockEntity(pos);
+        ServerPlayerEntity player = context.createMockCreativeServerPlayerInWorld();
+
+        // Advance through True Sight so Era II nodes can unlock
+        EarlyResearch.openJournal(player);
+        EarlyResearch.discoverCauldron(player, context.getWorld(), pos);
+        useOnCauldron(cauldron, player, new ItemStack(Items.WATER_BUCKET));
+        useOnCauldron(cauldron, player, new ItemStack(Items.CHARCOAL));
+        useOnCauldron(cauldron, player, new ItemStack(Items.COAL));
+        EarlyResearch.discoverReactive(player, context.getWorld(), pos);
+        EarlyResearch.discoverRaw(player, context.getWorld(), pos);
+        useOnCauldron(cauldron, player, new ItemStack(Items.GUNPOWDER));
+        useOnCauldron(cauldron, player, new ItemStack(Items.REDSTONE));
+        useOnCauldron(cauldron, player, new ItemStack(ModItems.HERBAL_PASTE));
+        useOnCauldron(cauldron, player, new ItemStack(Items.COPPER_INGOT));
+        EarlyResearch.discoverSight(player, context.getWorld(), pos);
+        useOnCauldron(cauldron, player, new ItemStack(ModItems.CRYSTALS.get(EssenceType.ORDO)));
+        useOnCauldron(cauldron, player, new ItemStack(Items.GLASS_PANE));
+        context.assertTrue((EarlyResearch.flags(player) & EarlyResearch.SIGHT_COMPLETED) != 0, "True Sight must be complete");
+
+        // Unlock both Era II elemental trails
+        EarlyResearch.discoverIgnis(player, context.getWorld(), pos);
+        EarlyResearch.discoverAqua(player, context.getWorld(), pos);
+        context.assertTrue((EarlyResearch.flags(player) & EarlyResearch.IGNIS_DISCOVERED) != 0, "Trail of Ignis must unlock");
+        context.assertTrue((EarlyResearch.flags(player) & EarlyResearch.AQUA_DISCOVERED) != 0, "Abyssal Current must unlock");
+
+        // Chain Ignis: blaze_rod + sugar_cane (fail), feather (fail), coal (success)
+        context.assertTrue(useOnCauldron(cauldron, player, new ItemStack(Items.BLAZE_ROD)), "Blaze rod dissolves");
+        context.assertTrue(useOnCauldron(cauldron, player, new ItemStack(Items.SUGAR_CANE)), "Sugar cane fails Ignis hypothesis");
+        context.assertTrue((EarlyResearch.flags(player) & EarlyResearch.FAILED_CANE) != 0, "Sugar cane failure recorded");
+        context.assertTrue(useOnCauldron(cauldron, player, new ItemStack(Items.BLAZE_ROD)), "Blaze rod dissolves");
+        context.assertFalse(useOnCauldron(cauldron, player, new ItemStack(Items.SUGAR_CANE)), "Repeated sugar cane failure rejected");
+        context.assertTrue(useOnCauldron(cauldron, player, new ItemStack(Items.FEATHER)), "Feather fails Ignis hypothesis");
+        context.assertTrue((EarlyResearch.flags(player) & EarlyResearch.FAILED_IGNIS_FEATHER) != 0, "Feather failure recorded");
+        context.assertTrue(useOnCauldron(cauldron, player, new ItemStack(Items.BLAZE_ROD)), "Blaze rod dissolves");
+        context.assertTrue(useOnCauldron(cauldron, player, new ItemStack(Items.COAL)), "Coal completes Trail of Ignis");
+        context.assertTrue((EarlyResearch.flags(player) & EarlyResearch.IGNIS_COMPLETED) != 0, "Trail of Ignis completed");
+
+        // Binding must not unlock before BOTH Ignis and Aqua trails are completed
+        EarlyResearch.discoverBinding(player, context.getWorld(), pos);
+        context.assertTrue((EarlyResearch.flags(player) & EarlyResearch.BINDING_DISCOVERED) == 0,
+            "Elemental Binding requires both Ignis and Aqua trails");
+
+        // Chain Aqua: prismarine_shard + sand (fail), ice (fail), kelp (success)
+        context.assertTrue(useOnCauldron(cauldron, player, new ItemStack(Items.PRISMARINE_SHARD)), "Prismarine shard dissolves");
+        context.assertTrue(useOnCauldron(cauldron, player, new ItemStack(Items.SAND)), "Sand fails Aqua hypothesis");
+        context.assertTrue((EarlyResearch.flags(player) & EarlyResearch.FAILED_AQUA_SAND) != 0, "Aqua sand failure recorded");
+        context.assertTrue(useOnCauldron(cauldron, player, new ItemStack(Items.PRISMARINE_SHARD)), "Prismarine shard dissolves");
+        context.assertTrue(useOnCauldron(cauldron, player, new ItemStack(Items.ICE)), "Ice fails Aqua hypothesis");
+        context.assertTrue((EarlyResearch.flags(player) & EarlyResearch.FAILED_ICE) != 0, "Aqua ice failure recorded");
+        context.assertTrue(useOnCauldron(cauldron, player, new ItemStack(Items.PRISMARINE_SHARD)), "Prismarine shard dissolves");
+        context.assertTrue(useOnCauldron(cauldron, player, new ItemStack(Items.KELP)), "Kelp completes Abyssal Current");
+        context.assertTrue((EarlyResearch.flags(player) & EarlyResearch.AQUA_COMPLETED) != 0, "Abyssal Current completed");
+
+        // Unlock and complete Elemental Binding: salt + slime_ball (fail), bone_meal (fail), string (success)
+        EarlyResearch.discoverBinding(player, context.getWorld(), pos);
+        context.assertTrue((EarlyResearch.flags(player) & EarlyResearch.BINDING_DISCOVERED) != 0, "Elemental Binding unlocked");
+        context.assertTrue(useOnCauldron(cauldron, player, new ItemStack(ModItems.SALT)), "Salt dissolves into Ordo/Terra/Aqua");
+        context.assertTrue(useOnCauldron(cauldron, player, new ItemStack(Items.SLIME_BALL)), "Slime ball fails Binding hypothesis");
+        context.assertTrue((EarlyResearch.flags(player) & EarlyResearch.FAILED_SLIME) != 0, "Slime failure recorded");
+        context.assertTrue(useOnCauldron(cauldron, player, new ItemStack(ModItems.SALT)), "Salt dissolves");
+        context.assertTrue(useOnCauldron(cauldron, player, new ItemStack(Items.BONE_MEAL)), "Bone meal fails Binding hypothesis");
+        context.assertTrue((EarlyResearch.flags(player) & EarlyResearch.FAILED_BONE_MEAL) != 0, "Bone meal failure recorded");
+        context.assertTrue(useOnCauldron(cauldron, player, new ItemStack(ModItems.SALT)), "Salt dissolves");
+        context.assertTrue(useOnCauldron(cauldron, player, new ItemStack(Items.STRING)), "String completes Elemental Binding");
+        context.assertTrue((EarlyResearch.flags(player) & EarlyResearch.BINDING_COMPLETED) != 0, "Elemental Binding completed");
+
+        // Reload advancements and verify all Era II flags persist
+        player.getAdvancementTracker().save();
+        player.getAdvancementTracker().reload(context.getWorld().getServer().getAdvancementLoader());
+        int eraTwoFlags = EarlyResearch.IGNIS_COMPLETED | EarlyResearch.AQUA_COMPLETED | EarlyResearch.BINDING_COMPLETED
+            | EarlyResearch.FAILED_CANE | EarlyResearch.FAILED_AQUA_SAND | EarlyResearch.FAILED_SLIME;
+        context.assertTrue((EarlyResearch.flags(player) & eraTwoFlags) == eraTwoFlags,
+            "Era II research flags must survive save and reload");
+        context.complete();
+    }
 }

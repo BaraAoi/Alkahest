@@ -1,0 +1,15 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "alkahest:binding_salt"
+    },
+    {
+      "item": "alkahest:crystal_aqua"
+    }
+  ],
+  "result": {
+    "id": "alkahest:binding_salt_aqua",
+    "count": 1
+  }
+}
