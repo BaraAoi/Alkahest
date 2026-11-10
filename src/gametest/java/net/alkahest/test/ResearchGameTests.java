@@ -160,8 +160,9 @@ public class ResearchGameTests implements FabricGameTest {
         distillery.collect(player);
         context.assertTrue((EarlyResearch.flags(player) & EarlyResearch.SIGHT_DISCOVERED) == 0, "Ash does not count as a crystal");
         distillery.stacks().set(1, new ItemStack(ModItems.CRYSTALS.get(EssenceType.AQUA)));
-        distillery.collect(player);
-        context.assertTrue((EarlyResearch.flags(player) & EarlyResearch.SIGHT_DISCOVERED) != 0, "Collecting a crystal should unlock true sight");
+        var distilleryScreen = (net.alkahest.screen.DistilleryScreenHandler) distillery.createMenu(2, player.getInventory(), player);
+        context.assertFalse(distilleryScreen.quickMove(player, 1).isEmpty(), "Taking a crystal via GUI shift-click should succeed");
+        context.assertTrue((EarlyResearch.flags(player) & EarlyResearch.SIGHT_DISCOVERED) != 0, "GUI output collection should unlock true sight");
         cauldron.stacks().set(0, new ItemStack(ModItems.CRYSTALS.get(EssenceType.ORDO)));
         cauldron.stacks().set(1, new ItemStack(Items.SPIDER_EYE));
         context.assertTrue(cauldron.activate(player), "Spider eye hypothesis should fail");

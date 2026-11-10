@@ -30,7 +30,10 @@ public class DistilleryBlock extends Block implements BlockEntityProvider {
         return ItemActionResult.success(world.isClient);
     }
     @Override protected ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, BlockHitResult hit) {
-        if (!world.isClient && world.getBlockEntity(pos) instanceof DistilleryBlockEntity distillery) distillery.collect(player);
+        if (!world.isClient && world.getBlockEntity(pos) instanceof DistilleryBlockEntity distillery) {
+            if (player.isSneaking()) player.openHandledScreen(distillery);
+            else distillery.collect(player);
+        }
         return ActionResult.success(world.isClient);
     }
     @Override protected void onStateReplaced(BlockState state, World world, BlockPos pos, BlockState newState, boolean moved) {
