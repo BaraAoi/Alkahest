@@ -195,7 +195,7 @@ public final class JournalScreen extends Screen {
     /** The synthesis page: one row per Matrix recipe, icons first, names and prices on hover. */
     private void renderRecipes(DrawContext c, int x, int y, int w, int h, int mouseX, int mouseY) {
         maxScroll = 0;
-        c.drawText(c, Text.translatable("screen.alkahest.journal.recipes"), x + 12, y + 10, 0xFF4F3520, false);
+        c.drawText(textRenderer, Text.translatable("screen.alkahest.journal.recipes"), x + 12, y + 10, 0xFF4F3520, false);
         c.fill(x + 12, y + 22, x + w - 12, y + 23, 0xFFB19A6E);
         List<MatrixRecipe> recipes = MatrixRecipe.all();
         for (int i = 0; i < recipes.size(); i++) {
@@ -219,21 +219,21 @@ public final class JournalScreen extends Screen {
         c.drawItem(new ItemStack(recipe.base()), cursor, iconY);
         cursor += 17;
         for (Item component : recipe.components()) {
-            c.drawText(c, "+", cursor, iconY + 4, 0xFF594633, false);
+            c.drawText(textRenderer, "+", cursor, iconY + 4, 0xFF594633, false);
             cursor += 7;
             c.drawItem(new ItemStack(component), cursor, iconY);
             cursor += 17;
         }
-        c.drawText(c, "→", cursor, iconY + 4, 0xFF977E50, false);
+        c.drawText(textRenderer, "→", cursor, iconY + 4, 0xFF977E50, false);
         cursor += 11;
         ItemStack output = recipe.output();
         c.drawItem(output, cursor, iconY);
         if (output.getCount() > 1) {
             String amount = String.valueOf(output.getCount());
-            c.drawText(c, amount, cursor + 17 - textRenderer.getWidth(amount), iconY + 9, 0xFF20140C, false);
+            c.drawText(textRenderer, amount, cursor + 17 - textRenderer.getWidth(amount), iconY + 9, 0xFF20140C, false);
         }
         String price = "◆ " + MatrixRecipe.price(recipe.cost());
-        c.drawText(c, price, mapX() + mapW() - 12 - textRenderer.getWidth(price), iconY + 4, 0xFF7A5A20, false);
+        c.drawText(textRenderer, price, mapX() + mapW() - 12 - textRenderer.getWidth(price), iconY + 4, 0xFF7A5A20, false);
     }
 
     private List<Text> describe(MatrixRecipe recipe) {
