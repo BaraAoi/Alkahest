@@ -181,7 +181,7 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory, Nam
             setActive(world, pos, self, false);
             return;
         }
-        consumeItems(recipe);
+        self.consumeItems(recipe);
         self.progress = 0;
         self.markDirty();
         celebrate(world, pos);
