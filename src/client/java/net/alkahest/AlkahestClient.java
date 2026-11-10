@@ -31,6 +31,7 @@ public final class AlkahestClient implements ClientModInitializer {
         ClientPlayNetworking.registerGlobalReceiver(OpenJournalPayload.ID, (payload, context) ->
             context.client().execute(() -> context.client().setScreen(new JournalScreen(payload.flags()))));
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.NAPALM_FLAME, RenderLayer.getCutout());
+        BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.JAR, RenderLayer.getCutout());
         EntityRendererRegistry.register(ModEntities.THROWN_REAGENT, FlyingItemEntityRenderer::new);
         EntityRendererRegistry.register(ModEntities.REAGENT_ZONE, EmptyEntityRenderer::new);
         ColorProviderRegistry.BLOCK.register((state, world, pos, tintIndex) ->
@@ -40,6 +41,12 @@ public final class AlkahestClient implements ClientModInitializer {
         ClientLifecycleEvents.CLIENT_STARTED.register(client -> LoggerFactory.getLogger("Alkahest").info("Alkahest client started"));
         ItemTooltipCallback.EVENT.register((stack, context, type, lines) -> {
             if (stack.getItem() instanceof CrystalWandItem) lines.add(Text.translatable("message.alkahest.wand_charge", stack.getOrDefault(ModDataComponents.ESSENCE_CHARGE, 0)));
+            if (stack.getItem() instanceof net.alkahest.item.custom.JarItem) {
+                var contents = net.alkahest.item.custom.JarItem.contents(stack);
+                lines.add(Text.translatable("message.alkahest.jar_total", contents.total()));
+                for (var essence : contents.contents()) lines.add(Text.literal("◆ " + essence.type().displayName() + ": " + essence.amount() + " · " + Math.round(essence.stability() * 100) + "%")
+                    .styled(style -> style.withColor(essence.type().color())));
+            }
             Float stability = stack.get(ModDataComponents.ESSENCE_STABILITY);
             if (stability != null) lines.add(Text.translatable("message.alkahest.stability", Math.round(stability * 100)));
             var player = MinecraftClient.getInstance().player;
