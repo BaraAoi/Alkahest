@@ -69,4 +69,50 @@ public class ChargerGameTests implements FabricGameTest {
         context.complete();
     }
 
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void chargerMountsOnJarAndRelinks(TestContext context) {
+        BlockPos jarPos = context.getAbsolutePos(new BlockPos(3, 2, 3));
+        context.setBlockState(3, 2, 3, ModBlocks.JAR);
+        var jar = (JarBlockEntity) context.getWorld().getBlockEntity(jarPos);
+        jar.setContents(new JarContentsComponent(List.of(new EssenceStack(EssenceType.ORDO, 4, .5f))));
+        var player = context.createMockPlayer(GameMode.SURVIVAL);
+        player.setPosition(jarPos.getX() + 2.5, jarPos.getY(), jarPos.getZ() + .5);
+        var chargers = new ItemStack(ModBlocks.ESSENCE_CHARGER, 2);
+        player.setStackInHand(Hand.MAIN_HAND, chargers);
+        var hit = new net.minecraft.util.hit.BlockHitResult(net.minecraft.util.math.Vec3d.ofCenter(jarPos), net.minecraft.util.math.Direction.NORTH, jarPos, false);
+        context.getWorld().getBlockState(jarPos).onUseWithItem(chargers, context.getWorld(), player, Hand.MAIN_HAND, hit);
+        BlockPos chargerPos = jarPos.up();
+        context.assertTrue(context.getWorld().getBlockState(chargerPos).isOf(ModBlocks.ESSENCE_CHARGER), "Clicking the jar with a charger places it above, even on the side");
+        context.assertTrue(chargers.getCount() == 1, "Placing consumes exactly one charger");
+        context.assertTrue(context.getWorld().getBlockState(chargerPos).get(net.alkahest.block.custom.EssenceChargerBlock.MOUNTED), "Placed charger displays the mounted shape");
+        context.assertTrue(EssenceChargerBlockEntity.findJar(context.getWorld(), chargerPos) == jar, "Charger automatically links to the jar below");
+        context.getWorld().getBlockState(jarPos).onUseWithItem(chargers, context.getWorld(), player, Hand.MAIN_HAND, hit);
+        context.assertTrue(chargers.getCount() == 1 && jar.contents().total() == 4, "Blocked placement must not consume items or contents");
+        var wand = new ItemStack(ModItems.WANDS.get(EssenceType.ORDO));
+        wand.set(ModDataComponents.ESSENCE_CHARGE, 40); player.getInventory().setStack(0, wand);
+        context.assertTrue(EssenceChargerBlockEntity.chargeNearby(EssenceChargerBlockEntity.findJar(context.getWorld(), chargerPos), chargerPos, List.of(player)) != null, "Linked jar supplies nearby wand");
+        context.assertTrue(jar.contents().total() == 3 && wand.get(ModDataComponents.ESSENCE_CHARGE) == 50, "Linked charging consumes the correct jar");
+        context.getWorld().breakBlock(jarPos, true);
+        context.assertTrue(EssenceChargerBlockEntity.findJar(context.getWorld(), chargerPos) == null, "Removing the jar detaches it");
+        context.assertFalse(context.getWorld().getBlockState(chargerPos).get(net.alkahest.block.custom.EssenceChargerBlock.MOUNTED), "Removed jar updates appearance");
+        context.getWorld().setBlockState(jarPos, ModBlocks.JAR.getDefaultState());
+        context.assertTrue(EssenceChargerBlockEntity.findJar(context.getWorld(), chargerPos) == context.getWorld().getBlockEntity(jarPos), "Replacement jar links automatically");
+        context.assertTrue(context.getWorld().getBlockState(chargerPos).get(net.alkahest.block.custom.EssenceChargerBlock.MOUNTED), "Replacement jar updates appearance");
+        context.complete();
+    }
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void prefersJarBelowAndKeepsLegacySetup(TestContext context) {
+        BlockPos pos = context.getAbsolutePos(new BlockPos(3, 2, 3));
+        context.setBlockState(3, 2, 3, ModBlocks.ESSENCE_CHARGER);
+        context.setBlockState(3, 3, 3, ModBlocks.JAR);
+        var above = (JarBlockEntity) context.getWorld().getBlockEntity(pos.up());
+        context.assertTrue(EssenceChargerBlockEntity.findJar(context.getWorld(), pos) == above, "0.1.14 jar above still works");
+        context.setBlockState(3, 1, 3, ModBlocks.JAR);
+        var below = (JarBlockEntity) context.getWorld().getBlockEntity(pos.down());
+        context.assertTrue(EssenceChargerBlockEntity.findJar(context.getWorld(), pos) == below, "Jar below has priority, even if empty");
+        context.getWorld().breakBlock(pos.down(), true);
+        context.assertTrue(EssenceChargerBlockEntity.findJar(context.getWorld(), pos) == above, "Legacy jar is used again when lower jar disappears");
+        context.complete();
+    }
+
 }

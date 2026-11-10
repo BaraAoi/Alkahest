@@ -1,7 +1,10 @@
 {
   "variants": {
-    "": {
+    "mounted=false": {
       "model": "alkahest:block/essence_charger"
+    },
+    "mounted=true": {
+      "model": "alkahest:block/essence_charger_mounted"
     }
   }
 }

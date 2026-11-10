@@ -7,6 +7,11 @@ import net.alkahest.essence.JarContentsComponent;
 import net.alkahest.item.custom.JarItem;
 import net.alkahest.registry.ModDataComponents;
 import net.alkahest.registry.ModItems;
+import net.alkahest.registry.ModBlocks;
+import net.minecraft.item.BlockItem;
+import net.minecraft.item.ItemPlacementContext;
+import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.Vec3d;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockEntityProvider;
 import net.minecraft.block.BlockState;
@@ -48,6 +53,15 @@ public class JarBlock extends Block implements BlockEntityProvider {
     @Override protected VoxelShape getCollisionShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) { return SHAPE; }
     @Override protected ItemActionResult onUseWithItem(ItemStack stack, BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
         if (stack.isEmpty()) return ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        // A normal click with the charger places it on top instead of treating it as jar input.
+        if (stack.isOf(ModBlocks.ESSENCE_CHARGER.asItem())) {
+            if (!world.isClient) {
+                var top = new BlockHitResult(Vec3d.ofCenter(pos).add(0, .5, 0), Direction.UP, pos, false);
+                if (!world.isAir(pos.up()) || !((BlockItem)stack.getItem()).place(new ItemPlacementContext(player, hand, stack, top)).isAccepted())
+                    player.sendMessage(Text.translatable("message.alkahest.charger_no_space_on_jar"), true);
+            }
+            return ItemActionResult.success(world.isClient);
+        }
         if (world.isClient) return ItemActionResult.SUCCESS;
         if (!(world.getBlockEntity(pos) instanceof JarBlockEntity jar)) return ItemActionResult.FAIL;
         var current = jar.contents();
