@@ -76,4 +76,22 @@ public class PipeGameTests implements FabricGameTest {
         c.assertTrue(pipes.getCount()==7 && state.get(AlchemyPipeBlock.WEST),"Placement consumes one item and connects to jar");
         c.complete();
     }
+    @GameTest(templateName=EMPTY_STRUCTURE)
+    public void wandCanConfigureDirectionAndSneakFilter(TestContext c) {
+        c.setBlockState(3,2,3,ModBlocks.ALCHEMY_PIPE);
+        BlockPos pos=c.getAbsolutePos(new BlockPos(3,2,3));
+        var pipe=(AlchemyPipeBlockEntity)c.getWorld().getBlockEntity(pos);
+        var player=c.createMockPlayer(GameMode.SURVIVAL);
+        var wand=new ItemStack(net.alkahest.registry.ModItems.WANDS.get(EssenceType.ORDO));
+        player.setStackInHand(Hand.MAIN_HAND,wand);
+        var hit=new BlockHitResult(Vec3d.ofCenter(pos),Direction.UP,pos,false);
+        c.getWorld().getBlockState(pos).onUseWithItem(wand,c.getWorld(),player,Hand.MAIN_HAND,hit);
+        c.assertTrue(c.getWorld().getBlockState(pos).get(AlchemyPipeBlock.FACING)==Direction.EAST,"Ordinary wand use changes output");
+        player.setSneaking(true);
+        var result=wand.useOnBlock(new net.minecraft.item.ItemUsageContext(player,Hand.MAIN_HAND,hit));
+        c.assertTrue(result.isAccepted() && pipe.filter()==EssenceType.IGNIS,"Sneak-use through the item changes filter even when block interaction is bypassed");
+        c.assertTrue(wand.getOrDefault(net.alkahest.registry.ModDataComponents.ESSENCE_CHARGE,0)==100,"Configuring pipe does not consume wand charge");
+        c.complete();
+    }
+
 }

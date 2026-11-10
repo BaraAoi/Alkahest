@@ -7,6 +7,9 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.util.Hand;
+import net.minecraft.util.ActionResult;
+import net.minecraft.item.ItemUsageContext;
+import net.alkahest.block.entity.AlchemyPipeBlockEntity;
 
 /** The basic wand currently activates the cauldron; other wand powers are not implemented yet. */
 public class CrystalWandItem extends Item {
@@ -14,6 +17,15 @@ public class CrystalWandItem extends Item {
     public CrystalWandItem(EssenceType type) {
         super(new Settings().maxCount(1).component(ModDataComponents.ESSENCE_CHARGE, 100));
         this.type = type;
+    }
+    @Override public ActionResult useOnBlock(ItemUsageContext context) {
+        // Sneaking may bypass the block interaction, so handle the pipe filter from the item too.
+        var player = context.getPlayer();
+        if (player != null && player.isSneaking() && context.getWorld().getBlockEntity(context.getBlockPos()) instanceof AlchemyPipeBlockEntity pipe) {
+            if (!context.getWorld().isClient) { pipe.nextFilter(); pipe.describe(player); }
+            return ActionResult.success(context.getWorld().isClient);
+        }
+        return super.useOnBlock(context);
     }
     public EssenceType essenceType() { return type; }
     public void consumeUse(PlayerEntity player, Hand hand) {
