@@ -488,7 +488,7 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
         server.updateListeners(pos, state, state, Block.NOTIFY_ALL);
         Packet<?> packet = toUpdatePacket();
         if (packet != null) {
-            server.getPlayerManager().sendToAround(null, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
+            server.getServer().getPlayerManager().sendToAround(null, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
                 64.0, server.getRegistryKey(), packet);
         }
     }
