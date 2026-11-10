@@ -2,6 +2,7 @@ package net.alkahest.test;
 
 import net.alkahest.block.custom.AlchemyPipeBlock;
 import net.alkahest.block.entity.AlchemyPipeBlockEntity;
+import net.alkahest.block.entity.DistilleryBellowsBlockEntity;
 import net.alkahest.block.entity.JarBlockEntity;
 import net.alkahest.essence.EssenceStack;
 import net.alkahest.essence.EssenceType;
@@ -127,6 +128,45 @@ public class PipeGameTests implements FabricGameTest {
         c.assertTrue(packet!=null && packet.getNbt()!=null, "Changing filter produces update data");
         replica.readComponentlessNbt(packet.getNbt(),c.getWorld().getRegistryManager());
         c.assertTrue(replica.filter()==EssenceType.AQUA, "Filter change reaches the client copy");
+        c.complete();
+    }
+
+    @GameTest(templateName=EMPTY_STRUCTURE)
+    public void pipesFillAndDrainBellows(TestContext c) {
+        c.setBlockState(1,2,3,ModBlocks.JAR);
+        c.setBlockState(2,2,3,ModBlocks.ALCHEMY_PIPE.getDefaultState().with(AlchemyPipeBlock.FACING,Direction.EAST));
+        c.setBlockState(3,2,3,ModBlocks.DISTILLERY_BELLOWS);
+        BlockPos p=c.getAbsolutePos(new BlockPos(2,2,3));
+        var source=(JarBlockEntity)c.getWorld().getBlockEntity(p.west());
+        var bellows=(DistilleryBellowsBlockEntity)c.getWorld().getBlockEntity(p.east());
+        c.assertTrue(c.getWorld().getBlockState(p).get(AlchemyPipeBlock.EAST),"Pipe connects to the bellows flask");
+        source.setContents(of(EssenceType.HERBA,2,.30f));
+        c.assertTrue(AlchemyPipeBlockEntity.transfer(c.getWorld(),p,source),"Pipe pours essence into the bellows");
+        c.assertTrue(bellows.amount()==1 && bellows.storedType()==EssenceType.HERBA,"Bellows hold one unit of the right type");
+        c.assertTrue(source.contents().total()==1,"The source jar loses exactly one unit");
+        source.setContents(of(EssenceType.IGNIS,2,.20f));
+        c.assertFalse(AlchemyPipeBlockEntity.transfer(c.getWorld(),p,source),"Bellows refuse a second essence type");
+        c.assertTrue(source.contents().total()==2 && bellows.amount()==1,"A refused transfer is lossless");
+        c.getWorld().setBlockState(p,c.getWorld().getBlockState(p).with(AlchemyPipeBlock.FACING,Direction.WEST));
+        source.setContents(JarContentsComponent.EMPTY);
+        c.assertTrue(AlchemyPipeBlockEntity.transfer(c.getWorld(),p,bellows),"Pipes drain the bellows into a jar");
+        c.assertTrue(bellows.amount()==0 && source.contents().total()==1,"The drained unit reaches the jar");
+        c.assertFalse(AlchemyPipeBlockEntity.transfer(c.getWorld(),p,bellows),"An empty flask moves nothing");
+        c.complete();
+    }
+
+    @GameTest(templateName=EMPTY_STRUCTURE)
+    public void fullBellowsRejectPipedEssence(TestContext c) {
+        c.setBlockState(1,2,3,ModBlocks.JAR);
+        c.setBlockState(2,2,3,ModBlocks.ALCHEMY_PIPE.getDefaultState().with(AlchemyPipeBlock.FACING,Direction.EAST));
+        c.setBlockState(3,2,3,ModBlocks.DISTILLERY_BELLOWS);
+        BlockPos p=c.getAbsolutePos(new BlockPos(2,2,3));
+        var source=(JarBlockEntity)c.getWorld().getBlockEntity(p.west());
+        var bellows=(DistilleryBellowsBlockEntity)c.getWorld().getBlockEntity(p.east());
+        bellows.accept(EssenceType.AQUA,DistilleryBellowsBlockEntity.CAPACITY,.4f);
+        source.setContents(of(EssenceType.AQUA,3,.30f));
+        c.assertFalse(AlchemyPipeBlockEntity.transfer(c.getWorld(),p,source),"A full flask stops the pipe");
+        c.assertTrue(source.contents().total()==3 && bellows.amount()==DistilleryBellowsBlockEntity.CAPACITY,"Nothing is lost when the flask is full");
         c.complete();
     }
 

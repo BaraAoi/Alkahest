@@ -19,7 +19,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-/** Early pipeline: transfer atomically between jars, never buffering or loading chunks. */
+/** Early pipeline: transfer atomically between jars and bellows, never buffering or loading chunks. */
 public class AlchemyPipeBlockEntity extends BlockEntity {
     private static final int MAX_SEGMENTS = 64;
     private EssenceType filter;
@@ -55,12 +55,66 @@ public class AlchemyPipeBlockEntity extends BlockEntity {
         if (world.getTime() % 10 != 0) return;
         Direction out=state.get(AlchemyPipeBlock.FACING);
         BlockPos input=pos.offset(out.getOpposite());
-        if (!world.isChunkLoaded(input) || !(world.getBlockEntity(input) instanceof JarBlockEntity source)) return;
+        if (!world.isChunkLoaded(input)) return;
+        BlockEntity source = world.getBlockEntity(input);
+        if (!isPort(source) || portContents(source).total() == 0) return;
         transfer(world,pos,source);
     }
+
+    /** Jars and distillation bellows both act as pipe endpoints. */
+    private static boolean isPort(BlockEntity be) {
+        return be instanceof JarBlockEntity || be instanceof DistilleryBellowsBlockEntity;
+    }
+
+    /** Bellows are a single-type container, so they are read as a one-entry jar. */
+    private static JarContentsComponent portContents(BlockEntity be) {
+        if (be instanceof JarBlockEntity jar) return jar.contents();
+        if (be instanceof DistilleryBellowsBlockEntity bellows) {
+            return bellows.empty() ? JarContentsComponent.EMPTY
+                : new JarContentsComponent(List.of(new EssenceStack(bellows.storedType(), bellows.amount(), bellows.stability())));
+        }
+        return JarContentsComponent.EMPTY;
+    }
+
+    /** Room left for {@code type}; zero blocks the transfer. */
+    private static int portFree(BlockEntity be, EssenceType type) {
+        if (be instanceof JarBlockEntity jar) {
+            JarContentsComponent contents = jar.contents();
+            if (!JarItem.allowed(contents) || !JarItem.singleType(contents)) return 0;
+            if (contents.total() > 0 && contents.contents().getFirst().type() != type) return 0;
+            return JarItem.CAPACITY - contents.total();
+        }
+        if (be instanceof DistilleryBellowsBlockEntity bellows) {
+            if (bellows.empty()) return DistilleryBellowsBlockEntity.CAPACITY;
+            if (bellows.storedType() != type) return 0;
+            return DistilleryBellowsBlockEntity.CAPACITY - bellows.amount();
+        }
+        return 0;
+    }
+
+    private static void portAdd(BlockEntity be, EssenceStack unit) {
+        if (be instanceof JarBlockEntity jar) {
+            jar.setContents(jar.contents().merge(new JarContentsComponent(List.of(unit)), JarItem.CAPACITY));
+        } else if (be instanceof DistilleryBellowsBlockEntity bellows) {
+            bellows.accept(unit.type(), unit.amount(), unit.stability());
+        }
+    }
+
+    private static void portRemove(BlockEntity be, EssenceStack stack) {
+        if (be instanceof JarBlockEntity jar) {
+            List<EssenceStack> remainder = new ArrayList<>(jar.contents().contents());
+            remainder.remove(stack);
+            if (stack.amount() > 1) remainder.add(new EssenceStack(stack.type(), stack.amount() - 1, stack.stability()));
+            jar.setContents(new JarContentsComponent(remainder));
+        } else if (be instanceof DistilleryBellowsBlockEntity bellows) {
+            bellows.drain(1);
+        }
+    }
     /** Walk a directed route once, then atomically move one matching unit to a jar with room. */
-    public static boolean transfer(World world, BlockPos start, JarBlockEntity source) {
-        if (world.isClient || !world.isChunkLoaded(start) || !JarItem.allowed(source.contents()) || source.contents().total() == 0) return false;
+    public static boolean transfer(World world, BlockPos start, BlockEntity source) {
+        if (world.isClient || !world.isChunkLoaded(start) || !isPort(source)) return false;
+        JarContentsComponent sourceContents = portContents(source);
+        if (!JarItem.allowed(sourceContents) || sourceContents.total() == 0) return false;
         BlockState first = world.getBlockState(start);
         if (!(first.getBlock() instanceof AlchemyPipeBlock) || !start.offset(first.get(AlchemyPipeBlock.FACING).getOpposite()).equals(source.getPos())) return false;
         Set<BlockPos> visited=new HashSet<>();
@@ -73,19 +127,18 @@ public class AlchemyPipeBlockEntity extends BlockEntity {
             if (!(state.getBlock() instanceof AlchemyPipeBlock)) return false;
             BlockPos next=cursor.offset(state.get(AlchemyPipeBlock.FACING));
             if (!world.isChunkLoaded(next)) return false;
-            if (world.getBlockEntity(next) instanceof JarBlockEntity target) {
-                if (target == source || !JarItem.allowed(target.contents()) || !JarItem.singleType(target.contents()) || target.contents().total() >= JarItem.CAPACITY) return false;
-                var item=source.contents().contents().stream().filter(e -> e.type() != EssenceType.VACUUM &&
+            BlockEntity target = world.getBlockEntity(next);
+            if (isPort(target)) {
+                if (target == source) return false;
+                JarContentsComponent targetContents = portContents(target);
+                EssenceType occupied = targetContents.total() == 0 ? null : targetContents.contents().getFirst().type();
+                var item=sourceContents.contents().stream().filter(e -> e.type() != EssenceType.VACUUM &&
                     required.stream().allMatch(f -> f == e.type()) &&
-                    (target.contents().total() == 0 || target.contents().contents().getFirst().type() == e.type())).findFirst().orElse(null);
-                if (item == null) return false;
-                List<EssenceStack> remainder=new ArrayList<>(source.contents().contents());
-                remainder.remove(item);
-                if (item.amount()>1) remainder.add(new EssenceStack(item.type(),item.amount()-1,item.stability()));
-                JarContentsComponent addition=new JarContentsComponent(List.of(new EssenceStack(item.type(),1,item.stability())));
+                    (occupied == null || occupied == e.type())).findFirst().orElse(null);
+                if (item == null || portFree(target, item.type()) <= 0) return false;
                 // Both updates run synchronously on the server tick; no contents are held by pipes.
-                target.setContents(target.contents().merge(addition,JarItem.CAPACITY));
-                source.setContents(new JarContentsComponent(remainder));
+                portAdd(target, new EssenceStack(item.type(), 1, item.stability()));
+                portRemove(source, item);
                 return true;
             }
             cursor=next;

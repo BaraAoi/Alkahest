@@ -65,6 +65,20 @@ public class DistilleryBellowsBlockEntity extends BlockEntity {
         return accepted;
     }
 
+    /** Removes up to {@code count} units; essence pipes drain the flask with it. */
+    public int drain(int count) {
+        int taken = Math.min(count, amount);
+        if (taken <= 0) return 0;
+        amount -= taken;
+        if (amount <= 0) {
+            type = null;
+            amount = 0;
+            stability = 0;
+        }
+        changed();
+        return taken;
+    }
+
     public void pourToJar(PlayerEntity player, Hand hand) {
         ItemStack held = player.getStackInHand(hand);
         if (!(held.getItem() instanceof JarItem)) {

@@ -103,6 +103,13 @@ for name in ('distillery_tier2', 'distillery_bellows'):
     assert (data_root / f'loot_table/blocks/{name}.json').is_file(), name
     assert (recipes / f'{name}.json').is_file(), name
 
+# The tier-2 cube must stay late-game: it is gated behind an Alkahest vial and copper blocks.
+tier2_recipe = json.loads((recipes / 'distillery_tier2.json').read_text())
+gate = {entry.get('item') for entry in tier2_recipe['key'].values()}
+assert 'alkahest:alkahest_vial' in gate, 'tier-2 distillery must require an Alkahest vial'
+assert 'minecraft:copper_block' in gate, 'tier-2 distillery must require copper blocks'
+assert tier2_recipe['key']['D'] == {'item': 'alkahest:distillery'}
+
 for tex in ('distillery_copper', 'distillery_panel', 'distillery_vent', 'bellows_iron',
             'distillery_crude', 'distillery_crude_panel', 'distillery_crude_glass'):
     assert (base / f'textures/block/{tex}.png').read_bytes().startswith(b'\x89PNG\r\n\x1a\n'), tex

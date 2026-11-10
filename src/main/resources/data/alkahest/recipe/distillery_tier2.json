@@ -1,16 +1,22 @@
 {
   "type": "minecraft:crafting_shaped",
   "pattern": [
-    "CGC",
-    "GDG",
-    "CGC"
+    "BCB",
+    "GVG",
+    "BDB"
   ],
   "key": {
+    "B": {
+      "item": "minecraft:copper_block"
+    },
     "C": {
       "item": "minecraft:copper_ingot"
     },
     "G": {
       "item": "minecraft:glass"
+    },
+    "V": {
+      "item": "alkahest:alkahest_vial"
     },
     "D": {
       "item": "alkahest:distillery"
