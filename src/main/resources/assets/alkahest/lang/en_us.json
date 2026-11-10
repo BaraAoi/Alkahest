@@ -58,7 +58,7 @@
   "screen.alkahest.journal.page.3": "My recipes\n\nCoal and a bottle purify water; two flowers and food make paste. Gunpowder or blaze powder with redstone makes fire dust. Spider eye and cactus make caustic slime.",
   "screen.alkahest.journal.page.4": "Distillation\n\nI need six copper ingots, two glass blocks and a furnace for the distillery. Organic matter takes a minute. With an empty hand I can check progress and collect crystals or ash.",
   "screen.alkahest.journal.page.5": "Reagents\n\nIf I right-click slime with fire dust in my inventory, I get napalm; caustic slime and gunpowder make an acid bomb. I can throw them, but I should be careful: they can hurt me too.",
-  "screen.alkahest.journal.page.6": "Essences and monocle\n\nFor a monocle I put a glass pane and an Ordo crystal in a heated cauldron with water, in either order; I may add a gold ingot. If a hypothesis is active, the experiment consumes the ingredients and gives no monocle: I must brew again. Equipped, it shows item essences. A stick and primal crystal make a wand.\n\nI can craft a jar from seven glass panes in a U shape. I place it and use a crystal on it: for now one crystal gives one unit. Using one jar on another pours everything; excess above 100 evaporates.\n\nThree copper ingots, glass and a Potentia crystal make a charger. I may obtain Potentia from glow berries or golden apples in the distillery. I place the charger on a jar: it automatically draws the matching essence and restores up to ten charges per unit each second while I am nearby.\n\nGlass, copper and an Aer crystal make eight pipes; I can distil Aer from raw chicken. I connect two jars with pipes. I use a wand to set each output, sneak-use to set a filter and an empty hand to inspect settings.",
+  "screen.alkahest.journal.page.6": "Essences and monocle\n\nFor a monocle I put a glass pane and an Ordo crystal in a heated cauldron with water, in either order; I may add a gold ingot. If a hypothesis is active, the experiment consumes the ingredients and gives no monocle: I must brew again. Equipped, it shows item essences. A stick and primal crystal make a wand.\n\nI can craft a jar from seven glass panes in a U shape. I place it and use a crystal on it: for now one crystal gives one unit. Using one jar on another pours everything; excess above 100 evaporates.\n\nThree copper ingots, glass and a Potentia crystal make a charger. I may obtain Potentia from glow berries or golden apples in the distillery. I place the charger on a jar: it automatically draws the matching essence and restores up to ten charges per unit each second while I am nearby.\n\nGlass, copper and an Aer crystal make eight pipes; I can distil Aer from raw chicken. I connect two jars with pipes. I use a wand to set each output, sneak-use to set a filter and an empty hand to inspect settings.\n\nI can make a manual separator from three copper ingots, glass, quartz and an Ordo crystal. I insert a mixed jar, then use empty jars to extract one essence type at a time. An empty hand returns the original jar. Stability is unchanged.",
   "effect.alkahest.in_napalm": "In Napalm",
   "screen.alkahest.research.title": "Brewing Basics",
   "screen.alkahest.research.locked": "I need an alchemy cauldron. I should place one or inspect an existing one.",
@@ -138,5 +138,14 @@
   "direction.alkahest.east": "east",
   "direction.alkahest.west": "west",
   "direction.alkahest.up": "up",
-  "direction.alkahest.down": "down"
+  "direction.alkahest.down": "down",
+  "block.alkahest.essence_separator": "Manual Essence Separator",
+  "message.alkahest.separator_invalid": "This jar contains incompatible data; operation cancelled.",
+  "message.alkahest.separator_needs_contents": "I need a jar containing essence first.",
+  "message.alkahest.separator_inserted": "Jar inserted. Use an empty jar to extract one essence type.",
+  "message.alkahest.separator_use_empty": "Use an empty jar to extract a fraction.",
+  "message.alkahest.separator_finished": "All essence extracted; take the empty source jar with an empty hand.",
+  "message.alkahest.separator_extracted": "Extracted: %s × %s.",
+  "message.alkahest.separator_empty": "There is no jar in the separator.",
+  "message.alkahest.separator_returned": "Source jar returned."
 }

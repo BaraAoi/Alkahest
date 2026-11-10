@@ -13,7 +13,8 @@
       "net.alkahest.test.JarGameTests",
       "net.alkahest.test.ChargerGameTests",
       "net.alkahest.test.PipeGameTests",
-      "net.alkahest.test.MiningGameTests"
+      "net.alkahest.test.MiningGameTests",
+      "net.alkahest.test.SeparatorGameTests"
     ]
   },
   "depends": {

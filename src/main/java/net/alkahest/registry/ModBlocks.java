@@ -4,6 +4,7 @@ import net.alkahest.Alkahest;
 import net.alkahest.block.custom.AlchemyCauldronBlock;
 import net.alkahest.block.custom.DistilleryBlock;
 import net.alkahest.block.custom.EssenceChargerBlock;
+import net.alkahest.block.custom.EssenceSeparatorBlock;
 import net.alkahest.block.custom.JarBlock;
 import net.alkahest.block.custom.AlchemyPipeBlock;
 import net.alkahest.item.custom.JarItem;
@@ -19,6 +20,7 @@ public final class ModBlocks {
     public static final Block ALCHEMY_CAULDRON = register("alchemy_cauldron", new AlchemyCauldronBlock(AbstractBlock.Settings.copy(Blocks.CAULDRON)));
     public static final Block JAR = jar();
     public static final Block ALCHEMY_PIPE = register("alchemy_pipe", new AlchemyPipeBlock(AbstractBlock.Settings.copy(Blocks.GLASS).strength(0.8f).nonOpaque()));
+    public static final Block ESSENCE_SEPARATOR = register("essence_separator", new EssenceSeparatorBlock(AbstractBlock.Settings.copy(Blocks.COPPER_BLOCK).nonOpaque()));
     public static final Block ESSENCE_CHARGER = register("essence_charger", new EssenceChargerBlock(AbstractBlock.Settings.copy(Blocks.COPPER_BLOCK).nonOpaque()));
     public static final Block DISTILLERY = register("distillery", new DistilleryBlock(AbstractBlock.Settings.copy(Blocks.COPPER_BLOCK)));
     public static final Block SALT_ORE = register("salt_ore", new Block(AbstractBlock.Settings.copy(Blocks.STONE).strength(3.0f, 3.0f).requiresTool()));

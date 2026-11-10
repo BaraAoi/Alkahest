@@ -33,6 +33,7 @@ public final class AlkahestClient implements ClientModInitializer {
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.NAPALM_FLAME, RenderLayer.getCutout());
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.JAR, RenderLayer.getCutout());
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.ALCHEMY_PIPE, RenderLayer.getCutout());
+        BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.ESSENCE_SEPARATOR, RenderLayer.getCutout());
         net.minecraft.client.item.ModelPredicateProviderRegistry.register(ModBlocks.JAR.asItem(), Alkahest.id("fill"),
             (stack, world, entity, seed) -> net.alkahest.essence.JarVisuals.level(net.alkahest.item.custom.JarItem.contents(stack)) / 10.0f);
         ColorProviderRegistry.ITEM.register((stack, tint) -> tint == 0

@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "occupied=false": {
+      "model": "alkahest:block/essence_separator_empty"
+    },
+    "occupied=true": {
+      "model": "alkahest:block/essence_separator_occupied"
+    }
+  }
+}

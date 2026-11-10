@@ -5,6 +5,7 @@
     "alkahest:alchemy_cauldron",
     "alkahest:distillery",
     "alkahest:essence_charger",
-    "alkahest:alchemy_pipe"
+    "alkahest:alchemy_pipe",
+    "alkahest:essence_separator"
   ]
 }
