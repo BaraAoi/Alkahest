@@ -51,4 +51,16 @@ public class DistilleryGameTests implements FabricGameTest {
         context.assertTrue(player.getInventory().contains(result), "The result must reach the player");
         context.complete();
     }
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void organicPotentiaSourceIsDistillable(TestContext context) {
+        context.setBlockState(3, 2, 3, ModBlocks.DISTILLERY);
+        var distillery = (DistilleryBlockEntity) context.getWorld().getBlockEntity(context.getAbsolutePos(new BlockPos(3, 2, 3)));
+        PlayerEntity player = context.createMockPlayer(GameMode.SURVIVAL);
+        player.setStackInHand(Hand.MAIN_HAND, new ItemStack(Items.GLOW_BERRIES));
+        distillery.insert(player, Hand.MAIN_HAND);
+        context.assertTrue(!distillery.stacks().get(0).isEmpty(), "Glow berries must be accepted as organic input");
+        context.assertTrue(net.alkahest.essence.ItemEssenceMap.get(distillery.stacks().get(0)).stream().anyMatch(e -> e.type() == net.alkahest.essence.EssenceType.POTENTIA), "Input must be able to produce Potentia");
+        context.complete();
+    }
+
 }

@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "minecraft:copper_ingot"
+    },
+    {
+      "item": "minecraft:copper_ingot"
+    },
+    {
+      "item": "minecraft:copper_ingot"
+    },
+    {
+      "item": "minecraft:glass"
+    },
+    {
+      "item": "alkahest:crystal_potentia"
+    }
+  ],
+  "result": {
+    "id": "alkahest:essence_charger",
+    "count": 1
+  }
+}

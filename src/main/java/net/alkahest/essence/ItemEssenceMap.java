@@ -21,6 +21,9 @@ public final class ItemEssenceMap {
     private static final TagKey<Item> SEEDS = tag("c", "seeds");
     private static final Map<Item, List<EssenceStack>> VALUES = Map.ofEntries(
         e(Items.APPLE, s(HERBA, 3), s(AQUA, 1), s(ORDO, 1)),
+        // Organic sources make Potentia obtainable in the early distillery without inorganic inputs.
+        e(Items.GLOW_BERRIES, s(HERBA, 3), s(LUX, 2), s(POTENTIA, 2)),
+        e(Items.GOLDEN_APPLE, s(HERBA, 3), s(ORDO, 3), s(POTENTIA, 2)),
         e(Items.BREAD, s(HERBA, 3), s(ORDO, 1)),
         e(Items.CARROT, s(HERBA, 3), s(AQUA, 1)),
         e(Items.COBBLESTONE, s(TERRA, 2), s(PERDITIO, 1)),
