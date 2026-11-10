@@ -1,6 +1,7 @@
 package net.alkahest.registry;
 
 import net.alkahest.Alkahest;
+import net.alkahest.entity.ElementalBoltEntity;
 import net.alkahest.entity.ElementalEntity;
 import net.alkahest.entity.ReagentZoneEntity;
 import net.alkahest.entity.ThrownReagentEntity;
@@ -28,6 +29,10 @@ public final class ModEntities {
         Registries.ENTITY_TYPE, Alkahest.id("reagent_zone"),
         FabricEntityTypeBuilder.<ReagentZoneEntity>create(SpawnGroup.MISC, ReagentZoneEntity::new)
             .dimensions(EntityDimensions.fixed(0.25f, 0.25f)).trackRangeBlocks(64).trackedUpdateRate(20).build());
+    public static final EntityType<ElementalBoltEntity> ELEMENTAL_BOLT = Registry.register(
+        Registries.ENTITY_TYPE, Alkahest.id("elemental_bolt"),
+        FabricEntityTypeBuilder.<ElementalBoltEntity>create(SpawnGroup.MISC, ElementalBoltEntity::new)
+            .dimensions(EntityDimensions.fixed(0.35f, 0.35f)).trackRangeBlocks(64).trackedUpdateRate(2).build());
     public static final Map<EssenceType, EntityType<ElementalEntity>> ELEMENTALS = elementals();
 
     private static Map<EssenceType, EntityType<ElementalEntity>> elementals() {
@@ -38,7 +43,7 @@ public final class ModEntities {
                     SpawnGroup.MONSTER,
                     (entityType, world) -> new ElementalEntity(entityType, world, type)
                 )
-                .dimensions(EntityDimensions.fixed(0.85f, 1.35f))
+                .dimensions(EntityDimensions.fixed(0.85f, 1.55f))
                 .trackRangeBlocks(64)
                 .trackedUpdateRate(3);
             if (type == EssenceType.IGNIS) {

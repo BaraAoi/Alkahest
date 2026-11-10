@@ -19,6 +19,8 @@ for name in (
 assert (base / 'textures/mob_effect/crystallized.png').read_bytes().startswith(b'\x89PNG\r\n\x1a\n')
 
 for t in prima:
+    for tex in (f'{t}.png', f'{t}_glow.png', f'bolt_{t}.png'):
+        assert (base / f'textures/entity/elemental/{tex}').read_bytes().startswith(b'\x89PNG\r\n\x1a\n'), tex
     egg_model = json.loads((base / f'models/item/elemental_{t}_spawn_egg.json').read_text())
     assert egg_model['parent'] == 'minecraft:item/template_spawn_egg', t
     salt_recipe = json.loads((recipes / f'binding_salt_{t}.json').read_text())
@@ -46,6 +48,7 @@ for locale in ('ru_ru', 'en_us'):
         assert data.get('item.alkahest.' + name), (locale, name)
     for t in prima:
         assert data.get(f'entity.alkahest.elemental_{t}'), (locale, t)
+    assert data.get('entity.alkahest.elemental_bolt'), locale
     assert data.get('effect.alkahest.crystallized'), locale
     assert data.get('screen.alkahest.journal.page.7'), locale
     for node in ('chain_ignis', 'chain_aqua', 'binding'):

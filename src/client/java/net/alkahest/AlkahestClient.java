@@ -47,6 +47,15 @@ public final class AlkahestClient implements ClientModInitializer {
                 ? net.alkahest.essence.JarVisuals.color(jar.contents()) : 0xffffff, ModBlocks.JAR);
         EntityRendererRegistry.register(ModEntities.THROWN_REAGENT, FlyingItemEntityRenderer::new);
         EntityRendererRegistry.register(ModEntities.REAGENT_ZONE, EmptyEntityRenderer::new);
+        net.fabricmc.fabric.api.client.rendering.v1.EntityModelLayerRegistry.registerModelLayer(
+            net.alkahest.client.render.ElementalEntityModel.LAYER,
+            net.alkahest.client.render.ElementalEntityModel::getTexturedModelData
+        );
+        net.fabricmc.fabric.api.client.rendering.v1.EntityModelLayerRegistry.registerModelLayer(
+            net.alkahest.client.render.ElementalBoltEntityRenderer.LAYER,
+            net.alkahest.client.render.ElementalBoltEntityRenderer::getTexturedModelData
+        );
+        EntityRendererRegistry.register(ModEntities.ELEMENTAL_BOLT, net.alkahest.client.render.ElementalBoltEntityRenderer::new);
         for (var elementalType : ModEntities.ELEMENTALS.values()) {
             EntityRendererRegistry.register(elementalType, net.alkahest.client.render.ElementalEntityRenderer::new);
         }

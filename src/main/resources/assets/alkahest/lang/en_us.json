@@ -189,8 +189,8 @@
   "item.alkahest.binding_salt_aer": "Binding Salt (Aer)",
   "item.alkahest.binding_salt_ordo": "Binding Salt (Ordo)",
   "item.alkahest.binding_salt_perditio": "Binding Salt (Perditio)",
-  "tooltip.alkahest.binding_salt.base": "Charge with a Prima crystal (right-click in inventory or craft). Throwing slows targets by 70%.",
-  "tooltip.alkahest.binding_salt.charged": "%s charge · anchors %s Elementals against evaporation",
+  "tooltip.alkahest.binding_salt.base": "Charge with a Prima crystal (right-click in inventory or craft). Throwing slows by 70% and strips Elemental levitation.",
+  "tooltip.alkahest.binding_salt.charged": "%s charge · grounds and anchors %s Elementals against evaporation",
   "entity.alkahest.elemental_ignis": "Ignis Elemental",
   "entity.alkahest.elemental_aqua": "Aqua Elemental",
   "entity.alkahest.elemental_terra": "Terra Elemental",
@@ -203,10 +203,10 @@
   "item.alkahest.elemental_aer_spawn_egg": "Aer Elemental Spawn Egg",
   "item.alkahest.elemental_ordo_spawn_egg": "Ordo Elemental Spawn Egg",
   "item.alkahest.elemental_perditio_spawn_egg": "Perditio Elemental Spawn Egg",
-  "message.alkahest.elemental_bound": "%s Elemental anchored by its opposite essence!",
-  "message.alkahest.elemental_wrong_salt": "Only %2$s Binding Salt can anchor a %1$s Elemental!",
+  "message.alkahest.elemental_bound": "%s Elemental grounded and anchored by its opposite essence!",
+  "message.alkahest.elemental_wrong_salt": "%1$s Elemental grounded, but only %2$s Binding Salt prevents evaporation!",
   "message.alkahest.elemental_evaporated": "Pure %s essence evaporated into thin air... It needed %s Binding Salt.",
-  "screen.alkahest.journal.page.7": "Elementals and Binding\n\nI have encountered living manifestations of Prima essences — Elementals. Neutral by nature, they retaliate fiercely when provoked. Slaying an unbound Elemental causes its pure essence to evaporate into the sky.\n\nTo anchor an Elemental, I must charge Binding Salt with a Prima crystal of the OPPOSITE essence (right-click in inventory or craft) and throw it before dealing the final blow:\n• Ignis <-> Aqua\n• Terra <-> Aer\n• Ordo <-> Perditio\n\nCharged salt encases targets in a crystal lattice for 15 seconds (-70% speed). An Elemental slain while bound by its antipode yields pure Prima crystals at 65–75% stability.",
+  "screen.alkahest.journal.page.7": "Elementals and Binding\n\nI have encountered dangerous manifestations of Prima essences — Elementals. Hostile on sight, they circle overhead and hurl ranged elemental bolts (fire, frost, stone, wind gusts, suppression or wither). Slaying an unbound Elemental causes its pure essence to evaporate into the sky.\n\nThrowing any Binding Salt strips an Elemental's levitation for 15 seconds, crashing it to the ground in crystal shackles (-70% speed). To prevent evaporation on death, I must charge the salt with a Prima crystal of the OPPOSITE essence:\n• Ignis <-> Aqua\n• Terra <-> Aer\n• Ordo <-> Perditio\n\nGrounded and anchored by its antipode, a slain Elemental yields pure Prima crystals at 65–75% stability.",
   "screen.alkahest.chain_ignis.title": "Trail of Ignis",
   "screen.alkahest.chain_ignis.hidden": "First I must master True Sight.",
   "screen.alkahest.chain_ignis.locked": "Wearing the Alchemist's Monocle, I should slay a Blaze in the Nether to study living flame.",
@@ -242,5 +242,6 @@
   "screen.alkahest.binding.completed": "The law of antipodes is clear! Charging Binding Salt with the opposite Prima crystal (Ignis <-> Aqua, Terra <-> Aer, Ordo <-> Perditio) binds an Elemental for 15s so it drops 65–75% stability crystals.",
   "message.alkahest.research.binding_slime": "Hypothesis disproven: the slime dissolved the salt lattice into paste.",
   "message.alkahest.research.binding_bone_meal": "Hypothesis disproven: the bone meal crumbled like chalk without binding.",
-  "message.alkahest.research.binding_success": "Hypothesis confirmed! 'Elemental Binding' completed: charge Binding Salt with an opposite crystal."
+  "message.alkahest.research.binding_success": "Hypothesis confirmed! 'Elemental Binding' completed: charge Binding Salt with an opposite crystal.",
+  "entity.alkahest.elemental_bolt": "Elemental Bolt"
 }
