@@ -148,6 +148,12 @@ check('getEntitySolid' in renderer, 'the rings must read as solid metal, not gla
 journal = (CLIENT / 'client/gui/JournalScreen.java').read_text()
 check('tri(' not in renderer, 'a QUADS layer cannot take three-vertex triangles')
 check('lining(' in renderer, 'the hollow cube needs a dark lining so the world cannot be seen through it')
+# A layer switch flushes the previous consumer in Minecraft's immediate provider. The metal
+# consumer must be acquired after drawing the void, not retained across the switch.
+lining_call = renderer.find('if (awake) lining(vertexConsumers.getBuffer(')
+metal_consumer = renderer.find('VertexConsumer buffer = vertexConsumers.getBuffer(RenderLayer.getEntitySolid(METAL))')
+check(lining_call >= 0 and metal_consumer > lining_call,
+      'acquire the metal consumer after the void lining, never across a layer switch')
 check('matrix_void.png' in renderer, 'the lining must use the flat void sprite, not the metal plate')
 void = A / 'textures/block/matrix_void.png'
 check(void.exists(), 'the void lining needs its texture')

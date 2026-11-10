@@ -62,11 +62,12 @@ public final class MatrixCoreRenderer implements BlockEntityRenderer<MatrixCoreB
         boolean awake = state.get(MatrixCoreBlock.AWAKE);
         boolean active = state.get(MatrixCoreBlock.ACTIVE);
         double time = (world.getTime() % 240000L) + tickDelta;
-        VertexConsumer buffer = vertexConsumers.getBuffer(RenderLayer.getEntitySolid(METAL));
-
         matrices.push();
         matrices.translate(0.5f, 0.5f, 0.5f);
         if (awake) lining(vertexConsumers.getBuffer(RenderLayer.getEntitySolid(VOID)), matrices.peek(), entity.getPos());
+        // Switching render layers can flush and close the previous consumer. Obtain the metal
+        // consumer only after the lining is finished; never reuse it across that layer switch.
+        VertexConsumer buffer = vertexConsumers.getBuffer(RenderLayer.getEntitySolid(METAL));
         if (!awake) {
             // Dormant: a tight coil hidden inside the core block. Nothing turns, nothing floats.
             for (int i = 0; i < RINGS.length; i++) {
