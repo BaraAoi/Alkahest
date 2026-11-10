@@ -129,7 +129,7 @@ public class AlchemyCauldronBlock extends Block implements BlockEntityProvider {
                 var trinketOpt = dev.emi.trinkets.api.TrinketsApi.getTrinketComponent(player);
                 if (trinketOpt.isPresent()) {
                     for (var entry : trinketOpt.get().getEquipped(s -> s.getItem() instanceof net.alkahest.item.custom.AlkahestAmuletItem)) {
-                        if (cauldron.useAmulet(world, pos, state, player, entry.getRight())) {
+                        if (cauldron.useAmulet(player, entry.getRight())) {
                             return ActionResult.success(false);
                         }
                     }

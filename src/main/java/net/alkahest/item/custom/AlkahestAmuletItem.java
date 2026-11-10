@@ -31,7 +31,10 @@ public class AlkahestAmuletItem extends TrinketItem {
 
     /** Consumes 1/5th of an Ordo charge; never breaks into a stick when depleted. */
     public boolean consumeUse(PlayerEntity player, Hand hand) {
-        ItemStack stack = player.getStackInHand(hand);
+        return consumeUseStack(player, player.getStackInHand(hand));
+    }
+
+    public boolean consumeUseStack(PlayerEntity player, ItemStack stack) {
         if (player.isCreative()) {
             return true;
         }

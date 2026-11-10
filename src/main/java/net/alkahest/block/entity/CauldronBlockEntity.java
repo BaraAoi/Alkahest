@@ -163,7 +163,11 @@ public class CauldronBlockEntity extends BlockEntity {
     }
 
     public boolean useAmulet(PlayerEntity player, Hand hand, AlkahestAmuletItem amulet) {
-        ItemStack stack = player.getStackInHand(hand);
+        return useAmulet(player, player.getStackInHand(hand));
+    }
+
+    public boolean useAmulet(PlayerEntity player, ItemStack stack) {
+        if (!(stack.getItem() instanceof AlkahestAmuletItem amulet)) return false;
         if (!water || dirtyWater) {
             if (!amulet.canConsumeUse(stack, player)) {
                 message(player, "message.alkahest.amulet_depleted");
@@ -173,7 +177,7 @@ public class CauldronBlockEntity extends BlockEntity {
             dirtyWater = false;
             setWater(true);
             evaporation = 0;
-            amulet.consumeUse(player, hand);
+            amulet.consumeUseStack(player, stack);
             if (world != null) {
                 world.playSound(null, pos, SoundEvents.BLOCK_AMETHYST_BLOCK_CHIME, SoundCategory.BLOCKS, 0.8f, 1.2f);
             }
