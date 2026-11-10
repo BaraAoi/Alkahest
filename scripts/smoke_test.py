@@ -19,7 +19,8 @@ if mode == "server":
     marker = "Done ("
 elif mode == "client":
     command = ["xvfb-run", "-a", "./gradlew", "runClient", "--no-daemon", "--console=plain"]
-    marker = "Alkahest client started"
+    # Resource/model loading occurs after CLIENT_STARTED during the splash screen.
+    marker = "minecraft:textures/atlas/blocks.png-atlas"
 else:
     raise SystemExit("expected server or client")
 
@@ -53,6 +54,22 @@ def send(command):
 success = False
 try:
     success = await_marker(marker)
+    if success and mode == "client":
+        # Give model baking time to finish and reject errors involving our jar resources.
+        end = time.monotonic() + 15
+        while time.monotonic() < end and proc.poll() is None:
+            try:
+                line = output.get(timeout=1)
+                print(line, end="", flush=True)
+                lines.append(line)
+            except queue.Empty:
+                pass
+        if proc.poll() is not None:
+            success = False
+        for line in lines:
+            low = line.lower()
+            if "alkahest" in low and ("jar" in low or "model" in low) and any(word in low for word in ("error", "unable to load", "failed", "missing")):
+                success = False
     if success and mode == "server":
         # A pre-0.1.2 world has water in block-entity NBT but no filled block state.
         send("forceload add 0 0")
