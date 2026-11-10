@@ -32,7 +32,10 @@ public record MatrixRecipe(Item base, List<Item> components, ItemStack output,
         synthesis(Items.QUARTZ, List.of(), new ItemStack(Items.AMETHYST_SHARD, 4),
             EssenceType.LUX, 3, EssenceType.VITIUM, 2),
         synthesis(Items.COAL, List.of(Items.GOLD_INGOT, ModItems.SALT), new ItemStack(Items.DIAMOND),
-            EssenceType.METALLUM, 8, EssenceType.LUX, 6, EssenceType.ORDO, 4)
+            EssenceType.METALLUM, 8, EssenceType.LUX, 6, EssenceType.ORDO, 4),
+        // The specification's Matrix recipe; the earlier cauldron recipe remains available.
+        synthesis(Items.GLASS_BOTTLE, List.of(ModItems.CAUSTIC_SLIME), new ItemStack(ModItems.MIASMA),
+            EssenceType.PERDITIO, 20, EssenceType.MORTUUS, 15, EssenceType.AQUA, 10)
     );
 
     private static MatrixRecipe synthesis(Item base, List<Item> components, ItemStack output, Object... essence) {

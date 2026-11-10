@@ -171,6 +171,10 @@ for block in ('MatrixPillarBlock', 'AlchemicalBrickBlock', 'MatrixCoreBlock'):
     text = (JAVA / f'block/custom/{block}.java').read_text()
     check('interactNearby' in text, f'{block} must answer to the same click as the core')
 check('MatrixRecipe.all()' in journal, 'the journal must list the matrix syntheses')
+check('recipes.size() * 17' in journal and 'rowY = top + i * 17 - scroll' in journal,
+      'the synthesis list must scroll instead of silently hiding later recipes')
+check('new ItemStack(ModItems.MIASMA)' in recipe_source and 'Items.GLASS_BOTTLE, List.of(ModItems.CAUSTIC_SLIME)' in recipe_source,
+      'the specification miasma synthesis needs a bottle and a pedestal slime')
 check('RECIPES_PAGE' in journal, 'the synthesis list needs its own page in the journal')
 check('recipe.cost()' in journal, 'the list must show what a synthesis costs in essence')
 check('insertBase' in core and 'takeFromCore' in core, 'the core must accept and hand back items')

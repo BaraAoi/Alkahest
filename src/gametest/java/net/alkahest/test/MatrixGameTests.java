@@ -319,6 +319,41 @@ public class MatrixGameTests implements FabricGameTest {
         c.complete();
     }
 
+    /** The specification's miasma recipe uses the physical pedestal and waits for all essence. */
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void miasmaRequiresSlimeFocusAndFullEssence(TestContext c) {
+        BlockPos pos = build(c);
+        wake(c);
+        var core = core(c);
+        core.setStack(MatrixCoreBlockEntity.BASE, new ItemStack(Items.GLASS_BOTTLE));
+        var player = c.createMockPlayer(net.minecraft.world.GameMode.CREATIVE);
+        var amulet = new ItemStack(ModItems.ALKAHEST_AMULET);
+        c.assertFalse(core.startWith(amulet, player), "The bottle alone must not start miasma");
+        pedestal(c, 7, CY - 1, 7, new ItemStack(ModItems.CAUSTIC_SLIME));
+        BlockPos pedestalPos = c.getAbsolutePos(new BlockPos(7, CY - 1, 7));
+        var part = (net.alkahest.block.entity.MatrixPedestalBlockEntity) c.getWorld().getBlockEntity(pedestalPos);
+        var perditio = jar(c, 0, CY, 0, EssenceType.PERDITIO, 23);
+        var mortuus = jar(c, 6, CY, 0, EssenceType.MORTUUS, 17);
+        c.assertTrue(core.recipe() != null && core.recipe().output().isOf(ModItems.MIASMA), "Bottle plus caustic slime select miasma");
+        c.assertTrue(core.status() == MatrixCoreBlockEntity.STATUS_NEEDS_START, "A focus is required");
+        run(c.getWorld(), pos, 20);
+        c.assertTrue(perditio.contents().total() == 23, "No essence is pulled before activation");
+        c.assertTrue(core.startWith(amulet, player), "The amulet starts miasma");
+        run(c.getWorld(), pos, MatrixCoreBlockEntity.DURATION + 2);
+        c.assertTrue(core.status() == MatrixCoreBlockEntity.STATUS_NO_ESSENCE, "The Matrix waits for missing Aqua");
+        c.assertTrue(part.held().isOf(ModItems.CAUSTIC_SLIME) && core.getStack(MatrixCoreBlockEntity.BASE).isOf(Items.GLASS_BOTTLE),
+            "Bottle and slime are safe while the price is incomplete");
+        c.assertTrue(core.getStack(MatrixCoreBlockEntity.OUTPUT).isEmpty(), "No free result without Aqua");
+        var aqua = jar(c, 0, CY, 6, EssenceType.AQUA, 12);
+        run(c.getWorld(), pos, 4);
+        c.assertTrue(core.getStack(MatrixCoreBlockEntity.OUTPUT).isOf(ModItems.MIASMA), "Completing the price produces miasma");
+        c.assertTrue(part.isEmpty() && core.getStack(MatrixCoreBlockEntity.BASE).isEmpty(), "One slime and one bottle are consumed");
+        c.assertTrue(perditio.contents().total() == 3 && mortuus.contents().total() == 2 && aqua.contents().total() == 2,
+            "The exact price is Perditio 20, Mortuus 15, Aqua 10");
+        c.assertFalse(core.started(), "The completed synthesis requires a new activation");
+        c.complete();
+    }
+
     /** String becomes three binding salts, paid for with essence taken straight out of the jars. */
     @GameTest(templateName = EMPTY_STRUCTURE)
     public void synthesisesBindingSaltFromJars(TestContext c) {

@@ -194,23 +194,30 @@ public final class JournalScreen extends Screen {
     }
     /** The synthesis page: one row per Matrix recipe, icons first, names and prices on hover. */
     private void renderRecipes(DrawContext c, int x, int y, int w, int h, int mouseX, int mouseY) {
-        maxScroll = 0;
         c.drawText(textRenderer, Text.translatable("screen.alkahest.journal.recipes"), x + 12, y + 10, 0xFF4F3520, false);
         c.fill(x + 12, y + 22, x + w - 12, y + 23, 0xFFB19A6E);
         List<MatrixRecipe> recipes = MatrixRecipe.all();
+        int top = y + 27, bottom = y + h - 6;
+        maxScroll = Math.max(0, recipes.size() * 17 - Math.max(0, bottom - top));
+        scroll = MathHelper.clamp(scroll, 0, maxScroll);
+        c.enableScissor(x + 7, top, x + w - 7, bottom);
         for (int i = 0; i < recipes.size(); i++) {
-            int rowY = y + 27 + i * 17;
-            if (rowY + 16 > y + h - 6) break;
+            int rowY = top + i * 17 - scroll;
+            if (rowY + 16 <= top) continue;
+            if (rowY >= bottom) break;
             if (i % 2 == 0) c.fill(x + 8, rowY, x + w - 8, rowY + 16, 0x1A4F3520);
             drawRecipeRow(c, recipes.get(i), x + 12, rowY);
         }
-        if (mouseX < x + 8 || mouseX >= x + w - 8) return;
+        c.disableScissor();
+        if (mouseX < x + 8 || mouseX >= x + w - 8 || mouseY < top || mouseY >= bottom) return;
         for (int i = 0; i < recipes.size(); i++) {
-            int rowY = y + 27 + i * 17;
-            if (rowY + 16 > y + h - 6) break;
-            if (mouseY < rowY || mouseY >= rowY + 16) continue;
-            c.drawTooltip(textRenderer, describe(recipes.get(i)), mouseX, mouseY);
-            return;
+            int rowY = top + i * 17 - scroll;
+            if (rowY + 16 <= top) continue;
+            if (rowY >= bottom) break;
+            if (mouseY >= rowY && mouseY < rowY + 16) {
+                c.drawTooltip(textRenderer, describe(recipes.get(i)), mouseX, mouseY);
+                return;
+            }
         }
     }
 
