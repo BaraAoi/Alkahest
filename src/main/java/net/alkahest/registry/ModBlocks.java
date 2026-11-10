@@ -22,7 +22,7 @@ public final class ModBlocks {
     public static final Block ALCHEMY_PIPE = register("alchemy_pipe", new AlchemyPipeBlock(AbstractBlock.Settings.copy(Blocks.GLASS).strength(0.8f).nonOpaque()));
     public static final Block ESSENCE_SEPARATOR = register("essence_separator", new EssenceSeparatorBlock(AbstractBlock.Settings.copy(Blocks.COPPER_BLOCK).nonOpaque()));
     public static final Block ESSENCE_CHARGER = register("essence_charger", new EssenceChargerBlock(AbstractBlock.Settings.copy(Blocks.COPPER_BLOCK).nonOpaque()));
-    public static final Block DISTILLERY = register("distillery", new DistilleryBlock(AbstractBlock.Settings.copy(Blocks.COPPER_BLOCK)));
+    public static final Block DISTILLERY = register("distillery", new DistilleryBlock(AbstractBlock.Settings.copy(Blocks.COPPER_BLOCK).nonOpaque().luminance(state -> state.get(DistilleryBlock.WORKING) ? 5 : 0)));
     public static final Block SALT_ORE = register("salt_ore", new Block(AbstractBlock.Settings.copy(Blocks.STONE).strength(3.0f, 3.0f).requiresTool()));
     // Temporary visual flames; the zone entity owns their lifetime and damage.
     public static final Block NAPALM_FLAME = Registry.register(Registries.BLOCK, Alkahest.id("napalm_flame"),

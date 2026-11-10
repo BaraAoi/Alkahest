@@ -120,6 +120,43 @@ public class DistilleryGameTests implements FabricGameTest {
         c.complete();
     }
     @GameTest(templateName=EMPTY_STRUCTURE)
+    public void visualStateTracksOperationWithoutLosingInventory(TestContext c) {
+        c.setBlockState(3,2,3,ModBlocks.DISTILLERY);
+        BlockPos pos=c.getAbsolutePos(new BlockPos(3,2,3));
+        var d=(DistilleryBlockEntity)c.getWorld().getBlockEntity(pos);
+        var working=net.alkahest.block.custom.DistilleryBlock.WORKING;
+        c.assertFalse(c.getWorld().getBlockState(pos).get(working), "A new or pre-property distillery defaults to idle");
+        c.assertTrue(c.getWorld().getBlockState(pos).getLuminance()==0, "Idle machine does not glow");
+        d.setStack(0,new ItemStack(Items.APPLE,3));
+        // An older save has the same slot indices and progress, regardless of the new visual state.
+        var saved=d.createNbt(c.getWorld().getRegistryManager()); saved.putInt("Progress",117);
+        d.readComponentlessNbt(saved,c.getWorld().getRegistryManager());
+        DistilleryBlockEntity.tick(c.getWorld(),pos,d);
+        c.assertTrue(c.getWorld().getBlockState(pos).get(working), "Machine becomes active while processing");
+        c.assertTrue(c.getWorld().getBlockState(pos).getLuminance()==5, "Working vessel emits subtle light");
+        c.assertTrue(c.getWorld().getBlockEntity(pos)==d && d.getStack(0).getCount()==3 && d.createNbt(c.getWorld().getRegistryManager()).getInt("Progress")==118, "Visual transition preserves block entity, input and saved progress");
+        for(int i=1;i<8;i++) d.setStack(i,new ItemStack(Items.STONE,64));
+        d.setStack(DistilleryBlockEntity.PENDING,new ItemStack(ModItems.ASH));
+        DistilleryBlockEntity.tick(c.getWorld(),pos,d);
+        c.assertFalse(c.getWorld().getBlockState(pos).get(working), "Blocked output stops the animation");
+        c.assertTrue(c.getWorld().getBlockEntity(pos)==d && d.getStack(0).getCount()==3 && !d.getStack(8).isEmpty(), "Blocked state change does not drop or consume inventory");
+        d.removeStack(1); DistilleryBlockEntity.tick(c.getWorld(),pos,d);
+        c.assertTrue(c.getWorld().getBlockState(pos).get(working) && d.getStack(1).isOf(ModItems.ASH), "Releasing output restarts visuals and deposits the pending item");
+        d.removeStack(0); DistilleryBlockEntity.tick(c.getWorld(),pos,d);
+        c.assertFalse(c.getWorld().getBlockState(pos).get(working), "Removing input stops the animation");
+        c.assertTrue(c.getWorld().getBlockEntity(pos)==d && d.getStack(1).isOf(ModItems.ASH), "Stopping keeps the output");
+        d.setStack(1,new ItemStack(Items.STONE,64));
+        d.setStack(0,new ItemStack(Items.APPLE));
+        saved=d.createNbt(c.getWorld().getRegistryManager()); saved.putInt("Progress",1199);
+        d.readComponentlessNbt(saved,c.getWorld().getRegistryManager());
+        DistilleryBlockEntity.tick(c.getWorld(),pos,d);
+        c.assertFalse(c.getWorld().getBlockState(pos).get(working), "Completing the last item immediately stops the visuals");
+        c.assertTrue(d.getStack(0).isEmpty() && !d.getStack(8).isEmpty(), "Full outputs preserve the last completed product");
+        var itemBox=new net.minecraft.util.math.Box(pos).expand(.8);
+        c.assertTrue(c.getWorld().getEntitiesByClass(net.minecraft.entity.ItemEntity.class,itemBox,e -> true).isEmpty(), "Visual-only state changes must not scatter items");
+        c.complete();
+    }
+    @GameTest(templateName=EMPTY_STRUCTURE)
     public void compositeCrystalsHaveWorkingRecipes(TestContext c) {
         for (var type : EssenceType.values()) {
             if (type.tier()!=EssenceType.Tier.COMPOSITA) continue;

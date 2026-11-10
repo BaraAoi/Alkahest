@@ -1,6 +1,8 @@
 package net.alkahest.block.entity;
 
+import net.alkahest.block.custom.DistilleryBlock;
 import net.alkahest.essence.EssenceStack;
+import net.minecraft.block.Block;
 import net.alkahest.essence.EssenceType;
 import net.alkahest.essence.ItemEssenceMap;
 import net.alkahest.registry.ModBlockEntities;
@@ -122,10 +124,17 @@ public class DistilleryBlockEntity extends BlockEntity implements SidedInventory
         }
         return false;
     }
+    /** Update the visible state only on transitions; same-block changes preserve the inventory. */
+    private static void setWorking(World world, BlockPos pos, boolean working) {
+        BlockState state = world.getBlockState(pos);
+        if (state.getBlock() instanceof DistilleryBlock && state.get(DistilleryBlock.WORKING) != working)
+            world.setBlockState(pos, state.with(DistilleryBlock.WORKING, working), Block.NOTIFY_ALL);
+    }
     public static void tick(World world, BlockPos pos, DistilleryBlockEntity self) {
-        if (!self.depositPending()) return;
+        if (!self.depositPending()) { setWorking(world, pos, false); return; }
         ItemStack input = self.stacks.get(0);
-        if (input.isEmpty() || !accepts(input)) { self.cancelProgress(); return; }
+        if (input.isEmpty() || !accepts(input)) { self.cancelProgress(); setWorking(world, pos, false); return; }
+        setWorking(world, pos, true);
         if (++self.progress >= 1200) {
             List<EssenceType> primaries = primaryCandidates(ItemEssenceMap.get(input));
             ItemStack result;
@@ -138,7 +147,8 @@ public class DistilleryBlockEntity extends BlockEntity implements SidedInventory
             input.decrement(1);
             if (input.isEmpty()) self.stacks.set(0, ItemStack.EMPTY);
             self.stacks.set(PENDING, result); self.progress = 0;
-            self.depositPending();
+            boolean delivered = self.depositPending();
+            setWorking(world, pos, delivered && accepts(self.stacks.get(0)));
         }
         self.markDirty();
     }

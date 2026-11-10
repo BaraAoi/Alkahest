@@ -55,7 +55,7 @@ success = False
 try:
     success = await_marker(marker)
     if success and mode == "client":
-        # Give model baking time to finish and reject errors involving our jar resources.
+        # Give model baking time to finish and reject errors involving mod resources.
         end = time.monotonic() + 15
         while time.monotonic() < end and proc.poll() is None:
             try:
@@ -68,7 +68,7 @@ try:
             success = False
         for line in lines:
             low = line.lower()
-            if "alkahest" in low and ("jar" in low or "model" in low) and any(word in low for word in ("error", "unable to load", "failed", "missing")):
+            if "alkahest" in low and any(word in low for word in ("error", "unable to load", "failed", "missing")):
                 success = False
     if success and mode == "server":
         # A pre-0.1.2 world has water in block-entity NBT but no filled block state.

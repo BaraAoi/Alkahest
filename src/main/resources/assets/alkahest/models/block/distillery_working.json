@@ -1,0 +1,6 @@
+{
+  "parent": "alkahest:block/distillery",
+  "textures": {
+    "chamber": "alkahest:block/distillery_chamber_active"
+  }
+}
