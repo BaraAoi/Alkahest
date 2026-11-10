@@ -38,6 +38,8 @@ public final class ModItems {
     public static final Item CRYSTALLIZATION_POWDER = item("crystallization_powder", new Item(new Item.Settings()));
     public static final Item ALKAHEST_VIAL = item("alkahest_vial", new AlkahestVialItem(new Item.Settings()));
     public static final Item ALKAHEST_AMULET = item("alkahest_amulet", new AlkahestAmuletItem(new Item.Settings()));
+    // Temporary creative-only focus: soul charging and the late-game forge are not implemented yet.
+    public static final Item PHILOSOPHERS_STONE = item("philosophers_stone", new Item(new Item.Settings().maxCount(1)));
     public static final Item ASH = item("ash", new Item(new Item.Settings()));
     public static final Map<EssenceType, Item> CRYSTALS = crystals();
     public static final Map<EssenceType, Item> WANDS = wands();
@@ -74,6 +76,7 @@ public final class ModItems {
                 entries.add(ALCHEMISTS_MONOCLE);
                 entries.add(ALKAHEST_VIAL);
                 entries.add(ALKAHEST_AMULET);
+                entries.add(PHILOSOPHERS_STONE);
                 entries.add(SALT); entries.add(PURIFIED_WATER); entries.add(HERBAL_PASTE);
                 entries.add(FIRE_DUST); entries.add(CAUSTIC_SLIME); entries.add(NAPALM); entries.add(ACID_BOMB);
                 entries.add(LIGHTNING_IN_A_BOTTLE); entries.add(MIASMA);

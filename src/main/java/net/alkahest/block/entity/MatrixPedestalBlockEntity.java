@@ -11,7 +11,6 @@ import net.minecraft.network.packet.Packet;
 import net.minecraft.network.packet.s2c.play.BlockEntityUpdateS2CPacket;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.registry.RegistryWrapper;
-import net.minecraft.text.Text;
 import net.minecraft.util.collection.DefaultedList;
 import net.minecraft.util.math.BlockPos;
 
@@ -45,15 +44,6 @@ public class MatrixPedestalBlockEntity extends BlockEntity {
         ItemStack remainder = stack.getCount() > 1 ? stack.copyWithCount(stack.getCount() - 1) : ItemStack.EMPTY;
         setHeld(remainder);
         return taken;
-    }
-
-    public void describe(net.minecraft.entity.player.PlayerEntity player) {
-        if (isEmpty()) {
-            player.sendMessage(Text.translatable("message.alkahest.pedestal_empty"), true);
-            return;
-        }
-        player.sendMessage(Text.translatable("message.alkahest.pedestal_status",
-            held().getName(), held().getCount()), false);
     }
 
     /**

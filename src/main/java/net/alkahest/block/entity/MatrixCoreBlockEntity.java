@@ -8,6 +8,8 @@ import net.alkahest.essence.EssenceType;
 import net.alkahest.essence.JarContentsComponent;
 import net.alkahest.matrix.MatrixRecipe;
 import net.alkahest.registry.ModBlockEntities;
+import net.alkahest.registry.ModItems;
+import net.alkahest.item.custom.AlkahestAmuletItem;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.entity.BlockEntity;
@@ -51,13 +53,14 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
     public static final int BASE = 0, OUTPUT = 1;
 
     public static final int STATUS_IDLE = 0, STATUS_WORKING = 1, STATUS_NO_ESSENCE = 2,
-        STATUS_BLOCKED = 3, STATUS_UNFORMED = 4, STATUS_NO_RECIPE = 5, STATUS_ASLEEP = 6, STATUS_DONE = 7;
+        STATUS_BLOCKED = 3, STATUS_UNFORMED = 4, STATUS_NO_RECIPE = 5, STATUS_ASLEEP = 6, STATUS_DONE = 7,
+        STATUS_NEEDS_START = 8;
 
     private final DefaultedList<ItemStack> stacks = DefaultedList.ofSize(2, ItemStack.EMPTY);
     private JarContentsComponent buffer = JarContentsComponent.EMPTY;
     private int progress;
     private boolean awake;
-    private boolean missingEssenceReported;
+    private boolean started;
 
     /** Essence streams that are still crossing the air; purely a visual, never saved. */
     private final List<EssenceFlight> flights = new ArrayList<>();
@@ -70,6 +73,7 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
     public int progress() { return progress; }
     public JarContentsComponent buffer() { return buffer; }
     public boolean awake() { return awake; }
+    public boolean started() { return started; }
 
     /** Eight pillars on the corners and eighteen bricks on the rest of the 3x3x3 shell. */
     public boolean formed() {
@@ -121,6 +125,7 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
         MatrixRecipe recipe = recipe();
         if (recipe == null) return stacks.get(BASE).isEmpty() ? STATUS_IDLE : STATUS_NO_RECIPE;
         if (!canStoreOutput(recipe.output())) return STATUS_BLOCKED;
+        if (!started) return STATUS_NEEDS_START;
         if (progress >= DURATION) return STATUS_NO_ESSENCE;
         return STATUS_WORKING;
     }
@@ -140,7 +145,7 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
     public void setAwake(World world, BlockPos pos, boolean value) {
         if (awake == value) return;
         awake = value;
-        if (!value) progress = 0;
+        if (!value) { progress = 0; started = false; }
         BlockState state = world.getBlockState(pos);
         if (state.getBlock() instanceof MatrixCoreBlock && state.get(MatrixCoreBlock.AWAKE) != value) {
             world.setBlockState(pos, state.with(MatrixCoreBlock.AWAKE, value), Block.NOTIFY_ALL);
@@ -152,6 +157,7 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
             world.playSound(null, pos, SoundEvents.BLOCK_AMETHYST_BLOCK_BREAK, SoundCategory.BLOCKS, 0.7f, 0.8f);
         }
         markDirty();
+        sync();
     }
 
     /** Hides or restores the twenty-six blocks of the cube without removing them. */
@@ -188,72 +194,56 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
         }
         MatrixRecipe recipe = self.awake ? self.recipe() : null;
         if (recipe == null || !self.canStoreOutput(recipe.output())) {
-            self.missingEssenceReported = false;
-            if (self.progress != 0) { self.progress = 0; self.markDirty(); }
+            if (self.started || self.progress != 0) {
+                self.started = false;
+                self.progress = 0;
+                self.markDirty();
+                self.sync();
+            }
+            setActive(world, pos, self, false);
+            return;
+        }
+        if (!self.started) {
             setActive(world, pos, self, false);
             return;
         }
         if (self.progress < DURATION) {
             self.progress++;
-            if (self.progress % 10 == 0) self.prefill(world, recipe.cost());
+            if (self.progress % 10 == 0) {
+                self.prefill(world, recipe.cost());
+                self.sync();
+            }
             setActive(world, pos, self, true);
             self.markDirty();
             return;
         }
         if (!self.pay(world, recipe.cost())) {
-            if (!self.missingEssenceReported && world instanceof ServerWorld server) {
-                self.reportMissingEssence(server, recipe);
-                self.missingEssenceReported = true;
-            }
             setActive(world, pos, self, false);
             return;
         }
-        self.missingEssenceReported = false;
         self.consumeItems(recipe);
+        self.started = false;
         self.progress = 0;
         self.markDirty();
         self.sync();
         celebrate(world, pos);
     }
 
-    /** Report why an otherwise valid synthesis is waiting instead of silently stopping. */
-    private void reportMissingEssence(ServerWorld server, MatrixRecipe recipe) {
-        StringBuilder missing = new StringBuilder();
-        for (Map.Entry<EssenceType, Integer> entry : recipe.cost().entrySet()) {
-            int deficit = entry.getValue() - stored(entry.getKey()) - jarsAround(server, entry.getKey());
-            if (deficit <= 0) continue;
-            if (!missing.isEmpty()) missing.append(", ");
-            missing.append(entry.getKey().displayName()).append(" ").append(deficit);
-        }
-        Text message = missing.isEmpty() ? Text.translatable("message.alkahest.matrix_wait_buffer")
-            : Text.translatable("message.alkahest.matrix_wait_essence", missing.toString());
-        for (PlayerEntity player : server.getPlayers()) {
-            if (player.squaredDistanceTo(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) <= 32 * 32)
-                player.sendMessage(message, false);
-        }
-    }
-
-    /** Explain which required parts are recognised; safe to call without removing the base. */
-    public void explainPedestals(PlayerEntity player) {
-        ItemStack base = stacks.get(BASE);
-        if (base.isEmpty()) return;
-        MatrixRecipe expected = MatrixRecipe.cheapestFor(base);
-        if (expected == null) {
-            player.sendMessage(Text.translatable("message.alkahest.matrix_unknown_base", base.getName()), false);
-            return;
-        }
-        if (expected.components().isEmpty()) return;
-        List<net.minecraft.item.Item> missing = expected.missingComponents(pedestalItems());
-        if (missing.isEmpty()) {
-            player.sendMessage(Text.translatable("message.alkahest.matrix_parts_ready"), false);
-        } else {
-            StringBuilder names = new StringBuilder();
-            for (var item : missing) {
-                if (!names.isEmpty()) names.append(", ");
-                names.append(item.getName().getString());
-            }
-            player.sendMessage(Text.translatable("message.alkahest.matrix_parts_missing", names.toString()), false);
-        }
+    /** Start one synthesis only. Bad recipes or a depleted amulet do not consume a use. */
+    public boolean startWith(ItemStack focus, PlayerEntity player) {
+        if (world == null || world.isClient || started || !awake || !formed()) return false;
+        MatrixRecipe recipe = recipe();
+        if (recipe == null || !canStoreOutput(recipe.output())) return false;
+        if (focus.isOf(ModItems.ALKAHEST_AMULET)) {
+            AlkahestAmuletItem amulet = (AlkahestAmuletItem) focus.getItem();
+            if (!amulet.consumeUseStack(player, focus)) return false;
+        } else if (!focus.isOf(ModItems.PHILOSOPHERS_STONE)) return false;
+        started = true;
+        progress = 0;
+        markDirty();
+        sync();
+        world.playSound(null, pos, SoundEvents.BLOCK_AMETHYST_BLOCK_CHIME, SoundCategory.BLOCKS, 0.7f, 1.4f);
+        return true;
     }
 
     /** Find the nearest formed Matrix that can actually reach this pedestal. */
@@ -513,6 +503,7 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
             case STATUS_NO_RECIPE -> "no_recipe";
             case STATUS_ASLEEP -> "asleep";
             case STATUS_DONE -> "done";
+            case STATUS_NEEDS_START -> "needs_start";
             default -> "ready";
         });
     }
@@ -520,11 +511,7 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
     /** Puts the held item into the empty core, where it floats until the Matrix uses it. */
     public boolean insertBase(ItemStack stack, PlayerEntity player) {
         if (stack.isEmpty() || world == null) return false;
-        if (!stacks.get(BASE).isEmpty()) {
-            player.sendMessage(Text.translatable("message.alkahest.matrix_core_full",
-                stacks.get(BASE).getName(), stacks.get(BASE).getCount()), true);
-            return false;
-        }
+        if (!stacks.get(BASE).isEmpty()) return false;
         stacks.set(BASE, stack.copyWithCount(1));
         progress = 0;
         if (!player.isCreative()) stack.decrement(1);
@@ -535,9 +522,6 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
             server.spawnParticles(new DustParticleEffect(new Vector3f(0.85f, 0.55f, 1f), 0.9f),
                 pos.getX() + 0.5, pos.getY() + 1.05, pos.getZ() + 0.5, 12, 0.2, 0.2, 0.2, 0.02);
         }
-        player.sendMessage(Text.translatable("message.alkahest.matrix_core_holds", stacks.get(BASE).getName()), true);
-        if (!awake) player.sendMessage(Text.translatable("message.alkahest.matrix_awake_hint"), false);
-        explainPedestals(player);
         return true;
     }
 
@@ -556,25 +540,13 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
         ItemStack base = stacks.get(BASE);
         if (!base.isEmpty()) {
             stacks.set(BASE, ItemStack.EMPTY);
+            started = false;
             progress = 0;
             give(player, base);
             markDirty();
             sync();
             world.playSound(null, pos, SoundEvents.BLOCK_AMETHYST_BLOCK_BREAK, SoundCategory.BLOCKS, 0.5f, 1.6f);
             return true;
-        }
-        player.sendMessage(statusText(), true);
-        if (status() == STATUS_ASLEEP) {
-            player.sendMessage(Text.translatable("message.alkahest.matrix_awake_hint"), false);
-        }
-        MatrixRecipe recipe = recipe();
-        if (recipe != null && !recipe.cost().isEmpty()) {
-            StringBuilder price = new StringBuilder();
-            for (Map.Entry<EssenceType, Integer> entry : recipe.cost().entrySet()) {
-                if (price.length() > 0) price.append(", ");
-                price.append(entry.getKey().displayName()).append(' ').append(entry.getValue());
-            }
-            player.sendMessage(Text.translatable("message.alkahest.matrix_price", price.toString()), false);
         }
         return false;
     }
@@ -600,10 +572,6 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
             server.spawnParticles(new DustParticleEffect(new Vector3f(0.85f, 0.55f, 1f), 1.1f),
                 pos.getX() + 0.5, pos.getY() + 0.6, pos.getZ() + 0.5, 40, 1.2, 1.2, 1.2, 0.08);
             world.playSound(null, pos, SoundEvents.BLOCK_AMETHYST_BLOCK_CHIME, SoundCategory.BLOCKS, 1f, 0.6f);
-            for (var player : server.getPlayers()) {
-                if (player.squaredDistanceTo(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) <= 32 * 32)
-                    player.sendMessage(Text.translatable("message.alkahest.matrix_complete"), false);
-            }
         }
     }
 
@@ -658,7 +626,7 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
     @Override public ItemStack removeStack(int slot, int amount) {
         ItemStack removed = Inventories.splitStack(stacks, slot, amount);
         if (!removed.isEmpty()) {
-            if (slot != OUTPUT) progress = 0;
+            if (slot != OUTPUT) { progress = 0; started = false; }
             markDirty();
         }
         return removed;
@@ -666,17 +634,17 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
     @Override public ItemStack removeStack(int slot) {
         ItemStack removed = Inventories.removeStack(stacks, slot);
         if (!removed.isEmpty()) {
-            if (slot != OUTPUT) progress = 0;
+            if (slot != OUTPUT) { progress = 0; started = false; }
             markDirty();
         }
         return removed;
     }
     @Override public void setStack(int slot, ItemStack stack) {
         stacks.set(slot, stack);
-        if (slot != OUTPUT) progress = 0;
+        if (slot != OUTPUT) { progress = 0; started = false; }
         markDirty();
     }
-    @Override public void clear() { stacks.clear(); progress = 0; markDirty(); }
+    @Override public void clear() { stacks.clear(); progress = 0; started = false; markDirty(); }
     @Override public boolean canPlayerUse(PlayerEntity player) { return Inventory.canPlayerUse(this, player); }
     @Override public boolean isValid(int slot, ItemStack stack) { return slot != OUTPUT; }
 
@@ -685,6 +653,7 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
         Inventories.writeNbt(nbt, stacks, registries);
         nbt.putInt("Progress", progress);
         nbt.putBoolean("Awake", awake);
+        nbt.putBoolean("Started", started);
         nbt.putBoolean("Active", active);
         nbt.put("Buffer", JarContentsComponent.CODEC.encodeStart(NbtOps.INSTANCE, buffer)
             .result().orElseGet(NbtCompound::new));
@@ -697,6 +666,8 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
         Inventories.readNbt(nbt, stacks, registries);
         progress = nbt.getInt("Progress");
         awake = nbt.getBoolean("Awake");
+        started = nbt.getBoolean("Started");
+        if (!started) progress = 0;
         active = nbt.getBoolean("Active");
         buffer = JarContentsComponent.CODEC.parse(NbtOps.INSTANCE, nbt.get("Buffer"))
             .result().orElse(JarContentsComponent.EMPTY);
@@ -711,6 +682,7 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
         }
         stacks.clear();
         progress = 0;
+        started = false;
     }
 
     /**
@@ -725,8 +697,9 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
             return;
         }
         MatrixCoreBlockEntity core = coreNearby(world, clicked);
-        if (core == null) {
-            player.sendMessage(Text.translatable("message.alkahest.matrix_unformed"), true);
+        if (core == null) return;
+        if (held.isOf(ModItems.ALKAHEST_AMULET) || held.isOf(ModItems.PHILOSOPHERS_STONE)) {
+            core.startWith(held, player);
             return;
         }
         if (!held.isEmpty()) core.insertBase(held, player);
@@ -746,15 +719,9 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
         if (world.isClient) return true;
         for (BlockPos candidate : BlockPos.iterate(clicked.add(-2, -2, -2), clicked.add(2, 2, 2))) {
             if (!(world.getBlockEntity(candidate) instanceof MatrixCoreBlockEntity core) || !core.formed()) continue;
-            if (core.awake()) {
-                player.sendMessage(Text.translatable("message.alkahest.matrix_already_awake"), true);
-                return true;
-            }
-            core.setAwake(world, candidate, true);
-            player.sendMessage(Text.translatable("message.alkahest.matrix_awake"), true);
+            if (!core.awake()) core.setAwake(world, candidate, true);
             return true;
         }
-        player.sendMessage(Text.translatable("message.alkahest.matrix_unformed"), true);
         return false;
     }
 

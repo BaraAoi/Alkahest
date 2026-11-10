@@ -88,9 +88,13 @@ check('self.awake ? self.recipe() : null' in core_be, 'a dormant Matrix must nev
 check('setAwake' in core_be and 'wakeEffect' in core_be, 'the core needs to be woken up')
 check('revealShell' in core_be and 'REVEALED' in core_be, 'awakening must hide the shell blocks')
 check('awakenNearby' in core_be, 'the wand wakes the cube once')
-check('matrix_already_awake' in core_be, 'a second activation must be refused politely')
+check('if (!core.awake()) core.setAwake' in core_be, 'a second awakening must do nothing')
+check('startWith' in core_be and 'if (!self.started)' in core_be, 'every synthesis requires a focus')
+check('sendMessage(' not in core_be, 'matrix must not write to chat')
 pedestal_be = (JAVA / 'block/entity/MatrixPedestalBlockEntity.java').read_text()
 check('takeOne' in pedestal_be, 'the core takes parts off the pedestals')
+check('sendMessage(' not in pedestal_be and 'sendMessage(' not in (JAVA / 'block/custom/MatrixPedestalBlock.java').read_text(),
+      'pedestals must not write to chat')
 check('MatrixPedestalBlockEntity' in core_be and 'PEDESTAL_REACH' in core_be, 'pedestals must feed the core')
 check('boolean corner = dx != 0 && dy != 0 && dz != 0;' in core_be,
       'the corners of the cube must be pillars and everything else bricks')
@@ -138,6 +142,9 @@ for lang in ('ru_ru', 'en_us'):
 
 # --- client and tests ---------------------------------------------------------------------------
 client = (CLIENT / 'AlkahestClient.java').read_text()
+hud = (CLIENT / 'client/gui/MonocleHud.java').read_text()
+check('MatrixCoreBlockEntity.coreNearby' in hud and 'matrix_essence' in hud, 'the monocle must show Matrix essence')
+check((A / 'textures/item/philosophers_stone.png').exists(), 'the creative stone focus needs a texture')
 check('MatrixCoreRenderer::new' in client, 'the halo renderer must be registered')
 check('MatrixPedestalRenderer::new' in client, 'the pedestal item renderer must be registered')
 renderer = (CLIENT / 'client/render/MatrixCoreRenderer.java').read_text()

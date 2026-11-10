@@ -65,6 +65,11 @@ public class MatrixGameTests implements FabricGameTest {
         pedestal.setHeld(stack.copy());
     }
 
+    private static void start(TestContext c) {
+        var player = c.createMockPlayer(net.minecraft.world.GameMode.CREATIVE);
+        c.assertTrue(core(c).startWith(new ItemStack(ModItems.ALKAHEST_AMULET), player), "The focus starts one synthesis");
+    }
+
     private static void run(World world, BlockPos pos, int ticks) {
         MatrixCoreBlockEntity core = (MatrixCoreBlockEntity) world.getBlockEntity(pos);
         for (int i = 0; i < ticks; i++) MatrixCoreBlockEntity.tick(world, pos, core);
@@ -101,6 +106,56 @@ public class MatrixGameTests implements FabricGameTest {
         c.complete();
     }
 
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void eachSynthesisRequiresFocusAndPersists(TestContext c) {
+        BlockPos pos = build(c);
+        wake(c);
+        var core = core(c);
+        var player = c.createMockPlayer(net.minecraft.world.GameMode.SURVIVAL);
+        core.setStack(MatrixCoreBlockEntity.BASE, new ItemStack(Items.STRING, 2));
+        JarBlockEntity ordo = jar(c, CX + 3, CY, CZ, EssenceType.ORDO, 10);
+        jar(c, CX - 3, CY, CZ, EssenceType.AQUA, 10);
+        run(c.getWorld(), pos, 40);
+        c.assertTrue(core.progress() == 0 && ordo.contents().total() == 10, "Awakening alone starts nothing");
+        c.assertTrue(core.status() == MatrixCoreBlockEntity.STATUS_NEEDS_START, "HUD asks for a focus");
+        var amulet = new ItemStack(ModItems.ALKAHEST_AMULET);
+        MatrixCoreBlockEntity.interactNearby(c.getWorld(), pos, player, amulet);
+        c.assertTrue(core.started() && core.getStack(MatrixCoreBlockEntity.BASE).isOf(Items.STRING), "Amulet starts without replacing base");
+        var saved = core.createNbt(c.getWorld().getRegistryManager());
+        var replica = new MatrixCoreBlockEntity(pos, core.getCachedState());
+        replica.readComponentlessNbt(saved, c.getWorld().getRegistryManager());
+        c.assertTrue(replica.started(), "Running state survives reload and sync");
+        run(c.getWorld(), pos, MatrixCoreBlockEntity.DURATION + 4);
+        c.assertTrue(core.getStack(MatrixCoreBlockEntity.OUTPUT).isOf(ModItems.BINDING_SALT), "One batch completes");
+        c.assertFalse(core.started(), "The focus must start every batch");
+        int remaining = ordo.contents().total();
+        run(c.getWorld(), pos, 40);
+        c.assertTrue(ordo.contents().total() == remaining, "A second base cannot auto-start");
+        core.setStack(MatrixCoreBlockEntity.OUTPUT, ItemStack.EMPTY);
+        var stone = new ItemStack(ModItems.PHILOSOPHERS_STONE);
+        MatrixCoreBlockEntity.interactNearby(c.getWorld(), pos, player, stone);
+        c.assertTrue(core.started() && stone.getCount() == 1, "Stone starts without being inserted or consumed");
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void focusCannotStartInvalidOrUnchargedRecipe(TestContext c) {
+        build(c);
+        wake(c);
+        var core = core(c);
+        var player = c.createMockPlayer(net.minecraft.world.GameMode.SURVIVAL);
+        var amulet = new ItemStack(ModItems.ALKAHEST_AMULET);
+        core.setStack(MatrixCoreBlockEntity.BASE, new ItemStack(Items.GLASS_PANE));
+        c.assertFalse(core.startWith(amulet, player), "Missing components reject start");
+        c.assertTrue(amulet.getOrDefault(net.alkahest.registry.ModDataComponents.AMULET_USES_STEP, 0) == 0,
+            "A rejected start costs no charge");
+        core.setStack(MatrixCoreBlockEntity.BASE, new ItemStack(Items.STRING));
+        amulet.set(net.alkahest.registry.ModDataComponents.ESSENCE_CHARGE, 0);
+        c.assertFalse(core.startWith(amulet, player), "Empty amulet cannot start a synthesis");
+        c.assertFalse(core.started(), "The Matrix remains idle");
+        c.complete();
+    }
+
     /** A lone core is nothing; the cube needs four bricks in every middle layer and pillars on the corners. */
     @GameTest(templateName = EMPTY_STRUCTURE)
     public void cubeNeedsPillarsAndBricks(TestContext c) {
@@ -134,6 +189,7 @@ public class MatrixGameTests implements FabricGameTest {
         wake(c);
         c.assertTrue(c.getWorld().getBlockState(pos).get(net.alkahest.block.custom.MatrixCoreBlock.AWAKE),
             "The wand switches the cube on");
+        start(c);
         run(c.getWorld(), pos, MatrixCoreBlockEntity.DURATION + 4);
         c.assertTrue(core.getStack(MatrixCoreBlockEntity.OUTPUT).getItem() == ModItems.BINDING_SALT,
             "An awakened cube works");
@@ -186,6 +242,7 @@ public class MatrixGameTests implements FabricGameTest {
         pedestal(c, CX + 3, CY, CZ, new ItemStack(Items.GOLD_INGOT));
         jar(c, CX - 3, CY, CZ, EssenceType.ORDO, 12);
         jar(c, CX - 3, CY, CZ + 1, EssenceType.LUX, 12);
+        start(c);
         run(c.getWorld(), pos, MatrixCoreBlockEntity.DURATION + 4);
         c.assertTrue(core.getStack(MatrixCoreBlockEntity.OUTPUT).getItem() == ModItems.ALCHEMISTS_MONOCLE,
             "The pane and the golden ingot from the pedestal make a monocle");
@@ -227,6 +284,8 @@ public class MatrixGameTests implements FabricGameTest {
         jar(c, 0, CY, 0, EssenceType.METALLUM, 8);
         jar(c, 6, CY, 0, EssenceType.LUX, 6);
         jar(c, 0, CY, 6, EssenceType.ORDO, 4);
+        MatrixCoreBlockEntity.interactNearby(c.getWorld(), pos, player, new ItemStack(ModItems.ALKAHEST_AMULET));
+        c.assertTrue(core.started(), "Real amulet interaction starts the synthesis");
         c.runAtTick(180, () -> {
             c.assertTrue(core.getStack(MatrixCoreBlockEntity.OUTPUT).isOf(Items.DIAMOND),
                 "The natural server ticker completes the diamond synthesis");
@@ -248,6 +307,7 @@ public class MatrixGameTests implements FabricGameTest {
         BlockPos pedestalPos = c.getAbsolutePos(new BlockPos(7, CY - 1, 7));
         var part = (net.alkahest.block.entity.MatrixPedestalBlockEntity) c.getWorld().getBlockEntity(pedestalPos);
         jar(c, 0, CY, 0, EssenceType.IGNIS, 6);
+        start(c);
         run(c.getWorld(), pos, MatrixCoreBlockEntity.DURATION + 4);
         c.assertTrue(core.status() == MatrixCoreBlockEntity.STATUS_NO_ESSENCE, "Missing Aer stops synthesis");
         c.assertTrue(part.held().isOf(Items.GLASS_BOTTLE), "The pedestal item is not lost while waiting");
@@ -268,6 +328,7 @@ public class MatrixGameTests implements FabricGameTest {
         core.setStack(MatrixCoreBlockEntity.BASE, new ItemStack(Items.STRING, 1));
         JarBlockEntity ordo = jar(c, CX + 3, CY, CZ, EssenceType.ORDO, 10);
         JarBlockEntity aqua = jar(c, CX - 3, CY, CZ, EssenceType.AQUA, 10);
+        start(c);
         run(c.getWorld(), pos, MatrixCoreBlockEntity.DURATION + 4);
 
         c.assertTrue(core.getStack(MatrixCoreBlockEntity.OUTPUT).getItem() == ModItems.BINDING_SALT,
@@ -303,6 +364,7 @@ public class MatrixGameTests implements FabricGameTest {
         var core = core(c);
         core.setStack(MatrixCoreBlockEntity.BASE, new ItemStack(Items.STRING));
         JarBlockEntity ordo = jar(c, CX + 4, CY + 1, CZ, EssenceType.ORDO, 10);
+        start(c);
         run(c.getWorld(), pos, 60);
         c.assertTrue(ordo.contents().total() < 10, "The jar is already giving essence away mid-synthesis");
         c.assertTrue(core.stored(EssenceType.ORDO) > 0, "The core keeps what flew in");
@@ -317,6 +379,7 @@ public class MatrixGameTests implements FabricGameTest {
         wake(c);
         var core = core(c);
         core.setStack(MatrixCoreBlockEntity.BASE, new ItemStack(Items.STRING, 2));
+        start(c);
         run(c.getWorld(), pos, MatrixCoreBlockEntity.DURATION * 2);
         c.assertTrue(core.getStack(MatrixCoreBlockEntity.OUTPUT).isEmpty(), "No essence, no product");
         c.assertTrue(core.getStack(MatrixCoreBlockEntity.BASE).getCount() == 2, "The base is untouched");
@@ -349,6 +412,7 @@ public class MatrixGameTests implements FabricGameTest {
         core.setStack(MatrixCoreBlockEntity.BASE, new ItemStack(Items.STRING));
         jar(c, CX + 3, CY, CZ, EssenceType.ORDO, 10);
         jar(c, CX - 3, CY, CZ, EssenceType.AQUA, 10);
+        start(c);
         run(c.getWorld(), pos, 40);
         c.assertTrue(core.progress() > 0, "The synthesis started");
         c.setBlockState(CX, CY + 1, CZ, Blocks.AIR);

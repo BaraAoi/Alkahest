@@ -1,7 +1,6 @@
 package net.alkahest.block.custom;
 
 import net.alkahest.block.entity.MatrixPedestalBlockEntity;
-import net.alkahest.block.entity.MatrixCoreBlockEntity;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockEntityProvider;
 import net.minecraft.block.BlockState;
@@ -47,14 +46,10 @@ public class MatrixPedestalBlock extends Block implements BlockEntityProvider {
         }
         if (world.isClient) return ItemActionResult.SUCCESS;
         if (!pedestal.isEmpty()) {
-            pedestal.describe(player);
             return ItemActionResult.SUCCESS;
         }
         pedestal.setHeld(stack.copyWithCount(1));
         if (!player.isCreative()) stack.decrement(1);
-        MatrixCoreBlockEntity core = MatrixCoreBlockEntity.forPedestal(world, pos);
-        if (core != null) core.explainPedestals(player);
-        else player.sendMessage(net.minecraft.text.Text.translatable("message.alkahest.pedestal_no_matrix"), false);
         world.playSound(null, pos, net.minecraft.sound.SoundEvents.BLOCK_AMETHYST_BLOCK_PLACE,
             net.minecraft.sound.SoundCategory.BLOCKS, 0.6f, 1.4f);
         return ItemActionResult.SUCCESS;
@@ -64,7 +59,6 @@ public class MatrixPedestalBlock extends Block implements BlockEntityProvider {
         if (world.isClient) return ActionResult.SUCCESS;
         if (!(world.getBlockEntity(pos) instanceof MatrixPedestalBlockEntity pedestal)) return ActionResult.PASS;
         if (pedestal.isEmpty()) {
-            pedestal.describe(player);
             return ActionResult.SUCCESS;
         }
         ItemStack taken = pedestal.takeOne();

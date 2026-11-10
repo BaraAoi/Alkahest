@@ -2,6 +2,11 @@ package net.alkahest.client.gui;
 
 import dev.emi.trinkets.api.TrinketsApi;
 import net.alkahest.block.custom.AlchemyPipeBlock;
+import net.alkahest.block.custom.MatrixCoreBlock;
+import net.alkahest.block.custom.MatrixPillarBlock;
+import net.alkahest.block.custom.AlchemicalBrickBlock;
+import net.alkahest.block.entity.MatrixCoreBlockEntity;
+import net.alkahest.matrix.MatrixRecipe;
 import net.alkahest.block.entity.AlchemyPipeBlockEntity;
 import net.alkahest.block.entity.JarBlockEntity;
 import net.alkahest.block.entity.CauldronBlockEntity;
@@ -30,7 +35,25 @@ public final class MonocleHud {
             !(client.crosshairTarget instanceof BlockHitResult hit) || hit.getType() != HitResult.Type.BLOCK) return;
         var blockEntity = client.world.getBlockEntity(hit.getBlockPos());
         List<Text> lines = new ArrayList<>();
-        if (blockEntity instanceof JarBlockEntity jar) {
+        var targetedBlock = client.world.getBlockState(hit.getBlockPos()).getBlock();
+        if (targetedBlock instanceof MatrixCoreBlock || targetedBlock instanceof MatrixPillarBlock
+            || targetedBlock instanceof AlchemicalBrickBlock) {
+            MatrixCoreBlockEntity matrix = blockEntity instanceof MatrixCoreBlockEntity direct ? direct
+                : MatrixCoreBlockEntity.coreNearby(client.world, hit.getBlockPos());
+            if (matrix == null) return;
+            lines.add(Text.translatable("screen.alkahest.monocle.matrix_core"));
+            lines.add(matrix.statusText());
+            MatrixRecipe expected = MatrixRecipe.cheapestFor(matrix.getStack(MatrixCoreBlockEntity.BASE));
+            if (expected != null) {
+                for (var entry : expected.cost().entrySet()) {
+                    int stored = Math.min(matrix.stored(entry.getKey()), entry.getValue());
+                    int remaining = entry.getValue() - stored;
+                    lines.add(Text.translatable("screen.alkahest.monocle.matrix_essence",
+                        entry.getKey().displayName(), stored, entry.getValue(), remaining)
+                        .styled(style -> style.withColor(entry.getKey().color())));
+                }
+            }
+        } else if (blockEntity instanceof JarBlockEntity jar) {
             var contents = jar.contents();
             lines.add(Text.translatable("screen.alkahest.monocle.jar", contents.total(), JarItem.CAPACITY));
             if (contents.total() == 0) lines.add(Text.translatable("screen.alkahest.monocle.empty"));
