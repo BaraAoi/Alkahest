@@ -194,7 +194,7 @@ public class JarGameTests implements FabricGameTest {
         jar.setContents(JarContentsComponent.EMPTY); var creativeCrystals=new ItemStack(ModItems.CRYSTALS.get(EssenceType.AQUA),12);
         creative.setStackInHand(net.minecraft.util.Hand.MAIN_HAND,creativeCrystals);
         net.alkahest.block.custom.JarBlock.fillCrystalStack(c.getWorld(),pos,creative,net.minecraft.util.Hand.MAIN_HAND);
-        c.assertTrue(creativeCrystals.getCount()==12 && jar.contents().total()==12, "Creative bulk fill keeps the held stack");
+        c.assertTrue(creativeCrystals.getCount()==12 && jar.contents().total()==12, "Creative bulk fill: creative="+creative.isCreative()+", held="+creativeCrystals.getCount()+", jar="+jar.contents().total());
         c.complete();
     }
 
