@@ -9,6 +9,8 @@ import net.alkahest.block.entity.JarBlockEntity;
 import net.alkahest.block.entity.StabilizerCoreBlockEntity;
 import net.alkahest.block.entity.StabilizerReceiverBlockEntity;
 import net.alkahest.block.entity.DistilleryBlockEntity;
+import net.alkahest.block.entity.DistilleryBellowsBlockEntity;
+import net.alkahest.block.entity.Tier2DistilleryBlockEntity;
 import net.minecraft.block.entity.BlockEntityType;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.Registry;
@@ -26,6 +28,10 @@ public final class ModBlockEntities {
         Alkahest.id("stabilizer_core"), BlockEntityType.Builder.create(StabilizerCoreBlockEntity::new, ModBlocks.STABILIZER_CORE).build(null));
     public static final BlockEntityType<JarBlockEntity> JAR = Registry.register(Registries.BLOCK_ENTITY_TYPE,
         Alkahest.id("jar"), BlockEntityType.Builder.create(JarBlockEntity::new, ModBlocks.JAR).build(null));
+    public static final BlockEntityType<Tier2DistilleryBlockEntity> DISTILLERY_TIER2 = Registry.register(Registries.BLOCK_ENTITY_TYPE,
+        Alkahest.id("distillery_tier2"), BlockEntityType.Builder.create(Tier2DistilleryBlockEntity::new, ModBlocks.DISTILLERY_TIER2).build(null));
+    public static final BlockEntityType<DistilleryBellowsBlockEntity> DISTILLERY_BELLOWS = Registry.register(Registries.BLOCK_ENTITY_TYPE,
+        Alkahest.id("distillery_bellows"), BlockEntityType.Builder.create(DistilleryBellowsBlockEntity::new, ModBlocks.DISTILLERY_BELLOWS).build(null));
     public static final BlockEntityType<CauldronBlockEntity> CAULDRON = Registry.register(Registries.BLOCK_ENTITY_TYPE,
         Alkahest.id("alchemy_cauldron"), BlockEntityType.Builder.create(CauldronBlockEntity::new, ModBlocks.ALCHEMY_CAULDRON).build(null));
     public static final BlockEntityType<DistilleryBlockEntity> DISTILLERY = Registry.register(Registries.BLOCK_ENTITY_TYPE,

@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "working=false": {
+      "model": "alkahest:block/distillery_tier2"
+    },
+    "working=true": {
+      "model": "alkahest:block/distillery_tier2_working"
+    }
+  }
+}

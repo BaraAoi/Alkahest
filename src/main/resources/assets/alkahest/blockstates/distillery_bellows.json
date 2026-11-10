@@ -1,0 +1,16 @@
+{
+  "variants": {
+    "level=0": {
+      "model": "alkahest:block/distillery_bellows_0"
+    },
+    "level=1": {
+      "model": "alkahest:block/distillery_bellows_1"
+    },
+    "level=2": {
+      "model": "alkahest:block/distillery_bellows_2"
+    },
+    "level=3": {
+      "model": "alkahest:block/distillery_bellows_3"
+    }
+  }
+}

@@ -53,6 +53,8 @@ public final class ModItems {
             .entries((context, entries) -> {
                 entries.add(ModBlocks.ALCHEMY_CAULDRON);
                 entries.add(ModBlocks.DISTILLERY);
+                entries.add(ModBlocks.DISTILLERY_TIER2);
+                entries.add(ModBlocks.DISTILLERY_BELLOWS);
                 entries.add(ModBlocks.JAR);
                 entries.add(ModBlocks.ESSENCE_CHARGER);
                 entries.add(ModBlocks.ESSENCE_SEPARATOR);

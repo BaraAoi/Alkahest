@@ -82,4 +82,36 @@ for locale in ('ru_ru', 'en_us'):
                  'solvent_charges', 'amulet_charge'):
         assert data.get('message.alkahest.' + name), (locale, name)
 
+
+# --- Tier-2 distillery and its essence bellows (0.1.32) ---------------------------------------
+bellows_state = json.loads((base / 'blockstates/distillery_bellows.json').read_text())['variants']
+assert set(bellows_state) == {f'level={level}' for level in range(4)}
+for level in range(4):
+    model_name = bellows_state[f'level={level}']['model'].split('/')[-1]
+    assert (base / f'models/block/{model_name}.json').is_file(), model_name
+
+tier2_state = json.loads((base / 'blockstates/distillery_tier2.json').read_text())['variants']
+assert tier2_state['working=false']['model'] == 'alkahest:block/distillery_tier2'
+assert tier2_state['working=true']['model'] == 'alkahest:block/distillery_tier2_working'
+
+for name in ('distillery_tier2', 'distillery_bellows'):
+    assert (base / f'models/item/{name}.json').is_file(), name
+    assert (data_root / f'loot_table/blocks/{name}.json').is_file(), name
+    assert (recipes / f'{name}.json').is_file(), name
+
+for tex in ('stabilizer_frame', 'stabilizer_glass', 'stabilizer_essence',
+            'distillery_crude', 'distillery_crude_panel', 'distillery_crude_glass',
+            'bellows_wood', 'bellows_leather'):
+    assert (base / f'textures/block/{tex}.png').read_bytes().startswith(b'\x89PNG\r\n\x1a\n'), tex
+
+for locale in ('ru_ru', 'en_us'):
+    data = json.loads((base / f'lang/{locale}.json').read_text())
+    for name in ('distillery_tier2', 'distillery_bellows', 'distillery'):
+        assert data.get('block.alkahest.' + name), (locale, name)
+    for suffix in ('title', 'input', 'ready', 'working', 'blocked'):
+        assert data.get(f'screen.alkahest.distillery_tier2.{suffix}'), (locale, suffix)
+    for name in ('bellows_instruction', 'bellows_empty', 'bellows_jar_full', 'bellows_poured',
+                 'bellows_status', 'bellows_status_empty'):
+        assert data.get('message.alkahest.' + name), (locale, name)
+
 print('Laboratory items, Elementals, Alkahest Era III assets, worldgen and translations validated')

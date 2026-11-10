@@ -53,8 +53,8 @@ public final class DistilleryScreen extends HandledScreen<DistilleryScreenHandle
     @Override protected void drawForeground(DrawContext context, int mouseX, int mouseY) {
         context.drawTextWithShadow(textRenderer, title, titleX, titleY, 0xFFF1D8A3);
         context.drawTextWithShadow(textRenderer, playerInventoryTitle, playerInventoryTitleX, playerInventoryTitleY, 0xFFDFD0AB);
-        context.drawTextWithShadow(textRenderer, Text.translatable("screen.alkahest.distillery.input"), 17, 35, 0xFFE3D1A5);
-        context.drawTextWithShadow(textRenderer, Text.translatable("screen.alkahest.distillery.output"), 12, 83, 0xFFE3D1A5);
+        context.drawTextWithShadow(textRenderer, Text.translatable("screen.alkahest.distillery.input"), 17, 35, 0xFFDCCBA6);
+        context.drawTextWithShadow(textRenderer, Text.translatable("screen.alkahest.distillery.output"), 12, 83, 0xFFDCCBA6);
         int statusColor = handler.status() == 2 ? 0xFFFFC27D
             : handler.status() == 1 ? (handler.isAlkahestActive() ? 0xFFD8B4FE : 0xFF8EE5D7) : 0xFFD1C6AC;
         context.drawCenteredTextWithShadow(textRenderer, statusText(), 88, 70, statusColor);
@@ -80,17 +80,17 @@ public final class DistilleryScreen extends HandledScreen<DistilleryScreenHandle
     @Override protected void drawBackground(DrawContext c, float delta, int mouseX, int mouseY) {
         c.drawTexture(BACKGROUND, x, y, WIDTH, HEIGHT, 0, 0, 472, 568, 472, 568);
         // Dark glass insets preserve contrast without hiding the engraved brass artwork.
-        c.fill(x + 7, y + 6, x + 169, y + 20, 0xD8091520);
-        c.fill(x + 10, y + 26, x + 166, y + 50, 0xA50D2027);
-        c.fill(x + 13, y + 53, x + 163, y + 79, 0xD00B1B24);
-        c.fill(x + 8, y + 81, x + 168, y + 112, 0xCC0B1820);
-        c.fill(x + 5, y + 117, x + 171, y + 208, 0xB9091520);
-        c.fill(x + 10, y + 21, x + 166, y + 22, 0xFF997A4D);
-        c.fill(x + 49, y + 87, x + 163, y + 88, 0xFF806D4E);
-        c.fill(x + 9, y + 129, x + 167, y + 130, 0xFF806D4E);
+        c.fill(x + 7, y + 6, x + 169, y + 20, 0xD816100B);
+        c.fill(x + 10, y + 26, x + 166, y + 50, 0xA51A120C);
+        c.fill(x + 13, y + 53, x + 163, y + 79, 0xD018110B);
+        c.fill(x + 8, y + 81, x + 168, y + 112, 0xCC1A120C);
+        c.fill(x + 5, y + 117, x + 171, y + 208, 0xB9130E0A);
+        c.fill(x + 10, y + 21, x + 166, y + 22, 0xFF8A8378);
+        c.fill(x + 49, y + 87, x + 163, y + 88, 0xFF6E6656);
+        c.fill(x + 9, y + 129, x + 167, y + 130, 0xFF6E6656);
         // Brass feed capillary connecting the Alkahest vial slot to the central retort input
         boolean alkahest = handler.isAlkahestActive();
-        c.fill(x + 98, y + 38, x + 126, y + 40, alkahest ? 0xFFA855F7 : 0xFF7D6644);
+        c.fill(x + 98, y + 38, x + 126, y + 40, alkahest ? 0xFFA855F7 : 0xFF6A6252);
         slot(c, 80, 31, true, false);
         slot(c, DistilleryScreenHandler.CATALYST_X, DistilleryScreenHandler.CATALYST_Y, false, alkahest);
         for (int col = 0; col < 7; col++) slot(c, 26 + col * 18, 96, false, false);

@@ -9,6 +9,8 @@
     "alkahest:essence_separator",
     "alkahest:stabilizer_receiver",
     "alkahest:stabilizer_core",
-    "alkahest:stabilizer_crest"
+    "alkahest:stabilizer_crest",
+    "alkahest:distillery_tier2",
+    "alkahest:distillery_bellows"
   ]
 }
