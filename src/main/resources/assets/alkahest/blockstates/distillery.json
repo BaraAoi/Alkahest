@@ -1,10 +1,10 @@
 {
   "variants": {
     "working=false": {
-      "model": "alkahest:block/distillery"
+      "model": "alkahest:block/distillery_crude"
     },
     "working=true": {
-      "model": "alkahest:block/distillery_working"
+      "model": "alkahest:block/distillery_crude_working"
     }
   }
 }

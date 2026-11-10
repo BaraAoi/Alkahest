@@ -62,6 +62,57 @@ def metal_tile(seed, base=(184, 108, 62)):
     return img
 
 
+def crude_copper(seed):
+    """Dented, patched copper for the crude tier-1 boiler."""
+    img = metal_tile(seed, base=(150, 92, 58))
+    for y in range(16):
+        for x in range(16):
+            n = noise(x, y, seed + 5)
+            if n % 17 == 0:
+                img[y][x] = (104, 74, 54, 255)
+            if (x * 3 + y * 5) % 23 == 0:
+                img[y][x] = (170, 126, 82, 255)
+    for i in range(5):
+        x, y = noise(i, 1, seed) % 14 + 1, noise(i, 4, seed) % 14 + 1
+        img[y][x] = (58, 42, 34, 255)
+        img[y][x - 1] = (196, 160, 112, 255)
+    # rivets along the top and bottom edges
+    for x in (2, 7, 13):
+        img[1][x] = (206, 172, 120, 255)
+        img[14][x] = (206, 172, 120, 255)
+    return img
+
+
+def crude_panel(seed):
+    img = canvas(16, 16)
+    for y in range(16):
+        for x in range(16):
+            n = noise(x, y, seed)
+            base = (66, 60, 54) if (y // 5) % 2 == 0 else (78, 68, 58)
+            img[y][x] = (*shade(base, (n % 18) - 9), 255)
+    for x in range(2, 14):
+        img[5][x] = (128, 96, 62, 255)
+        img[11][x] = (128, 96, 62, 255)
+    for y in range(1, 15):
+        img[y][1] = (96, 82, 66, 255)
+        img[y][14] = (96, 82, 66, 255)
+    return img
+
+
+def crude_glass(seed):
+    img = canvas(16, 16, (0, 0, 0, 0))
+    for y in range(16):
+        for x in range(16):
+            n = noise(x, y, seed)
+            a = 40 + n % 30
+            if x in (0, 15) or y in (0, 15):
+                a = 96
+            img[y][x] = (126, 146, 140, a)
+    img[4][6] = (220, 236, 226, 120)
+    img[5][5] = (220, 236, 226, 100)
+    return img
+
+
 def wood_tile(seed):
     """Sturdy planks with a dark iron-grey frame and nail heads."""
     img = canvas(16, 16)
@@ -161,8 +212,9 @@ def crude_gui(width=472, height=568):
 
 
 def main():
-    write_png(BLOCK / 'bellows_wood.png', 16, 16, wood_tile(9))
-    write_png(BLOCK / 'bellows_leather.png', 16, 16, leather_tile(10))
+    write_png(BLOCK / 'distillery_crude.png', 16, 16, crude_copper(6))
+    write_png(BLOCK / 'distillery_crude_panel.png', 16, 16, crude_panel(7))
+    write_png(BLOCK / 'distillery_crude_glass.png', 16, 16, crude_glass(8))
     write_png(BLOCK / 'bellows_iron.png', 16, 16, iron_tile(11))
     write_png(GUI / 'distillery_backdrop.png', 472, 568, crude_gui())
     print('textures written')

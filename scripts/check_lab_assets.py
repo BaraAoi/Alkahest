@@ -93,14 +93,18 @@ for level in range(4):
 tier2_state = json.loads((base / 'blockstates/distillery_tier2.json').read_text())['variants']
 assert tier2_state['working=false']['model'] == 'alkahest:block/distillery'
 assert tier2_state['working=true']['model'] == 'alkahest:block/distillery_working'
+crude_state = json.loads((base / 'blockstates/distillery.json').read_text())['variants']
+assert crude_state['working=false']['model'] == 'alkahest:block/distillery_crude'
+assert crude_state['working=true']['model'] == 'alkahest:block/distillery_crude_working'
+assert json.loads((base / 'models/item/distillery.json').read_text())['parent'] == 'alkahest:block/distillery_crude'
 
 for name in ('distillery_tier2', 'distillery_bellows'):
     assert (base / f'models/item/{name}.json').is_file(), name
     assert (data_root / f'loot_table/blocks/{name}.json').is_file(), name
     assert (recipes / f'{name}.json').is_file(), name
 
-for tex in ('distillery_copper', 'distillery_panel', 'distillery_vent',
-            'bellows_wood', 'bellows_leather', 'bellows_iron'):
+for tex in ('distillery_copper', 'distillery_panel', 'distillery_vent', 'bellows_iron',
+            'distillery_crude', 'distillery_crude_panel', 'distillery_crude_glass'):
     assert (base / f'textures/block/{tex}.png').read_bytes().startswith(b'\x89PNG\r\n\x1a\n'), tex
 
 for locale in ('ru_ru', 'en_us'):

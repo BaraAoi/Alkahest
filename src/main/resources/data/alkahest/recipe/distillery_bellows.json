@@ -1,16 +1,16 @@
 {
   "type": "minecraft:crafting_shaped",
   "pattern": [
-    "PLP",
-    "LIL",
-    "PLP"
+    "GCG",
+    "CIC",
+    "GCG"
   ],
   "key": {
-    "P": {
-      "item": "minecraft:oak_planks"
+    "G": {
+      "item": "minecraft:glass"
     },
-    "L": {
-      "item": "minecraft:leather"
+    "C": {
+      "item": "minecraft:copper_ingot"
     },
     "I": {
       "item": "minecraft:iron_ingot"

@@ -23,16 +23,17 @@ def model(name):
     return data
 
 
-# The crude tier-1 cube and the tier-2 cube share the original brass artwork.
+# The crude tier-1 cube keeps the dented copper artwork the player asked to retain.
 states = load('blockstates/distillery.json')['variants']
-assert states['working=false']['model'] == 'alkahest:block/distillery'
-assert states['working=true']['model'] == 'alkahest:block/distillery_working'
-model_idle = model('distillery')
-model_active = model('distillery_working')
-assert model_idle['textures']['chamber'] == 'alkahest:block/distillery_chamber_idle'
-assert model_active['textures']['chamber'] == 'alkahest:block/distillery_chamber_active'
-assert len(model_idle['elements']) >= 8
-for candidate in (model_idle, model_active):
+assert states['working=false']['model'] == 'alkahest:block/distillery_crude'
+assert states['working=true']['model'] == 'alkahest:block/distillery_crude_working'
+assert load('models/item/distillery.json')['parent'] == 'alkahest:block/distillery_crude'
+crude_idle, crude_active = model('distillery_crude'), model('distillery_crude_working')
+assert crude_idle['textures']['copper'] == 'alkahest:block/distillery_crude'
+assert crude_active['textures']['essence'] == 'alkahest:block/jar_essence'
+assert crude_idle['textures'] != crude_active['textures']
+assert len(crude_idle['elements']) >= 8
+for candidate in (crude_idle, crude_active):
     for el in candidate['elements']:
         assert all(0 <= n <= 16 for n in el['from'] + el['to'])
         assert all(a < b for a, b in zip(el['from'], el['to']))
@@ -88,7 +89,7 @@ def decode_rgb_frames(raw, width, frame_height, frame_count):
     return {b''.join(rows[i*frame_height:(i+1)*frame_height]) for i in range(frame_count)}
 
 
-textures = set(model_idle['textures'].values()) | set(model_active['textures'].values())
+textures = set(crude_idle['textures'].values()) | set(crude_active['textures'].values())
 for texture in textures:
     assert texture.startswith('alkahest:block/')
     name = texture.split('/')[-1]
@@ -98,6 +99,9 @@ for texture in textures:
         assert len(decode_rgb_frames(raw, 32, 32, 8)) == 8, 'Animation must have eight visually distinct frames'
     else:
         assert dimensions in ((16, 16), (32, 32)), (name, dimensions)
+brass = load('models/block/distillery.json')
+assert brass['textures']['chamber'] == 'alkahest:block/distillery_chamber_idle'
+assert load('models/block/distillery_working.json')['textures']['chamber'] == 'alkahest:block/distillery_chamber_active'
 meta = load('textures/block/distillery_chamber_active.png.mcmeta')['animation']
 assert meta['frametime'] > 0 and 256//32 >= 2
 
@@ -107,32 +111,39 @@ assert tier2['working=false']['model'] == 'alkahest:block/distillery'
 assert tier2['working=true']['model'] == 'alkahest:block/distillery_working'
 assert load('models/item/distillery_tier2.json')['parent'] == 'alkahest:block/distillery'
 
-# Bellows: wooden boards, a leather bag and iron ribs; each level must grow the bag.
+# Bellows: a glass flask smaller than a block with a tinted essence column inside.
 bellows_states = load('blockstates/distillery_bellows.json')['variants']
-heights, ribs = [], []
+tops = []
 for level in range(4):
     name = bellows_states[f'level={level}']['model'].split('/')[-1]
     assert name == f'distillery_bellows_{level}', name
     bellows = load(f'models/block/{name}.json')
-    assert bellows['textures']['wood'] == 'alkahest:block/bellows_wood'
-    assert bellows['textures']['leather'] == 'alkahest:block/bellows_leather'
-    assert bellows['textures']['iron'] == 'alkahest:block/bellows_iron'
-    leather = [el for el in bellows['elements']
-               if any(face['texture'] == '#leather' for face in el['faces'].values())]
-    heights.append(max((el['to'][1] for el in leather), default=3))
-    ribs.append(sum(1 for el in bellows['elements']
-                    if all(face['texture'] == '#iron' for face in el['faces'].values())))
+    assert bellows['textures']['glass'] == 'minecraft:block/glass', name
+    assert bellows['textures']['essence'] == 'alkahest:block/jar_essence', name
+    assert bellows['textures']['iron'] == 'alkahest:block/bellows_iron', name
+    liquid = [el for el in bellows['elements']
+              if any(face.get('tintindex') == 0 for face in el['faces'].values())]
     for el in bellows['elements']:
-        assert all(0 <= n <= 16 for n in el['from'] + el['to'])
-        assert all(a <= b for a, b in zip(el['from'], el['to']))
-assert heights == sorted(heights) and heights[-1] > heights[1] > heights[0], heights
-assert ribs == sorted(ribs) and ribs[-1] > ribs[0], ribs
+        assert all(0 <= n <= 16 for n in el['from'] + el['to']), name
+        assert all(a < b for a, b in zip(el['from'], el['to'])), name
+        for face in el['faces'].values():
+            assert face['texture'].startswith('#') and face['texture'][1:] in bellows['textures'], name
+    if level == 0:
+        assert not liquid, 'an empty flask must not render liquid'
+        continue
+    assert len(liquid) == 1, name
+    flask = [el for el in bellows['elements'] if el['faces']['up']['texture'] == '#glass']
+    assert flask, name
+    body = max(flask, key=lambda el: (el['to'][1] - el['from'][1]) * (el['to'][0] - el['from'][0]))
+    column = liquid[0]
+    # the liquid stays inside the glass and never covers the neck
+    assert body['from'][0] < column['from'][0] and body['from'][2] < column['from'][2], name
+    assert body['to'][0] > column['to'][0] and body['to'][2] > column['to'][2], name
+    assert body['to'][1] > column['to'][1] > 4, name
+    tops.append(column['to'][1])
+assert tops == sorted(tops) and len(set(tops)) == 3, tops
 assert load('models/item/distillery_bellows.json')['parent'] == 'alkahest:block/distillery_bellows_2'
-total = 0
-for texture in ('bellows_wood', 'bellows_leather', 'bellows_iron'):
-    validate_png(assets/f'textures/block/{texture}.png')
-    total += 1
-assert total == 3
+validate_png(assets/'textures/block/bellows_iron.png')
 
 # Stabilizer receiver: real glass plus a tinted liquid that uses the jar essence art.
 receiver_states = load('blockstates/stabilizer_receiver.json')['variants']
@@ -155,4 +166,4 @@ for name in (empty, occupied):
         assert all(a <= b for a, b in zip(el['from'], el['to']))
 assert load(f'models/block/{occupied}.json')['elements'] != load(f'models/block/{empty}.json')['elements']
 assert load('models/item/stabilizer_receiver.json')['parent'] == 'alkahest:block/stabilizer_receiver'
-print('Distillery, bellows and receiver models, working variants and textures validated')
+print('Crude distillery, glass bellows, receiver and brass tier-2 models validated')

@@ -47,6 +47,7 @@ public final class AlkahestClient implements ClientModInitializer {
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.ESSENCE_SEPARATOR, RenderLayer.getCutout());
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.STABILIZER_RECEIVER, RenderLayer.getCutout());
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.DISTILLERY_TIER2, RenderLayer.getCutout());
+        BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.DISTILLERY_BELLOWS, RenderLayer.getCutout());
         net.minecraft.client.item.ModelPredicateProviderRegistry.register(ModBlocks.JAR.asItem(), Alkahest.id("fill"),
             (stack, world, entity, seed) -> net.alkahest.essence.JarVisuals.level(net.alkahest.item.custom.JarItem.contents(stack)) / 10.0f);
         ColorProviderRegistry.ITEM.register((stack, tint) -> tint == 0
@@ -57,6 +58,10 @@ public final class AlkahestClient implements ClientModInitializer {
         ColorProviderRegistry.BLOCK.register((state, world, pos, tint) -> tint == 0 && world != null && pos != null
             && world.getBlockEntity(pos) instanceof net.alkahest.block.entity.StabilizerReceiverBlockEntity receiver
                 ? net.alkahest.essence.JarVisuals.color(receiver.contents()) : 0xffffff, ModBlocks.STABILIZER_RECEIVER);
+        // The bellows are glass flasks: the stored essence colours the liquid inside.
+        ColorProviderRegistry.BLOCK.register((state, world, pos, tint) -> tint == 0 && world != null && pos != null
+            && world.getBlockEntity(pos) instanceof net.alkahest.block.entity.DistilleryBellowsBlockEntity bellows
+                && !bellows.empty() ? bellows.storedType().color() : 0xffffff, ModBlocks.DISTILLERY_BELLOWS);
         EntityRendererRegistry.register(ModEntities.THROWN_REAGENT, FlyingItemEntityRenderer::new);
         EntityRendererRegistry.register(ModEntities.REAGENT_ZONE, EmptyEntityRenderer::new);
         EntityModelLayerRegistry.registerModelLayer(

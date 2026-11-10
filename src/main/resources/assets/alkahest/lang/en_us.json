@@ -293,7 +293,7 @@
   "message.alkahest.stabilizer_pour_full": "The receiver took %s units; %s units remain in your jar.",
   "message.alkahest.stabilizer_contents": "Receiver: %s / %s units · progress %s%%",
   "block.alkahest.distillery_tier2": "Tier II Distillery",
-  "block.alkahest.distillery_bellows": "Distillation Bellows",
+  "block.alkahest.distillery_bellows": "Distillation bellows",
   "screen.alkahest.distillery_tier2.title": "Tier II Distillery",
   "screen.alkahest.distillery_tier2.input": "Input",
   "screen.alkahest.distillery_tier2.ready": "Waiting for input",
