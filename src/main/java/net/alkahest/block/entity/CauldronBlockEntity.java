@@ -130,8 +130,10 @@ public class CauldronBlockEntity extends BlockEntity {
         ItemStack output = recipe(inputs);
         if (output.isEmpty()) { message(player, "message.alkahest.no_recipe"); return false; }
         stacks.replaceAll(ignored -> ItemStack.EMPTY); setWater(false); evaporation = 0; markDirty();
-        if (output.isOf(ModItems.PURIFIED_WATER) && player instanceof ServerPlayerEntity researcher)
-            EarlyResearch.discoverReactive(researcher, world, pos);
+        if (player instanceof ServerPlayerEntity researcher) {
+            if (output.isOf(ModItems.PURIFIED_WATER)) EarlyResearch.discoverReactive(researcher, world, pos);
+            if (output.isOf(ModItems.HERBAL_PASTE)) EarlyResearch.discoverRaw(researcher, world, pos);
+        }
         if (!player.giveItemStack(output)) player.dropItem(output, false);
         message(player, "message.alkahest.cauldron_success");
         return true;

@@ -9,7 +9,19 @@ import net.alkahest.research.EarlyResearch;
 
 /** Guide with early research pages; the full research tree is not yet implemented. */
 public final class JournalScreen extends Screen {
-    private static final int PAGE_COUNT = 9;
+    private static final int GUIDE_PAGES = 7;
+    private record ResearchPage(String key, int parents, int discovered, int completed, String[] choices, int[] failed) { }
+    private static final ResearchPage[] RESEARCH = {
+        new ResearchPage("research", EarlyResearch.ROOT, EarlyResearch.DISCOVERED, EarlyResearch.COMPLETED,
+            new String[]{"sand", "sugar", "coal"}, new int[]{EarlyResearch.FAILED_SAND, EarlyResearch.FAILED_SUGAR, 0}),
+        new ResearchPage("reactive", EarlyResearch.COMPLETED, EarlyResearch.REACTIVE_DISCOVERED, EarlyResearch.REACTIVE_COMPLETED,
+            new String[]{"feather", "redstone", "clay"}, new int[]{EarlyResearch.FAILED_FEATHER, 0, EarlyResearch.FAILED_CLAY}),
+        new ResearchPage("raw", EarlyResearch.COMPLETED, EarlyResearch.RAW_DISCOVERED, EarlyResearch.RAW_COMPLETED,
+            new String[]{"copper", "iron", "cobble"}, new int[]{0, EarlyResearch.FAILED_IRON, EarlyResearch.FAILED_COBBLE}),
+        new ResearchPage("sight", EarlyResearch.RAW_COMPLETED | EarlyResearch.REACTIVE_COMPLETED, EarlyResearch.SIGHT_DISCOVERED, EarlyResearch.SIGHT_COMPLETED,
+            new String[]{"glass", "eye", "torch"}, new int[]{0, EarlyResearch.FAILED_EYE, EarlyResearch.FAILED_TORCH})
+    };
+    private static final int PAGE_COUNT = GUIDE_PAGES + RESEARCH.length;
     private final int researchFlags;
     private int page;
     public JournalScreen(int researchFlags) { super(Text.translatable("screen.alkahest.journal")); this.researchFlags = researchFlags; }
@@ -31,32 +43,25 @@ public final class JournalScreen extends Screen {
         context.fill(left + 4, top + 4, left + 248, top + 190, 0xFFF2E2B7);
         context.drawCenteredTextWithShadow(textRenderer, Text.translatable("screen.alkahest.journal"), width / 2, top + 11, 0xFFFFE390);
         context.fill(left + 12, top + 26, left + 240, top + 27, 0xFF9D784F);
-        if (page == 7 || page == 8) renderResearch(context, left, top, page == 8);
+        if (page >= GUIDE_PAGES) renderResearch(context, left, top, RESEARCH[page - GUIDE_PAGES]);
         else context.drawTextWrapped(textRenderer, Text.translatable("screen.alkahest.journal.page." + page), left + 15, top + 34, 222, 0xFF30251B);
         context.drawCenteredTextWithShadow(textRenderer, (page + 1) + " / " + PAGE_COUNT, width / 2, top + 168, 0xFF725033);
         super.render(context, mouseX, mouseY, delta);
     }
-    private void renderResearch(DrawContext context, int left, int top, boolean reactive) {
+    private void renderResearch(DrawContext context, int left, int top, ResearchPage research) {
         int color = 0xFF30251B;
-        String key = reactive ? "screen.alkahest.reactive." : "screen.alkahest.research.";
+        String key = "screen.alkahest." + research.key() + ".";
         context.drawText(textRenderer, Text.translatable(key + "title"), left + 15, top + 34, color, false);
         String state;
-        if (reactive && (researchFlags & EarlyResearch.COMPLETED) == 0) state = "hidden";
-        else if ((researchFlags & (reactive ? EarlyResearch.REACTIVE_COMPLETED : EarlyResearch.COMPLETED)) != 0) state = "completed";
-        else if ((researchFlags & (reactive ? EarlyResearch.REACTIVE_DISCOVERED : EarlyResearch.DISCOVERED)) != 0) state = "hypothesis";
+        if ((researchFlags & research.parents()) != research.parents()) state = "hidden";
+        else if ((researchFlags & research.completed()) != 0) state = "completed";
+        else if ((researchFlags & research.discovered()) != 0) state = "hypothesis";
         else state = "locked";
         context.drawTextWrapped(textRenderer, Text.translatable(key + state), left + 15, top + 49, 222, color);
         if (!state.equals("hypothesis")) return;
         context.drawTextWrapped(textRenderer, Text.translatable(key + "instructions"), left + 15, top + 72, 222, color);
-        if (reactive) {
-            drawChoice(context, left + 15, top + 108, key + "feather", EarlyResearch.FAILED_FEATHER);
-            drawChoice(context, left + 15, top + 121, key + "redstone", 0);
-            drawChoice(context, left + 15, top + 134, key + "clay", EarlyResearch.FAILED_CLAY);
-        } else {
-            drawChoice(context, left + 15, top + 108, key + "sand", EarlyResearch.FAILED_SAND);
-            drawChoice(context, left + 15, top + 121, key + "sugar", EarlyResearch.FAILED_SUGAR);
-            drawChoice(context, left + 15, top + 134, key + "coal", 0);
-        }
+        for (int i = 0; i < research.choices().length; i++)
+            drawChoice(context, left + 15, top + 108 + 13 * i, key + research.choices()[i], research.failed()[i]);
     }
     private void drawChoice(DrawContext context, int x, int y, String key, int failedBit) {
         boolean failed = (researchFlags & failedBit) != 0;

@@ -1,6 +1,8 @@
 package net.alkahest.block.entity;
 
 import net.alkahest.essence.EssenceType;
+import net.alkahest.research.EarlyResearch;
+import net.minecraft.server.network.ServerPlayerEntity;
 import net.alkahest.essence.ItemEssenceMap;
 import net.alkahest.registry.ModBlockEntities;
 import net.alkahest.registry.ModDataComponents;
@@ -34,8 +36,14 @@ public class DistilleryBlockEntity extends BlockEntity {
         progress = 0; markDirty(); message(player, "message.alkahest.distillery_started");
     }
     public void collect(PlayerEntity player) {
-        if (stacks.get(1).isEmpty()) { message(player, "message.alkahest.distillery_wait"); return; }
+        if (stacks.get(1).isEmpty()) {
+            if (!stacks.get(0).isEmpty()) player.sendMessage(Text.translatable("message.alkahest.distillery_progress", Math.min(100, progress * 100 / 1200)), true);
+            else message(player, "message.alkahest.distillery_wait");
+            return;
+        }
         ItemStack output = stacks.get(1); stacks.set(1, ItemStack.EMPTY);
+        if (world != null && !world.isClient && player instanceof ServerPlayerEntity researcher && ModItems.CRYSTALS.containsValue(output.getItem()))
+            EarlyResearch.discoverSight(researcher, world, pos);
         if (!player.giveItemStack(output)) player.dropItem(output, false);
         markDirty();
     }
