@@ -175,6 +175,9 @@ check('recipes.size() * 17' in journal and 'rowY = top + i * 17 - scroll' in jou
       'the synthesis list must scroll instead of silently hiding later recipes')
 check('new ItemStack(ModItems.MIASMA)' in recipe_source and 'Items.GLASS_BOTTLE, List.of(ModItems.CAUSTIC_SLIME)' in recipe_source,
       'the specification miasma synthesis needs a bottle and a pedestal slime')
+check('EssenceType.POTENTIA, 15, EssenceType.AER, 10' in recipe_source, 'the crystal lightning synthesis must retain its specification price')
+check('StartedRecipe' in core and 'startedRecipeKey' in core, 'an active synthesis must retain its recipe identity')
+check('uniqueForBase' in hud and 'matrix.recipe()' in hud, 'the monocle must use the matched recipe, not guess a shared base')
 check('RECIPES_PAGE' in journal, 'the synthesis list needs its own page in the journal')
 check('recipe.cost()' in journal, 'the list must show what a synthesis costs in essence')
 check('insertBase' in core and 'takeFromCore' in core, 'the core must accept and hand back items')

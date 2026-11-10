@@ -5,6 +5,7 @@ import net.alkahest.registry.ModItems;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
+import net.minecraft.registry.Registries;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -35,7 +36,10 @@ public record MatrixRecipe(Item base, List<Item> components, ItemStack output,
             EssenceType.METALLUM, 8, EssenceType.LUX, 6, EssenceType.ORDO, 4),
         // The specification's Matrix recipe; the earlier cauldron recipe remains available.
         synthesis(Items.GLASS_BOTTLE, List.of(ModItems.CAUSTIC_SLIME), new ItemStack(ModItems.MIASMA),
-            EssenceType.PERDITIO, 20, EssenceType.MORTUUS, 15, EssenceType.AQUA, 10)
+            EssenceType.PERDITIO, 20, EssenceType.MORTUUS, 15, EssenceType.AQUA, 10),
+        // The specification's alternative; the lightning-rod recipe stays available as well.
+        synthesis(Items.GLASS_BOTTLE, List.of(ModItems.CRYSTALS.get(EssenceType.IGNIS), ModItems.CRYSTALS.get(EssenceType.AER)),
+            new ItemStack(ModItems.LIGHTNING_IN_A_BOTTLE), EssenceType.POTENTIA, 15, EssenceType.AER, 10)
     );
 
     private static MatrixRecipe synthesis(Item base, List<Item> components, ItemStack output, Object... essence) {
@@ -62,20 +66,50 @@ public record MatrixRecipe(Item base, List<Item> components, ItemStack output,
         return missingComponents(given).isEmpty();
     }
 
-    public static MatrixRecipe find(ItemStack base, List<ItemStack> given) {
-        if (base == null || base.isEmpty()) return null;
-        for (MatrixRecipe recipe : ALL) {
-            if (base.getItem() != recipe.base) continue;
-            if (recipe.accepts(given)) return recipe;
-        }
-        return null;
+    /** Stable identity includes the ingredients, output and price; never an index in the list. */
+    public String key() {
+        List<String> parts = new ArrayList<>();
+        for (Item component : components) parts.add(Registries.ITEM.getId(component).toString());
+        Collections.sort(parts);
+        List<String> prices = new ArrayList<>();
+        cost.forEach((type, amount) -> prices.add(type.asString() + "=" + amount));
+        Collections.sort(prices);
+        return Registries.ITEM.getId(base) + "|" + String.join(",", parts) + "|"
+            + Registries.ITEM.getId(output.getItem()) + "*" + output.getCount() + "|" + String.join(",", prices);
     }
 
-    /** The cheapest recipe for the base item, used to explain what is still missing. */
-    public static MatrixRecipe cheapestFor(ItemStack base) {
+    /** Extra unrelated pedestal items are allowed, but two complete matches are ambiguous. */
+    public static List<MatrixRecipe> matches(ItemStack base, List<ItemStack> given) {
+        List<MatrixRecipe> matches = new ArrayList<>();
+        if (base == null || base.isEmpty()) return matches;
+        for (MatrixRecipe recipe : ALL) {
+            if (base.getItem() == recipe.base && recipe.accepts(given)) matches.add(recipe);
+        }
+        return matches;
+    }
+
+    public static MatrixRecipe find(ItemStack base, List<ItemStack> given) {
+        List<MatrixRecipe> matches = matches(base, given);
+        return matches.size() == 1 ? matches.getFirst() : null;
+    }
+
+    /** A base-only preview is safe only when the base has exactly one possible recipe. */
+    public static MatrixRecipe uniqueForBase(ItemStack base) {
         if (base == null || base.isEmpty()) return null;
-        for (MatrixRecipe recipe : ALL) if (base.getItem() == recipe.base) return recipe;
-        return null;
+        MatrixRecipe result = null;
+        for (MatrixRecipe recipe : ALL) {
+            if (base.getItem() != recipe.base) continue;
+            if (result != null) return null;
+            result = recipe;
+        }
+        return result;
+    }
+
+    public static boolean hasMultipleForBase(ItemStack base) {
+        if (base == null || base.isEmpty()) return false;
+        int count = 0;
+        for (MatrixRecipe recipe : ALL) if (base.getItem() == recipe.base && ++count > 1) return true;
+        return false;
     }
 
     public static int price(Map<EssenceType, Integer> cost) {

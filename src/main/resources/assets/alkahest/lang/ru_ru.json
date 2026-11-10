@@ -357,6 +357,8 @@
   "message.alkahest.matrix_price": "Для синтеза нужно: %s",
   "message.alkahest.matrix_unformed": "Матрица не собрана: 8 Опор по углам куба 3×3×3 и 18 Алхимических кирпичей между ними",
   "screen.alkahest.monocle.matrix_essence": "◆ %s: %s/%s · нужно ещё %s",
+  "screen.alkahest.matrix.ambiguous": "Несколько рецептов: уберите лишние компоненты с пьедесталов",
+  "screen.alkahest.monocle.matrix_choose_recipe": "Разложите компоненты одного рецепта из журнала",
   "screen.alkahest.matrix.needs_start": "ПКМ амулетом или философским камнем для запуска",
   "item.alkahest.philosophers_stone": "Философский камень (прототип)",
   "screen.alkahest.monocle.matrix_core": "Матрица: куб 3×3×3",

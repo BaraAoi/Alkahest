@@ -354,6 +354,91 @@ public class MatrixGameTests implements FabricGameTest {
         c.complete();
     }
 
+    /** The specification's lightning recipe shares a bottle base with miasma. */
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void bottledLightningFromTwoCrystalPedestals(TestContext c) {
+        BlockPos pos = build(c);
+        wake(c);
+        var core = core(c);
+        core.setStack(MatrixCoreBlockEntity.BASE, new ItemStack(Items.GLASS_BOTTLE));
+        pedestal(c, 7, CY - 1, 7, new ItemStack(ModItems.CRYSTALS.get(EssenceType.IGNIS)));
+        pedestal(c, 0, CY - 1, CZ, new ItemStack(ModItems.CRYSTALS.get(EssenceType.AER)));
+        pedestal(c, 6, CY - 1, CZ, new ItemStack(Items.GOLD_INGOT));
+        var ignis = (net.alkahest.block.entity.MatrixPedestalBlockEntity) c.getWorld().getBlockEntity(c.getAbsolutePos(new BlockPos(7, CY - 1, 7)));
+        var aerCrystal = (net.alkahest.block.entity.MatrixPedestalBlockEntity) c.getWorld().getBlockEntity(c.getAbsolutePos(new BlockPos(0, CY - 1, CZ)));
+        var extra = (net.alkahest.block.entity.MatrixPedestalBlockEntity) c.getWorld().getBlockEntity(c.getAbsolutePos(new BlockPos(6, CY - 1, CZ)));
+        var potentia = jar(c, 0, CY, 0, EssenceType.POTENTIA, 20);
+        var aer = jar(c, 6, CY, 0, EssenceType.AER, 12);
+        c.assertTrue(core.recipe() != null && core.recipe().output().isOf(ModItems.LIGHTNING_IN_A_BOTTLE), "Both crystals select lightning, not miasma");
+        c.assertTrue(core.recipe().cost().get(EssenceType.POTENTIA) == 15 && core.recipe().cost().get(EssenceType.AER) == 10,
+            "The monocle's selected recipe has the specification price");
+        start(c);
+        run(c.getWorld(), pos, MatrixCoreBlockEntity.DURATION + 4);
+        c.assertTrue(core.getStack(MatrixCoreBlockEntity.OUTPUT).isOf(ModItems.LIGHTNING_IN_A_BOTTLE), "The bottle turns into lightning");
+        c.assertTrue(ignis.isEmpty() && aerCrystal.isEmpty(), "Both crystals are absorbed");
+        c.assertTrue(extra.held().isOf(Items.GOLD_INGOT), "An unrelated pedestal item survives");
+        c.assertTrue(potentia.contents().total() == 5 && aer.contents().total() == 2, "The exact price is paid");
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void conflictingBottleRecipesRefuseToGuess(TestContext c) {
+        BlockPos pos = build(c);
+        wake(c);
+        var core = core(c);
+        core.setStack(MatrixCoreBlockEntity.BASE, new ItemStack(Items.GLASS_BOTTLE));
+        pedestal(c, 7, CY - 1, 7, new ItemStack(ModItems.CAUSTIC_SLIME));
+        pedestal(c, 0, CY - 1, CZ, new ItemStack(ModItems.CRYSTALS.get(EssenceType.IGNIS)));
+        pedestal(c, 6, CY - 1, CZ, new ItemStack(ModItems.CRYSTALS.get(EssenceType.AER)));
+        var player = c.createMockPlayer(net.minecraft.world.GameMode.SURVIVAL);
+        var amulet = new ItemStack(ModItems.ALKAHEST_AMULET);
+        c.assertTrue(core.recipe() == null && core.status() == MatrixCoreBlockEntity.STATUS_AMBIGUOUS,
+            "Both complete recipes are ambiguous instead of silently choosing one");
+        c.assertFalse(core.startWith(amulet, player), "A focus cannot start an ambiguous recipe");
+        c.assertTrue(amulet.getOrDefault(net.alkahest.registry.ModDataComponents.AMULET_USES_STEP, 0) == 0,
+            "An ambiguous attempt costs no amulet use");
+        run(c.getWorld(), pos, 20);
+        c.assertTrue(core.progress() == 0 && core.getStack(MatrixCoreBlockEntity.OUTPUT).isEmpty(), "No synthesis runs");
+        var slime = (net.alkahest.block.entity.MatrixPedestalBlockEntity) c.getWorld().getBlockEntity(c.getAbsolutePos(new BlockPos(7, CY - 1, 7)));
+        slime.takeOne();
+        c.assertTrue(core.recipe() != null && core.recipe().output().isOf(ModItems.LIGHTNING_IN_A_BOTTLE), "Removing slime selects lightning");
+        c.assertTrue(core.startWith(amulet, player), "The selected recipe can now start");
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void changedRecipeCancelsWithoutConsumingItems(TestContext c) {
+        BlockPos pos = build(c);
+        wake(c);
+        var core = core(c);
+        core.setStack(MatrixCoreBlockEntity.BASE, new ItemStack(Items.GLASS_BOTTLE));
+        pedestal(c, 7, CY - 1, 7, new ItemStack(ModItems.CAUSTIC_SLIME));
+        var slime = (net.alkahest.block.entity.MatrixPedestalBlockEntity) c.getWorld().getBlockEntity(c.getAbsolutePos(new BlockPos(7, CY - 1, 7)));
+        jar(c, 0, CY, 0, EssenceType.PERDITIO, 20);
+        start(c);
+        run(c.getWorld(), pos, 50);
+        int buffered = core.stored(EssenceType.PERDITIO);
+        c.assertTrue(buffered > 0, "Some essence was reserved before the ingredients changed");
+        var registry = c.getWorld().getRegistryManager();
+        var oldSave = core.createNbt(registry);
+        oldSave.remove("StartedRecipe");
+        var legacy = new MatrixCoreBlockEntity(pos, core.getCachedState());
+        legacy.readComponentlessNbt(oldSave, registry);
+        c.assertFalse(legacy.started(), "An old in-flight save without an identity stops instead of guessing");
+        c.assertTrue(legacy.getStack(MatrixCoreBlockEntity.BASE).isOf(Items.GLASS_BOTTLE) && legacy.stored(EssenceType.PERDITIO) == buffered,
+            "Migration keeps the base and reserved essence");
+        slime.takeOne();
+        pedestal(c, 0, CY - 1, CZ, new ItemStack(ModItems.CRYSTALS.get(EssenceType.IGNIS)));
+        pedestal(c, 6, CY - 1, CZ, new ItemStack(ModItems.CRYSTALS.get(EssenceType.AER)));
+        run(c.getWorld(), pos, 1);
+        c.assertFalse(core.started(), "Changing to a different recipe cancels instead of switching mid-synthesis");
+        c.assertTrue(core.stored(EssenceType.PERDITIO) == buffered && core.getStack(MatrixCoreBlockEntity.BASE).isOf(Items.GLASS_BOTTLE),
+            "Cancellation retains the base and reserved essence");
+        c.assertTrue(core.getStack(MatrixCoreBlockEntity.OUTPUT).isEmpty(), "Changing ingredients creates no result");
+        c.assertTrue(core.recipe() != null && core.recipe().output().isOf(ModItems.LIGHTNING_IN_A_BOTTLE), "The new recipe is ready for an explicit start");
+        c.complete();
+    }
+
     /** String becomes three binding salts, paid for with essence taken straight out of the jars. */
     @GameTest(templateName = EMPTY_STRUCTURE)
     public void synthesisesBindingSaltFromJars(TestContext c) {

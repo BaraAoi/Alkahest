@@ -54,13 +54,14 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
 
     public static final int STATUS_IDLE = 0, STATUS_WORKING = 1, STATUS_NO_ESSENCE = 2,
         STATUS_BLOCKED = 3, STATUS_UNFORMED = 4, STATUS_NO_RECIPE = 5, STATUS_ASLEEP = 6, STATUS_DONE = 7,
-        STATUS_NEEDS_START = 8;
+        STATUS_NEEDS_START = 8, STATUS_AMBIGUOUS = 9;
 
     private final DefaultedList<ItemStack> stacks = DefaultedList.ofSize(2, ItemStack.EMPTY);
     private JarContentsComponent buffer = JarContentsComponent.EMPTY;
     private int progress;
     private boolean awake;
     private boolean started;
+    private String startedRecipeKey = "";
 
     /** Essence streams that are still crossing the air; purely a visual, never saved. */
     private final List<EssenceFlight> flights = new ArrayList<>();
@@ -115,7 +116,9 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
 
     public MatrixRecipe recipe() {
         if (world == null || stacks.get(BASE).isEmpty()) return null;
-        return MatrixRecipe.find(stacks.get(BASE), pedestalItems());
+        MatrixRecipe found = MatrixRecipe.find(stacks.get(BASE), pedestalItems());
+        if (started && (found == null || !found.key().equals(startedRecipeKey))) return null;
+        return found;
     }
 
     public int status() {
@@ -123,7 +126,10 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
         if (!awake) return STATUS_ASLEEP;
         if (stacks.get(BASE).isEmpty() && !stacks.get(OUTPUT).isEmpty()) return STATUS_DONE;
         MatrixRecipe recipe = recipe();
-        if (recipe == null) return stacks.get(BASE).isEmpty() ? STATUS_IDLE : STATUS_NO_RECIPE;
+        if (recipe == null) {
+            if (stacks.get(BASE).isEmpty()) return STATUS_IDLE;
+            return MatrixRecipe.matches(stacks.get(BASE), pedestalItems()).size() > 1 ? STATUS_AMBIGUOUS : STATUS_NO_RECIPE;
+        }
         if (!canStoreOutput(recipe.output())) return STATUS_BLOCKED;
         if (!started) return STATUS_NEEDS_START;
         if (progress >= DURATION) return STATUS_NO_ESSENCE;
@@ -145,7 +151,7 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
     public void setAwake(World world, BlockPos pos, boolean value) {
         if (awake == value) return;
         awake = value;
-        if (!value) { progress = 0; started = false; }
+        if (!value) { progress = 0; started = false; startedRecipeKey = ""; }
         BlockState state = world.getBlockState(pos);
         if (state.getBlock() instanceof MatrixCoreBlock && state.get(MatrixCoreBlock.AWAKE) != value) {
             world.setBlockState(pos, state.with(MatrixCoreBlock.AWAKE, value), Block.NOTIFY_ALL);
@@ -196,6 +202,7 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
         if (recipe == null || !self.canStoreOutput(recipe.output())) {
             if (self.started || self.progress != 0) {
                 self.started = false;
+                self.startedRecipeKey = "";
                 self.progress = 0;
                 self.markDirty();
                 self.sync();
@@ -223,6 +230,7 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
         }
         self.consumeItems(recipe);
         self.started = false;
+        self.startedRecipeKey = "";
         self.progress = 0;
         self.markDirty();
         self.sync();
@@ -238,6 +246,7 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
             AlkahestAmuletItem amulet = (AlkahestAmuletItem) focus.getItem();
             if (!amulet.consumeUseStack(player, focus)) return false;
         } else if (!focus.isOf(ModItems.PHILOSOPHERS_STONE)) return false;
+        startedRecipeKey = recipe.key();
         started = true;
         progress = 0;
         markDirty();
@@ -504,6 +513,7 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
             case STATUS_ASLEEP -> "asleep";
             case STATUS_DONE -> "done";
             case STATUS_NEEDS_START -> "needs_start";
+            case STATUS_AMBIGUOUS -> "ambiguous";
             default -> "ready";
         });
     }
@@ -541,6 +551,7 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
         if (!base.isEmpty()) {
             stacks.set(BASE, ItemStack.EMPTY);
             started = false;
+            startedRecipeKey = "";
             progress = 0;
             give(player, base);
             markDirty();
@@ -626,7 +637,7 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
     @Override public ItemStack removeStack(int slot, int amount) {
         ItemStack removed = Inventories.splitStack(stacks, slot, amount);
         if (!removed.isEmpty()) {
-            if (slot != OUTPUT) { progress = 0; started = false; }
+            if (slot != OUTPUT) { progress = 0; started = false; startedRecipeKey = ""; }
             markDirty();
         }
         return removed;
@@ -634,17 +645,17 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
     @Override public ItemStack removeStack(int slot) {
         ItemStack removed = Inventories.removeStack(stacks, slot);
         if (!removed.isEmpty()) {
-            if (slot != OUTPUT) { progress = 0; started = false; }
+            if (slot != OUTPUT) { progress = 0; started = false; startedRecipeKey = ""; }
             markDirty();
         }
         return removed;
     }
     @Override public void setStack(int slot, ItemStack stack) {
         stacks.set(slot, stack);
-        if (slot != OUTPUT) { progress = 0; started = false; }
+        if (slot != OUTPUT) { progress = 0; started = false; startedRecipeKey = ""; }
         markDirty();
     }
-    @Override public void clear() { stacks.clear(); progress = 0; started = false; markDirty(); }
+    @Override public void clear() { stacks.clear(); progress = 0; started = false; startedRecipeKey = ""; markDirty(); }
     @Override public boolean canPlayerUse(PlayerEntity player) { return Inventory.canPlayerUse(this, player); }
     @Override public boolean isValid(int slot, ItemStack stack) { return slot != OUTPUT; }
 
@@ -654,6 +665,7 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
         nbt.putInt("Progress", progress);
         nbt.putBoolean("Awake", awake);
         nbt.putBoolean("Started", started);
+        nbt.putString("StartedRecipe", started ? startedRecipeKey : "");
         nbt.putBoolean("Active", active);
         nbt.put("Buffer", JarContentsComponent.CODEC.encodeStart(NbtOps.INSTANCE, buffer)
             .result().orElseGet(NbtCompound::new));
@@ -667,7 +679,13 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
         progress = nbt.getInt("Progress");
         awake = nbt.getBoolean("Awake");
         started = nbt.getBoolean("Started");
-        if (!started) progress = 0;
+        startedRecipeKey = nbt.getString("StartedRecipe");
+        // Old running saves lack a recipe identity; stop safely rather than guessing a new recipe.
+        if (!started || startedRecipeKey.isEmpty()) {
+            started = false;
+            startedRecipeKey = "";
+            progress = 0;
+        }
         active = nbt.getBoolean("Active");
         buffer = JarContentsComponent.CODEC.parse(NbtOps.INSTANCE, nbt.get("Buffer"))
             .result().orElse(JarContentsComponent.EMPTY);
@@ -683,6 +701,7 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
         stacks.clear();
         progress = 0;
         started = false;
+        startedRecipeKey = "";
     }
 
     /**

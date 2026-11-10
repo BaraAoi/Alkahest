@@ -357,6 +357,8 @@
   "message.alkahest.matrix_price": "The synthesis needs: %s",
   "message.alkahest.matrix_unformed": "Matrix is not assembled: 8 pillars on the corners of a 3×3×3 cube and 18 alchemical bricks between them",
   "screen.alkahest.monocle.matrix_essence": "◆ %s: %s/%s · still needs %s",
+  "screen.alkahest.matrix.ambiguous": "Multiple recipes match: remove extra pedestal ingredients",
+  "screen.alkahest.monocle.matrix_choose_recipe": "Arrange the components of one recipe from the journal",
   "screen.alkahest.matrix.needs_start": "Use an amulet or philosopher’s stone to start",
   "item.alkahest.philosophers_stone": "Philosopher’s Stone (prototype)",
   "screen.alkahest.monocle.matrix_core": "Matrix: 3×3×3 cube",
