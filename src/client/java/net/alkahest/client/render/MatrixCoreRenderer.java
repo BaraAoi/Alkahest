@@ -101,7 +101,9 @@ public final class MatrixCoreRenderer implements BlockEntityRenderer<MatrixCoreB
         matrices.pop();
 
         // The item the player put in floats in the hollow of the cube and is drunk by the essence.
-        ItemStack held = entity.getStack(MatrixCoreBlockEntity.BASE);
+        // A finished result replaces the base visually until the player takes it.
+        ItemStack held = entity.getStack(MatrixCoreBlockEntity.OUTPUT);
+        if (held.isEmpty()) held = entity.getStack(MatrixCoreBlockEntity.BASE);
         if (!held.isEmpty()) {
             float bob = (float) Math.sin(time * 0.06) * 0.04f;
             matrices.push();

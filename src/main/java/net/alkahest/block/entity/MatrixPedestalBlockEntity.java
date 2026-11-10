@@ -79,6 +79,8 @@ public class MatrixPedestalBlockEntity extends BlockEntity {
 
     @Override protected void readNbt(NbtCompound nbt, RegistryWrapper.WrapperLookup registries) {
         super.readNbt(nbt, registries);
+        // Empty slots are omitted from NBT, so remove stale client-side contents first.
+        storage.clear();
         Inventories.readNbt(nbt, storage, registries);
     }
 

@@ -154,6 +154,12 @@ core = (JAVA / 'block/entity/MatrixCoreBlockEntity.java').read_text()
 check('sendToAround' in core, 'the core must push its contents instead of leaving ghost items')
 pedestal = (JAVA / 'block/entity/MatrixPedestalBlockEntity.java').read_text()
 check('sendToAround' in pedestal, 'the pedestal must push its contents instead of leaving ghost items')
+check('stacks.clear();\n        Inventories.readNbt' in core, 'core must clear omitted NBT slots before reading')
+check('storage.clear();\n        Inventories.readNbt' in pedestal, 'pedestal must clear omitted NBT slots before reading')
+check('ItemStackParticleEffect' in core and 'advanceItemFlights' in core, 'consumed items must fly into the core')
+check('MatrixCoreBlockEntity.OUTPUT' in renderer, 'the finished product must be visible')
+check('screen.alkahest.matrix.index_base' in journal and 'screen.alkahest.matrix.index_parts' in journal,
+      'the recipe tooltip must separate the base and pedestal components')
 for block in ('MatrixPillarBlock', 'AlchemicalBrickBlock', 'MatrixCoreBlock'):
     text = (JAVA / f'block/custom/{block}.java').read_text()
     check('interactNearby' in text, f'{block} must answer to the same click as the core')

@@ -70,6 +70,37 @@ public class MatrixGameTests implements FabricGameTest {
         for (int i = 0; i < ticks; i++) MatrixCoreBlockEntity.tick(world, pos, core);
     }
 
+    /** Reproduce client update packets on already-populated replicas, including omitted empty slots. */
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void emptyUpdatesClearClientReplicas(TestContext c) {
+        BlockPos pos = build(c);
+        var registry = c.getWorld().getRegistryManager();
+        var source = core(c);
+        var replica = new MatrixCoreBlockEntity(pos, source.getCachedState());
+        source.setStack(MatrixCoreBlockEntity.BASE, new ItemStack(Items.COAL));
+        replica.readComponentlessNbt(source.toUpdatePacket().getNbt(), registry);
+        c.assertTrue(replica.getStack(MatrixCoreBlockEntity.BASE).isOf(Items.COAL), "Replica receives the base");
+        source.setStack(MatrixCoreBlockEntity.BASE, ItemStack.EMPTY);
+        source.setStack(MatrixCoreBlockEntity.OUTPUT, new ItemStack(Items.DIAMOND));
+        replica.readComponentlessNbt(source.toUpdatePacket().getNbt(), registry);
+        c.assertTrue(replica.getStack(MatrixCoreBlockEntity.BASE).isEmpty(), "Consumed base is removed on client");
+        c.assertTrue(replica.getStack(MatrixCoreBlockEntity.OUTPUT).isOf(Items.DIAMOND), "Replica receives product");
+        source.setStack(MatrixCoreBlockEntity.OUTPUT, ItemStack.EMPTY);
+        replica.readComponentlessNbt(source.toUpdatePacket().getNbt(), registry);
+        c.assertTrue(replica.isEmpty(), "Taken product no longer floats on client");
+
+        pedestal(c, CX + 3, CY, CZ, new ItemStack(Items.GOLD_INGOT));
+        BlockPos pedestalPos = c.getAbsolutePos(new BlockPos(CX + 3, CY, CZ));
+        var pedestal = (net.alkahest.block.entity.MatrixPedestalBlockEntity) c.getWorld().getBlockEntity(pedestalPos);
+        var replicaPedestal = new net.alkahest.block.entity.MatrixPedestalBlockEntity(pedestalPos, pedestal.getCachedState());
+        replicaPedestal.readComponentlessNbt(pedestal.toUpdatePacket().getNbt(), registry);
+        c.assertTrue(replicaPedestal.held().isOf(Items.GOLD_INGOT), "Replica receives the pedestal item");
+        pedestal.takeOne();
+        replicaPedestal.readComponentlessNbt(pedestal.toUpdatePacket().getNbt(), registry);
+        c.assertTrue(replicaPedestal.isEmpty(), "Taken pedestal item no longer floats on client");
+        c.complete();
+    }
+
     /** A lone core is nothing; the cube needs four bricks in every middle layer and pillars on the corners. */
     @GameTest(templateName = EMPTY_STRUCTURE)
     public void cubeNeedsPillarsAndBricks(TestContext c) {

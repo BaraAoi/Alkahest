@@ -216,6 +216,8 @@ public final class JournalScreen extends Screen {
 
     private void drawRecipeRow(DrawContext c, MatrixRecipe recipe, int iconX, int iconY) {
         int cursor = iconX;
+        // The framed icon is the base placed in the core; following icons go on pedestals.
+        c.fill(cursor - 1, iconY, cursor + 16, iconY + 16, 0xAAAF8B40);
         c.drawItem(new ItemStack(recipe.base()), cursor, iconY);
         cursor += 17;
         for (Item component : recipe.components()) {
@@ -246,8 +248,10 @@ public final class JournalScreen extends Screen {
             if (parts.length() > 0) parts.append(" + ");
             parts.append(new ItemStack(component).getName().getString());
         }
-        lines.add(Text.literal(Text.translatable("screen.alkahest.matrix.index_from").getString() + ": "
-            + recipe.base().getName().getString() + (parts.length() > 0 ? " + " + parts : ""))
+        lines.add(Text.translatable("screen.alkahest.matrix.index_base", recipe.base().getName())
+            .formatted(Formatting.GOLD));
+        lines.add(Text.translatable("screen.alkahest.matrix.index_parts",
+            parts.length() > 0 ? parts.toString() : Text.translatable("screen.alkahest.matrix.index_none").getString())
             .formatted(Formatting.GRAY));
         StringBuilder cost = new StringBuilder();
         for (Map.Entry<EssenceType, Integer> entry : recipe.cost().entrySet()) {

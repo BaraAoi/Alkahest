@@ -20,6 +20,8 @@ import net.minecraft.nbt.NbtOps;
 import net.minecraft.network.packet.Packet;
 import net.minecraft.network.packet.s2c.play.BlockEntityUpdateS2CPacket;
 import net.minecraft.particle.DustParticleEffect;
+import net.minecraft.particle.ItemStackParticleEffect;
+import net.minecraft.particle.ParticleTypes;
 import net.minecraft.registry.RegistryWrapper;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
@@ -48,7 +50,7 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
     public static final int BASE = 0, OUTPUT = 1;
 
     public static final int STATUS_IDLE = 0, STATUS_WORKING = 1, STATUS_NO_ESSENCE = 2,
-        STATUS_BLOCKED = 3, STATUS_UNFORMED = 4, STATUS_NO_RECIPE = 5, STATUS_ASLEEP = 6;
+        STATUS_BLOCKED = 3, STATUS_UNFORMED = 4, STATUS_NO_RECIPE = 5, STATUS_ASLEEP = 6, STATUS_DONE = 7;
 
     private final DefaultedList<ItemStack> stacks = DefaultedList.ofSize(2, ItemStack.EMPTY);
     private JarContentsComponent buffer = JarContentsComponent.EMPTY;
@@ -57,6 +59,7 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
 
     /** Essence streams that are still crossing the air; purely a visual, never saved. */
     private final List<EssenceFlight> flights = new ArrayList<>();
+    private final List<ItemFlight> itemFlights = new ArrayList<>();
 
     public MatrixCoreBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.MATRIX_CORE, pos, state);
@@ -111,6 +114,7 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
     public int status() {
         if (!formed()) return STATUS_UNFORMED;
         if (!awake) return STATUS_ASLEEP;
+        if (stacks.get(BASE).isEmpty() && !stacks.get(OUTPUT).isEmpty()) return STATUS_DONE;
         MatrixRecipe recipe = recipe();
         if (recipe == null) return stacks.get(BASE).isEmpty() ? STATUS_IDLE : STATUS_NO_RECIPE;
         if (!canStoreOutput(recipe.output())) return STATUS_BLOCKED;
@@ -169,7 +173,10 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
 
     public static void tick(World world, BlockPos pos, MatrixCoreBlockEntity self) {
         if (world.isClient) return;
-        if (world instanceof ServerWorld server) self.advanceFlights(server);
+        if (world instanceof ServerWorld server) {
+            self.advanceFlights(server);
+            self.advanceItemFlights(server);
+        }
         if (!self.formed()) {
             if (self.awake) self.setAwake(world, pos, false);
             if (self.progress != 0) { self.progress = 0; self.markDirty(); }
@@ -209,7 +216,8 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
             for (MatrixPedestalBlockEntity pedestal : pedestals()) {
                 if (pedestal.isEmpty()) continue;
                 if (pedestal.held().getItem() != component) continue;
-                pedestal.takeOne();
+                ItemStack absorbed = pedestal.takeOne();
+                launchItemFlight(pedestal.getPos(), absorbed);
                 break;
             }
         }
@@ -318,6 +326,33 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
         return best;
     }
 
+    /** Short visual-only stream of fragments from a consumed pedestal item to the core. */
+    private record ItemFlight(BlockPos from, ItemStack item, long start) { }
+    private static final int ITEM_FLIGHT_TICKS = 28;
+
+    private void launchItemFlight(BlockPos from, ItemStack item) {
+        if (world != null && !item.isEmpty())
+            itemFlights.add(new ItemFlight(from.toImmutable(), item.copyWithCount(1), world.getTime()));
+    }
+
+    private void advanceItemFlights(ServerWorld server) {
+        Iterator<ItemFlight> iterator = itemFlights.iterator();
+        while (iterator.hasNext()) {
+            ItemFlight flight = iterator.next();
+            int age = (int) (server.getTime() - flight.start());
+            if (age < 0 || age > ITEM_FLIGHT_TICKS) { iterator.remove(); continue; }
+            double t = age / (double) ITEM_FLIGHT_TICKS;
+            double x = flight.from().getX() + 0.5 + (pos.getX() - flight.from().getX()) * t;
+            double y = flight.from().getY() + 1.15 + (pos.getY() - flight.from().getY() - 0.1) * t
+                + Math.sin(t * Math.PI) * 0.5;
+            double z = flight.from().getZ() + 0.5 + (pos.getZ() - flight.from().getZ()) * t;
+            server.spawnParticles(new ItemStackParticleEffect(ParticleTypes.ITEM, flight.item()),
+                x, y, z, 2, 0.04, 0.04, 0.04, 0.005);
+            server.spawnParticles(new DustParticleEffect(new Vector3f(0.85f, 0.55f, 1f), 1.0f),
+                x, y, z, 2, 0.06, 0.06, 0.06, 0.005);
+        }
+    }
+
     /** Ticks one unit of essence spends leaving the jar, crossing the air and soaking into the core. */
     public static final int FLIGHT_TICKS = 52;
     private static final int FLIGHT_OOZE = 14;
@@ -412,6 +447,7 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
             case STATUS_UNFORMED -> "unformed";
             case STATUS_NO_RECIPE -> "no_recipe";
             case STATUS_ASLEEP -> "asleep";
+            case STATUS_DONE -> "done";
             default -> "ready";
         });
     }
@@ -498,6 +534,10 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
             server.spawnParticles(new DustParticleEffect(new Vector3f(0.85f, 0.55f, 1f), 1.1f),
                 pos.getX() + 0.5, pos.getY() + 0.6, pos.getZ() + 0.5, 40, 1.2, 1.2, 1.2, 0.08);
             world.playSound(null, pos, SoundEvents.BLOCK_AMETHYST_BLOCK_CHIME, SoundCategory.BLOCKS, 1f, 0.6f);
+            for (var player : server.getPlayers()) {
+                if (player.squaredDistanceTo(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) <= 32 * 32)
+                    player.sendMessage(Text.translatable("message.alkahest.matrix_complete"), false);
+            }
         }
     }
 
@@ -586,6 +626,8 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
 
     @Override protected void readNbt(NbtCompound nbt, RegistryWrapper.WrapperLookup registries) {
         super.readNbt(nbt, registries);
+        // Inventory NBT omits empty slots; a client replica must discard its old values.
+        stacks.clear();
         Inventories.readNbt(nbt, stacks, registries);
         progress = nbt.getInt("Progress");
         awake = nbt.getBoolean("Awake");
