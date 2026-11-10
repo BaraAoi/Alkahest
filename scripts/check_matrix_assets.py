@@ -140,6 +140,13 @@ check('ring(' in renderer and 'pyramid(' in renderer, 'the halo needs rings and 
 check('MatrixCoreBlock.AWAKE' in renderer, 'the halo must follow the awake state')
 check('matrix_ring_metal.png' in renderer, 'the rings are drawn with the forged metal texture')
 check('getEntitySolid' in renderer, 'the rings must read as solid metal, not glass')
+check('PYRAMID_ORBIT' in renderer, 'the pyramid orbit speed must stay an explicit constant')
+orbit = float(re.search(r'PYRAMID_ORBIT\s*=\s*([0-9.]+)f', renderer).group(1))
+check(orbit <= 0.05, f'the pyramids must glide, not spin ({orbit} rad/tick)')
+dormant = renderer.split('if (!awake) {', 1)[1].split('} else {', 1)[0]
+check('time' not in dormant, 'the dormant halo must be completely still')
+check(len(re.findall(r'\{\s*[0-9.]+f,\s*[0-9.]+f\}', renderer.split('RINGS =', 1)[1].split(';', 1)[0])) == 3,
+      'the halo needs three rings at separate radii')
 
 gametest_mod = load(GAMETEST / 'resources/fabric.mod.json')
 check('net.alkahest.test.MatrixGameTests' in gametest_mod['entrypoints']['fabric-gametest'],
