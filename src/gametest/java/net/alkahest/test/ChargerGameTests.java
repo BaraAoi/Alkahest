@@ -57,6 +57,10 @@ public class ChargerGameTests implements FabricGameTest {
         ItemStack wand = new ItemStack(ModItems.WANDS.get(EssenceType.ORDO));
         wand.set(ModDataComponents.ESSENCE_CHARGE, 60); player.getInventory().setStack(0, wand);
         context.runAtTick(25, () -> {
+            var bounds = net.minecraft.util.math.Box.of(net.minecraft.util.math.Vec3d.ofCenter(pos), 64, 64, 64);
+            var players = context.getWorld().getEntitiesByClass(net.minecraft.entity.player.PlayerEntity.class, bounds, p -> p.isAlive() && !p.isSpectator());
+            context.assertTrue(players.contains(player), "Mock player must be findable in world: count=" + players.size() + ", alive=" + player.isAlive() + ", pos=" + player.getPos());
+            context.assertTrue(context.getWorld().getBlockEntity(pos) instanceof EssenceChargerBlockEntity, "Charger block entity must remain present");
             context.assertTrue(wand.get(ModDataComponents.ESSENCE_CHARGE) >= 70, "World ticker finds nearby player and charges wand");
             context.assertTrue(((JarBlockEntity)placed).contents().total() < 3, "Charging consumes matching essence");
             int charge = wand.get(ModDataComponents.ESSENCE_CHARGE);
