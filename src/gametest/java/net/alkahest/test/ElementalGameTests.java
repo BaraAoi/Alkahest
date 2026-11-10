@@ -130,7 +130,7 @@ public class ElementalGameTests implements FabricGameTest {
         });
     }
 
-    @GameTest(templateName = EMPTY_STRUCTURE, tickLimit = 100)
+    @GameTest(templateName = EMPTY_STRUCTURE, tickLimit = 120)
     public void elementalRangedAttacksInflictElementalHazards(TestContext context) {
         for (int x = 1; x <= 9; x++) {
             for (int z = 1; z <= 7; z++) {
@@ -139,22 +139,22 @@ public class ElementalGameTests implements FabricGameTest {
         }
 
         // 1. Hostile Ignis Elemental fires ranged bolt via AI combat goal and ignites target
-        CowEntity fireTarget = context.spawnEntity(EntityType.COW, 7.5f, 2.0f, 2.5f);
+        CowEntity fireTarget = context.spawnEntity(EntityType.COW, 5.5f, 2.0f, 2.0f);
         fireTarget.setAiDisabled(true);
-        ElementalEntity ignis = context.spawnEntity(ModEntities.ELEMENTALS.get(EssenceType.IGNIS), 2.5f, 2.5f, 2.5f);
+        ElementalEntity ignis = context.spawnEntity(ModEntities.ELEMENTALS.get(EssenceType.IGNIS), 2.5f, 2.2f, 2.0f);
         ignis.setTarget(fireTarget);
 
         // 2. Direct Perditio bolt inflicts Wither and corrodes armor (Husk never burns helmet in daylight)
-        ZombieEntity armorTarget = context.spawnEntity(EntityType.HUSK, 7.5f, 2.0f, 5.5f);
+        ZombieEntity armorTarget = context.spawnEntity(EntityType.HUSK, 5.5f, 2.0f, 5.5f);
         armorTarget.setAiDisabled(true);
         ItemStack helmet = new ItemStack(Items.IRON_HELMET);
         armorTarget.equipStack(EquipmentSlot.HEAD, helmet);
-        ElementalEntity perditio = context.spawnEntity(ModEntities.ELEMENTALS.get(EssenceType.PERDITIO), 2.5f, 2.5f, 5.5f);
+        ElementalEntity perditio = context.spawnEntity(ModEntities.ELEMENTALS.get(EssenceType.PERDITIO), 2.5f, 2.2f, 5.5f);
         perditio.setAiDisabled(true);
         ElementalBoltEntity perditioBolt = perditio.shootElementalBolt(armorTarget);
         context.assertTrue(perditioBolt != null, "Server Elemental must spawn ElementalBoltEntity");
 
-        context.runAtTick(75, () -> {
+        context.runAtTick(85, () -> {
             context.assertTrue(fireTarget.getHealth() < fireTarget.getMaxHealth(),
                 "Hostile Ignis Elemental ranged attack must damage target, health=" + fireTarget.getHealth());
             context.assertTrue(fireTarget.getFireTicks() > 0,

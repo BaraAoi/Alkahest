@@ -221,7 +221,7 @@ public class ElementalEntity extends HostileEntity {
         ElementalBoltEntity bolt = new ElementalBoltEntity(ModEntities.ELEMENTAL_BOLT, this, getWorld(), essenceType);
         bolt.setPosition(sx, sy, sz);
         float speed = essenceType == EssenceType.AER ? 1.45f : 1.15f;
-        bolt.setVelocity(dx, dy, dz, speed, 0.8f);
+        bolt.setVelocity(dx, dy, dz, speed, 0.25f);
         getWorld().spawnEntity(bolt);
 
         if (getWorld() instanceof ServerWorld serverWorld) {
