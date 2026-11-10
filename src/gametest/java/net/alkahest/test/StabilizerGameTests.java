@@ -67,7 +67,7 @@ public class StabilizerGameTests implements FabricGameTest {
 
         c.assertTrue(receiver(c).contents().total() == 8, "Poured essence must be stored in the receiver");
         ItemStack held = player.getStackInHand(Hand.MAIN_HAND);
-        c.assertTrue(!held.isEmpty() && held.isOf(ModBlocks.JAR), "The jar itself must stay in hand");
+        c.assertTrue(!held.isEmpty() && held.isOf(ModBlocks.JAR.asItem()), "The jar itself must stay in hand");
         c.assertTrue(JarItem.contents(held).total() == 0, "The jar in hand must become empty");
         c.assertTrue(c.getWorld().getBlockState(receiverPos(c)).get(StabilizerReceiverBlock.OCCUPIED),
             "Occupied state must be visible to clients");
