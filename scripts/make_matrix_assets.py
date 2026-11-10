@@ -142,26 +142,6 @@ def core_bottom():
 
 
 # --- pillar ----------------------------------------------------------------------------------
-def pillar_shaft(lit):
-    rows = blank()
-    for y in range(SIZE):
-        for x in range(SIZE):
-            base = SLATE
-            if x in (0, 15):
-                base = GOLD_EDGE
-            elif x in (1, 14):
-                base = GOLD_DARK
-            elif x in (6, 9):
-                base = VIOLET if not lit else VIOLET_LIGHT
-            elif x in (7, 8):
-                base = VIOLET_DARK if not lit else VIOLET
-            rows[y][x] = (*shift(base, noise(x, y, 4)), 255)
-    for y in (4, 9, 13):
-        for x in (6, 7, 8, 9):
-            rows[y][x] = (*((VIOLET_GLOW) if lit else GOLD), 255)
-    return rows
-
-
 def pillar_plinth(lit):
     rows = blank()
     for y in range(SIZE):
@@ -305,8 +285,6 @@ write_png(BLOCK / 'matrix_core_side_lit.png', core_side(True))
 write_png(BLOCK / 'matrix_core_top.png', core_top(False))
 write_png(BLOCK / 'matrix_core_top_lit.png', core_top(True))
 write_png(BLOCK / 'matrix_core_bottom.png', core_bottom())
-write_png(BLOCK / 'matrix_pillar_shaft.png', pillar_shaft(False))
-write_png(BLOCK / 'matrix_pillar_shaft_lit.png', pillar_shaft(True))
 write_png(BLOCK / 'matrix_pillar_plinth.png', pillar_plinth(False))
 write_png(BLOCK / 'matrix_pillar_plinth_lit.png', pillar_plinth(True))
 write_png(BLOCK / 'matrix_pillar_cap.png', pillar_cap(False))
