@@ -88,7 +88,7 @@ public class CauldronGameTests implements FabricGameTest {
                 context.assertTrue(cauldron.essences().getOrDefault(EssenceType.IGNIS, 0) == 1, "1 surplus Ignis must remain");
 
                 // Aqua wand refills the cauldron for 1 charge without needing a bucket.
-                ItemStack aquaWand = new ItemStack(ModItems.CRYSTAL_WANDS.get(EssenceType.AQUA));
+                ItemStack aquaWand = new ItemStack(ModItems.WANDS.get(EssenceType.AQUA));
                 player.setStackInHand(Hand.MAIN_HAND, aquaWand);
                 context.assertTrue(cauldron.useItem(player, Hand.MAIN_HAND), "Aqua wand must refill dry cauldron");
                 context.assertTrue(context.getWorld().getBlockState(pos).get(AlchemyCauldronBlock.FILLED), "Water state restored by Aqua wand");
