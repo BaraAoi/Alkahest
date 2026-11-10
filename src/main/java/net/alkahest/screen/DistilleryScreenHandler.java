@@ -28,6 +28,10 @@ public class DistilleryScreenHandler extends ScreenHandler {
             @Override public boolean canInsert(ItemStack stack) { return DistilleryBlockEntity.accepts(stack); }
             @Override public int getMaxItemCount() { return 1; }
             @Override public int getMaxItemCount(ItemStack stack) { return 1; }
+            @Override public void onTakeItem(PlayerEntity player, ItemStack stack) {
+                if (inventory instanceof DistilleryBlockEntity distillery) distillery.cancelProgress();
+                super.onTakeItem(player, stack);
+            }
         });
         addSlot(new Slot(inventory, 1, 116, 32) {
             @Override public boolean canInsert(ItemStack stack) { return false; }

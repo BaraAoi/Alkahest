@@ -90,6 +90,8 @@ public class DistilleryGameTests implements FabricGameTest {
         player.getInventory().setStack(9,new ItemStack(Items.APPLE,8));
         context.assertFalse(handler.quickMove(player,2).isEmpty(), "Shift-click from player inventory inserts input");
         context.assertTrue(distillery.getStack(0).getCount()==1 && player.getInventory().getStack(9).getCount()==7, "Only one ingredient moves without losing the rest");
+        context.assertTrue(handler.quickMove(player,2).isEmpty(), "An occupied input cannot accept more via shift-click");
+        context.assertTrue(distillery.getStack(0).getCount()==1 && player.getInventory().getStack(9).getCount()==7, "Repeated shift-click cannot overfill input");
         for(int i=0;i<37;i++) DistilleryBlockEntity.tick(context.getWorld(),pos,distillery);
         context.assertTrue(handler.progress()==37 && handler.maxProgress()==1200, "Screen properties expose live progress and duration");
         context.assertFalse(handler.quickMove(player,0).isEmpty(), "Shift-click removes the input");

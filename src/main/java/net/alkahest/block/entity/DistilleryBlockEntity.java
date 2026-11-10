@@ -61,6 +61,7 @@ public class DistilleryBlockEntity extends BlockEntity implements SidedInventory
         if (!player.giveItemStack(output)) player.dropItem(output, false);
         markDirty();
     }
+    public void cancelProgress() { if (progress != 0) { progress = 0; markDirty(); } }
     public void discoverOutput(PlayerEntity player, ItemStack output) {
         if (world != null && !world.isClient && player instanceof ServerPlayerEntity researcher && ModItems.CRYSTALS.containsValue(output.getItem()))
             EarlyResearch.discoverSight(researcher, world, pos);
