@@ -56,6 +56,11 @@ public final class AlkahestClient implements ClientModInitializer {
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.TRANSMUTATOR_CORE, RenderLayer.getCutout());
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.MATRIX_CORE, RenderLayer.getCutout());
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.MATRIX_PILLAR, RenderLayer.getCutout());
+        BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.MATRIX_PEDESTAL, RenderLayer.getCutout());
+        net.minecraft.client.render.block.entity.BlockEntityRendererFactories.register(
+            net.alkahest.registry.ModBlockEntities.MATRIX_CORE, net.alkahest.client.render.MatrixCoreRenderer::new);
+        net.minecraft.client.render.block.entity.BlockEntityRendererFactories.register(
+            net.alkahest.registry.ModBlockEntities.MATRIX_PEDESTAL, net.alkahest.client.render.MatrixPedestalRenderer::new);
         net.minecraft.client.item.ModelPredicateProviderRegistry.register(ModBlocks.JAR.asItem(), Alkahest.id("fill"),
             (stack, world, entity, seed) -> net.alkahest.essence.JarVisuals.level(net.alkahest.item.custom.JarItem.contents(stack)) / 10.0f);
         ColorProviderRegistry.ITEM.register((stack, tint) -> tint == 0

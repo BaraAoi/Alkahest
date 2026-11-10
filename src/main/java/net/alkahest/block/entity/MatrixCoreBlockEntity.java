@@ -39,23 +39,24 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Centre of the 3x3x3 Matrix. One base item plus up to three extra items are synthesised into a
- * new item; the essence is pulled out of the jars around the cube through the air, so the whole
- * multiblock needs no pipes at all.
+ * Centre of the 3x3x3 Matrix. The base item sits inside the core and the extra parts lie on the
+ * pedestals around the cube; essence is drawn out of the jars through the air. A freshly built
+ * cube is dormant — a wand has to wake it up before any ring starts to turn.
  */
 public class MatrixCoreBlockEntity extends BlockEntity implements Inventory, NamedScreenHandlerFactory {
     public static final int DURATION = 160;
     public static final int BUFFER = 128;
     public static final int REACH = 12;
-    public static final int BASE = 0, OUTPUT = 4;
-    public static final int[] COMPONENTS = {1, 2, 3};
+    public static final int PEDESTAL_REACH = 5;
+    public static final int BASE = 0, OUTPUT = 1;
 
     public static final int STATUS_IDLE = 0, STATUS_WORKING = 1, STATUS_NO_ESSENCE = 2,
-        STATUS_BLOCKED = 3, STATUS_UNFORMED = 4, STATUS_NO_RECIPE = 5;
+        STATUS_BLOCKED = 3, STATUS_UNFORMED = 4, STATUS_NO_RECIPE = 5, STATUS_ASLEEP = 6;
 
-    private final DefaultedList<ItemStack> stacks = DefaultedList.ofSize(5, ItemStack.EMPTY);
+    private final DefaultedList<ItemStack> stacks = DefaultedList.ofSize(2, ItemStack.EMPTY);
     private JarContentsComponent buffer = JarContentsComponent.EMPTY;
     private int progress;
+    private boolean awake;
 
     private final PropertyDelegate properties = new PropertyDelegate() {
         @Override public int get(int index) {
@@ -76,23 +77,7 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory, Nam
 
     public int progress() { return progress; }
     public JarContentsComponent buffer() { return buffer; }
-
-    public List<ItemStack> components() {
-        List<ItemStack> list = new ArrayList<>();
-        for (int slot : COMPONENTS) list.add(stacks.get(slot));
-        return list;
-    }
-
-    public MatrixRecipe recipe() { return MatrixRecipe.find(stacks.get(BASE), components()); }
-
-    public int status() {
-        if (!formed()) return STATUS_UNFORMED;
-        MatrixRecipe recipe = recipe();
-        if (recipe == null) return stacks.get(BASE).isEmpty() ? STATUS_IDLE : STATUS_NO_RECIPE;
-        if (!canStoreOutput(recipe.output())) return STATUS_BLOCKED;
-        if (progress >= DURATION) return STATUS_NO_ESSENCE;
-        return STATUS_WORKING;
-    }
+    public boolean awake() { return awake; }
 
     /** Eight pillars on the corners and eighteen bricks on the rest of the 3x3x3 shell. */
     public boolean formed() {
@@ -111,6 +96,41 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory, Nam
         return true;
     }
 
+    /** Every pedestal standing around the cube. */
+    public List<MatrixPedestalBlockEntity> pedestals() {
+        List<MatrixPedestalBlockEntity> result = new ArrayList<>();
+        if (world == null) return result;
+        for (BlockPos candidate : BlockPos.iterate(pos.add(-PEDESTAL_REACH, -2, -PEDESTAL_REACH),
+            pos.add(PEDESTAL_REACH, 2, PEDESTAL_REACH))) {
+            if (candidate.getSquaredDistance(pos) > PEDESTAL_REACH * PEDESTAL_REACH) continue;
+            if (world.getBlockEntity(candidate) instanceof MatrixPedestalBlockEntity pedestal) result.add(pedestal);
+        }
+        return result;
+    }
+
+    public List<ItemStack> pedestalItems() {
+        List<ItemStack> result = new ArrayList<>();
+        for (MatrixPedestalBlockEntity pedestal : pedestals()) {
+            if (!pedestal.isEmpty()) result.add(pedestal.held());
+        }
+        return result;
+    }
+
+    public MatrixRecipe recipe() {
+        if (world == null) return null;
+        return MatrixRecipe.find(stacks.get(BASE), pedestalItems());
+    }
+
+    public int status() {
+        if (!formed()) return STATUS_UNFORMED;
+        if (!awake) return STATUS_ASLEEP;
+        MatrixRecipe recipe = recipe();
+        if (recipe == null) return stacks.get(BASE).isEmpty() ? STATUS_IDLE : STATUS_NO_RECIPE;
+        if (!canStoreOutput(recipe.output())) return STATUS_BLOCKED;
+        if (progress >= DURATION) return STATUS_NO_ESSENCE;
+        return STATUS_WORKING;
+    }
+
     private boolean canStoreOutput(ItemStack product) {
         if (product.isEmpty()) return false;
         ItemStack output = stacks.get(OUTPUT);
@@ -119,10 +139,33 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory, Nam
         return output.getCount() + product.getCount() <= output.getMaxCount();
     }
 
+    /** Wakes the cube up or puts it back to sleep; the block state follows immediately. */
+    public void setAwake(World world, BlockPos pos, boolean value) {
+        if (awake == value) return;
+        awake = value;
+        if (!value) progress = 0;
+        BlockState state = world.getBlockState(pos);
+        if (state.getBlock() instanceof MatrixCoreBlock && state.get(MatrixCoreBlock.AWAKE) != value) {
+            world.setBlockState(pos, state.with(MatrixCoreBlock.AWAKE, value), Block.NOTIFY_ALL);
+        }
+        if (value) {
+            wakeEffect(world, pos);
+        } else {
+            world.playSound(null, pos, SoundEvents.BLOCK_AMETHYST_BLOCK_BREAK, SoundCategory.BLOCKS, 0.7f, 0.8f);
+        }
+        markDirty();
+    }
+
     public static void tick(World world, BlockPos pos, MatrixCoreBlockEntity self) {
         if (world.isClient) return;
-        MatrixRecipe recipe = self.recipe();
-        if (!self.formed() || recipe == null || !self.canStoreOutput(recipe.output())) {
+        if (!self.formed()) {
+            if (self.awake) self.setAwake(world, pos, false);
+            if (self.progress != 0) { self.progress = 0; self.markDirty(); }
+            setActive(world, pos, self, false);
+            return;
+        }
+        MatrixRecipe recipe = self.awake ? self.recipe() : null;
+        if (recipe == null || !self.canStoreOutput(recipe.output())) {
             if (self.progress != 0) { self.progress = 0; self.markDirty(); }
             setActive(world, pos, self, false);
             return;
@@ -138,25 +181,29 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory, Nam
             setActive(world, pos, self, false);
             return;
         }
-        ItemStack product = recipe.output().copy();
-        ItemStack stored = self.stacks.get(OUTPUT);
-        if (stored.isEmpty()) self.stacks.set(OUTPUT, product);
-        else stored.increment(product.getCount());
-        ItemStack base = self.stacks.get(BASE);
-        base.decrement(1);
-        if (base.isEmpty()) self.stacks.set(BASE, ItemStack.EMPTY);
-        for (int slot : COMPONENTS) {
-            ItemStack component = self.stacks.get(slot);
-            if (component.isEmpty()) continue;
-            // Only one copy of each component is spent, and only as many as the recipe asks.
-            if (recipe.components().contains(component.getItem())) {
-                component.decrement(1);
-                if (component.isEmpty()) self.stacks.set(slot, ItemStack.EMPTY);
-            }
-        }
+        consumeItems(recipe);
         self.progress = 0;
         self.markDirty();
         celebrate(world, pos);
+    }
+
+    /** Spends the base item and one copy of every part lying on the pedestals. */
+    private void consumeItems(MatrixRecipe recipe) {
+        ItemStack base = stacks.get(BASE);
+        base.decrement(1);
+        if (base.isEmpty()) stacks.set(BASE, ItemStack.EMPTY);
+        for (net.minecraft.item.Item component : recipe.components()) {
+            for (MatrixPedestalBlockEntity pedestal : pedestals()) {
+                if (pedestal.isEmpty()) continue;
+                if (pedestal.held().getItem() != component) continue;
+                pedestal.takeOne();
+                break;
+            }
+        }
+        ItemStack product = recipe.output().copy();
+        ItemStack stored = stacks.get(OUTPUT);
+        if (stored.isEmpty()) stacks.set(OUTPUT, product);
+        else stored.increment(product.getCount());
     }
 
     /** Draws one unit of every still-missing essence, so sparks fly for the whole operation. */
@@ -285,6 +332,15 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory, Nam
         }
     }
 
+    /** The awakening: rings unlock, pyramids take flight, the whole cube lights up. */
+    private static void wakeEffect(World world, BlockPos pos) {
+        if (world instanceof ServerWorld server) {
+            server.spawnParticles(new DustParticleEffect(new Vector3f(0.9f, 0.7f, 1f), 1.2f),
+                pos.getX() + 0.5, pos.getY() + 0.6, pos.getZ() + 0.5, 60, 1.6, 1.6, 1.6, 0.12);
+        }
+        world.playSound(null, pos, SoundEvents.BLOCK_BEACON_ACTIVATE, SoundCategory.BLOCKS, 0.9f, 1.2f);
+    }
+
     /** Switches the glow of the whole shell, so a working Matrix lights up as one machine. */
     private static void setActive(World world, BlockPos pos, MatrixCoreBlockEntity self, boolean active) {
         if (self.active == active) return;
@@ -293,8 +349,7 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory, Nam
             for (int dy = -1; dy <= 1; dy++) {
                 for (int dz = -1; dz <= 1; dz++) {
                     BlockPos target = pos.add(dx, dy, dz);
-                    BlockState state = world.getBlockState(target);
-                    glow(world, target, state, active);
+                    glow(world, target, world.getBlockState(target), active);
                 }
             }
         }
@@ -319,7 +374,7 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory, Nam
     public boolean active() { return active; }
 
     // --- inventory --------------------------------------------------------------------------
-    @Override public int size() { return 5; }
+    @Override public int size() { return 2; }
     @Override public boolean isEmpty() {
         for (ItemStack stack : stacks) if (!stack.isEmpty()) return false;
         return true;
@@ -359,6 +414,7 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory, Nam
         super.writeNbt(nbt, registries);
         Inventories.writeNbt(nbt, stacks, registries);
         nbt.putInt("Progress", progress);
+        nbt.putBoolean("Awake", awake);
         nbt.putBoolean("Active", active);
         nbt.put("Buffer", JarContentsComponent.CODEC.encodeStart(NbtOps.INSTANCE, buffer)
             .result().orElseGet(NbtCompound::new));
@@ -368,6 +424,7 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory, Nam
         super.readNbt(nbt, registries);
         Inventories.readNbt(nbt, stacks, registries);
         progress = nbt.getInt("Progress");
+        awake = nbt.getBoolean("Awake");
         active = nbt.getBoolean("Active");
         buffer = JarContentsComponent.CODEC.parse(NbtOps.INSTANCE, nbt.get("Buffer"))
             .result().orElse(JarContentsComponent.EMPTY);
@@ -396,12 +453,25 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory, Nam
         return false;
     }
 
-    /** Ticks a core next to a clicked shell block, used by the block classes. */
+    /** Wakes or sleeps the built Matrix next to a clicked shell block. */
+    public static boolean toggleAwakeNearby(World world, BlockPos clicked, PlayerEntity player) {
+        if (world.isClient) return true;
+        for (BlockPos candidate : BlockPos.iterate(clicked.add(-2, -2, -2), clicked.add(2, 2, 2))) {
+            if (!(world.getBlockEntity(candidate) instanceof MatrixCoreBlockEntity core) || !core.formed()) continue;
+            boolean wake = !core.awake();
+            core.setAwake(world, candidate, wake);
+            player.sendMessage(Text.translatable(wake ? "message.alkahest.matrix_awake"
+                : "message.alkahest.matrix_asleep"), true);
+            return true;
+        }
+        player.sendMessage(Text.translatable("message.alkahest.matrix_unformed"), true);
+        return false;
+    }
+
     public static boolean nearbyCore(World world, BlockPos clicked) {
         for (BlockPos candidate : BlockPos.iterate(clicked.add(-2, -2, -2), clicked.add(2, 2, 2))) {
             if (world.getBlockEntity(candidate) instanceof MatrixCoreBlockEntity core && core.formed()) return true;
         }
         return false;
     }
-
 }

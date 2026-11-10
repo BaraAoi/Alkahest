@@ -35,14 +35,18 @@ def png_size(path):
 
 
 # --- blockstates, models and textures ---------------------------------------------------------
-for name, variants in (('matrix_core', {'active=false', 'active=true'}),
-                       ('matrix_pillar', {'active=false', 'active=true'}),
-                       ('alchemical_brick', {'active=false', 'active=true'})):
-    states = load(A / f'blockstates/{name}.json')
-    check(set(states['variants']) == variants, f'{name} needs idle and active variants')
+states = load(A / 'blockstates/matrix_core.json')
+check(set(states['variants']) == {'awake=false,active=false', 'awake=false,active=true',
+                                  'awake=true,active=false', 'awake=true,active=true'},
+      'the core needs the awake and active states')
+for name in ('matrix_pillar', 'alchemical_brick'):
+    variants = set(load(A / f'blockstates/{name}.json')['variants'])
+    check(variants == {'active=false', 'active=true'}, f'{name} needs idle and active variants')
+pedestal_states = load(A / 'blockstates/matrix_pedestal.json')
+check('' in pedestal_states['variants'], 'the pedestal has a single state')
 
 models = ['matrix_core', 'matrix_core_lit', 'matrix_pillar', 'matrix_pillar_lit',
-          'alchemical_brick', 'alchemical_brick_lit']
+          'alchemical_brick', 'alchemical_brick_lit', 'matrix_pedestal']
 for name in models:
     model = load(A / f'models/block/{name}.json')
     check(model.get('elements'), f'{name} must be built from elements')
@@ -60,13 +64,23 @@ for name in models:
             check(kind == 6, f'{texture} needs an alpha channel')
 
 pillar = load(A / 'models/block/matrix_pillar.json')
-check(len(pillar['elements']) == 3, 'the Matrix pillar is a plinth, a shaft and a cap')
-for name in ('matrix_core', 'matrix_pillar', 'alchemical_brick'):
+check(len(pillar['elements']) == 5, 'the Matrix corner block is a stepped pyramid')
+pedestal_model = load(A / 'models/block/matrix_pedestal.json')
+check(len(pedestal_model['elements']) == 3, 'the pedestal is a base, a column and a top plate')
+ring_texture = A / 'textures/block/matrix_ring.png'
+check(ring_texture.exists(), 'the halo needs its own ring texture')
+for name in ('matrix_core', 'matrix_pillar', 'matrix_pedestal', 'alchemical_brick'):
     item_model = load(A / f'models/item/{name}.json')
     check(item_model['parent'].startswith('alkahest:block/'), f'{name} item model must use a block model')
 
 # --- structure rules in the java -----------------------------------------------------------------
 core_be = (JAVA / 'block/entity/MatrixCoreBlockEntity.java').read_text()
+check('if (!self.awake)' in core_be or 'self.awake ? self.recipe() : null' in core_be,
+      'a dormant Matrix must never run')
+check('setAwake' in core_be and 'wakeEffect' in core_be, 'the core needs to be woken up')
+pedestal_be = (JAVA / 'block/entity/MatrixPedestalBlockEntity.java').read_text()
+check('takeOne' in pedestal_be, 'the core takes parts off the pedestals')
+check('MatrixPedestalBlockEntity' in core_be and 'PEDESTAL_REACH' in core_be, 'pedestals must feed the core')
 check('boolean corner = dx != 0 && dy != 0 && dz != 0;' in core_be,
       'the corners of the cube must be pillars and everything else bricks')
 check(core_be.count('for (int dy = -1; dy <= 1; dy++)') >= 1, 'the cube is 3x3x3')
@@ -90,6 +104,8 @@ pillar_recipe = load(DATA / 'recipe/matrix_pillar_recipe.json')
 check(pillar_recipe['result']['count'] >= 2, 'pillar craft should give at least two pieces')
 brick_recipe = load(DATA / 'recipe/alchemical_brick.json')
 check(brick_recipe['result']['count'] >= 4, 'brick craft should give a handful of bricks')
+pedestal_recipe = load(DATA / 'recipe/matrix_pedestal.json')
+check(pedestal_recipe['result']['id'] == 'alkahest:matrix_pedestal', 'the pedestal needs its own craft')
 
 # --- language ------------------------------------------------------------------------------------
 for lang in ('ru_ru', 'en_us'):
@@ -98,19 +114,26 @@ for lang in ('ru_ru', 'en_us'):
                 'screen.alkahest.matrix.title', 'screen.alkahest.matrix.ready', 'screen.alkahest.matrix.working',
                 'screen.alkahest.matrix.no_essence', 'screen.alkahest.matrix.blocked',
                 'screen.alkahest.matrix.unformed', 'screen.alkahest.matrix.no_recipe',
-                'message.alkahest.matrix_unformed'):
+                'message.alkahest.matrix_unformed', 'screen.alkahest.matrix.asleep',
+                'message.alkahest.matrix_awake', 'message.alkahest.pedestal_status',
+                'block.alkahest.matrix_pedestal'):
         check(key in strings, f'{lang} misses {key}')
 
 # --- client and tests ---------------------------------------------------------------------------
 client = (CLIENT / 'AlkahestClient.java').read_text()
 check('MatrixScreen::new' in client, 'the client must register the matrix screen')
+check('MatrixCoreRenderer::new' in client, 'the halo renderer must be registered')
+check('MatrixPedestalRenderer::new' in client, 'the pedestal item renderer must be registered')
+renderer = (CLIENT / 'client/render/MatrixCoreRenderer.java').read_text()
+check('ring(' in renderer and 'pyramid(' in renderer, 'the halo needs rings and flying pyramids')
+check('MatrixCoreBlock.AWAKE' in renderer, 'the halo must follow the awake state')
 
 gametest_mod = load(GAMETEST / 'resources/fabric.mod.json')
 check('net.alkahest.test.MatrixGameTests' in gametest_mod['entrypoints']['fabric-gametest'],
       'the matrix game tests must be registered')
 tests = (GAMETEST / 'java/net/alkahest/test/MatrixGameTests.java').read_text()
 test_count = len(re.findall(r'@GameTest', tests))
-check(test_count >= 8, f'expected at least eight matrix game tests, found {test_count}')
+check(test_count >= 9, f'expected at least nine matrix game tests, found {test_count}')
 
 # --- report ----------------------------------------------------------------------------------------
 if failures:

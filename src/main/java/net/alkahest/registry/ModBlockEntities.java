@@ -12,6 +12,7 @@ import net.alkahest.block.entity.DistilleryBlockEntity;
 import net.alkahest.block.entity.DistilleryBellowsBlockEntity;
 import net.alkahest.block.entity.Tier2DistilleryBlockEntity;
 import net.alkahest.block.entity.MatrixCoreBlockEntity;
+import net.alkahest.block.entity.MatrixPedestalBlockEntity;
 import net.alkahest.block.entity.TransmutatorCoreBlockEntity;
 import net.alkahest.block.entity.TransmutatorPillarBlockEntity;
 import net.minecraft.block.entity.BlockEntityType;
@@ -35,6 +36,8 @@ public final class ModBlockEntities {
         Alkahest.id("distillery_tier2"), BlockEntityType.Builder.create(Tier2DistilleryBlockEntity::new, ModBlocks.DISTILLERY_TIER2).build(null));
     public static final BlockEntityType<DistilleryBellowsBlockEntity> DISTILLERY_BELLOWS = Registry.register(Registries.BLOCK_ENTITY_TYPE,
         Alkahest.id("distillery_bellows"), BlockEntityType.Builder.create(DistilleryBellowsBlockEntity::new, ModBlocks.DISTILLERY_BELLOWS).build(null));
+    public static final BlockEntityType<MatrixPedestalBlockEntity> MATRIX_PEDESTAL = Registry.register(Registries.BLOCK_ENTITY_TYPE,
+        Alkahest.id("matrix_pedestal"), BlockEntityType.Builder.create(MatrixPedestalBlockEntity::new, ModBlocks.MATRIX_PEDESTAL).build(null));
     public static final BlockEntityType<MatrixCoreBlockEntity> MATRIX_CORE = Registry.register(Registries.BLOCK_ENTITY_TYPE,
         Alkahest.id("matrix_core"), BlockEntityType.Builder.create(MatrixCoreBlockEntity::new, ModBlocks.MATRIX_CORE).build(null));
     public static final BlockEntityType<TransmutatorCoreBlockEntity> TRANSMUTATOR_CORE = Registry.register(Registries.BLOCK_ENTITY_TYPE,

@@ -1,6 +1,7 @@
 package net.alkahest.block.custom;
 
 import net.alkahest.block.entity.MatrixCoreBlockEntity;
+import net.alkahest.item.custom.CrystalWandItem;
 import net.alkahest.registry.ModBlockEntities;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockEntityProvider;
@@ -22,16 +23,22 @@ import net.minecraft.util.math.random.Random;
 import net.minecraft.world.World;
 import org.joml.Vector3f;
 
-/** Centre of the 3x3x3 Matrix; right-click it to feed the synthesis. */
+/**
+ * Centre of the 3x3x3 Matrix. A finished cube is dormant: rings lie flat and nothing works until
+ * a crystal wand wakes it. Only then do the rings spin and the pyramid hold the field.
+ */
 public class MatrixCoreBlock extends Block implements BlockEntityProvider {
+    public static final BooleanProperty AWAKE = BooleanProperty.of("awake");
     public static final BooleanProperty ACTIVE = BooleanProperty.of("active");
 
     public MatrixCoreBlock(Settings settings) {
         super(settings);
-        setDefaultState(getStateManager().getDefaultState().with(ACTIVE, false));
+        setDefaultState(getStateManager().getDefaultState().with(AWAKE, false).with(ACTIVE, false));
     }
 
-    @Override protected void appendProperties(StateManager.Builder<Block, BlockState> builder) { builder.add(ACTIVE); }
+    @Override protected void appendProperties(StateManager.Builder<Block, BlockState> builder) {
+        builder.add(AWAKE, ACTIVE);
+    }
 
     @Override public BlockEntity createBlockEntity(BlockPos pos, BlockState state) {
         return new MatrixCoreBlockEntity(pos, state);
@@ -42,20 +49,27 @@ public class MatrixCoreBlock extends Block implements BlockEntityProvider {
             ? (w, p, s, be) -> MatrixCoreBlockEntity.tick(w, p, (MatrixCoreBlockEntity) be) : null;
     }
 
-    private void open(World world, BlockPos pos, PlayerEntity player) {
+    /** A wand wakes the cube; anything else opens the interface of a built cube. */
+    private void interact(World world, BlockPos pos, PlayerEntity player, ItemStack held) {
         if (world.isClient || player.isSneaking()) return;
-        MatrixCoreBlockEntity.openNearby(world, pos, player);
+        if (held.getItem() instanceof CrystalWandItem) {
+            MatrixCoreBlockEntity.toggleAwakeNearby(world, pos, player);
+            return;
+        }
+        if (MatrixCoreBlockEntity.nearbyCore(world, pos)) MatrixCoreBlockEntity.openNearby(world, pos, player);
+        else player.sendMessage(net.minecraft.text.Text.translatable("message.alkahest.matrix_unformed"), true);
     }
 
     @Override protected ItemActionResult onUseWithItem(ItemStack stack, BlockState state, World world, BlockPos pos,
                                                        PlayerEntity player, Hand hand, BlockHitResult hit) {
-        open(world, pos, player);
-        return player.isSneaking() ? ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION : ItemActionResult.success(world.isClient);
+        if (player.isSneaking()) return ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        interact(world, pos, player, stack);
+        return ItemActionResult.success(world.isClient);
     }
 
     @Override protected ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, BlockHitResult hit) {
         if (player.isSneaking()) return ActionResult.PASS;
-        open(world, pos, player);
+        interact(world, pos, player, ItemStack.EMPTY);
         return ActionResult.success(world.isClient);
     }
 

@@ -12,7 +12,7 @@ import java.util.List;
 /** Drawn in code: a violet-and-gold panel with the star of slots, a progress bar and the price. */
 public final class MatrixScreen extends HandledScreen<MatrixScreenHandler> {
     private static final int WIDTH = 176, HEIGHT = 166;
-    private static final int TRACK_X = 100, TRACK_Y = 62, TRACK_WIDTH = 22, TRACK_HEIGHT = 6;
+    private static final int TRACK_X = 72, TRACK_Y = 34, TRACK_WIDTH = 40, TRACK_HEIGHT = 6;
 
     public MatrixScreen(MatrixScreenHandler handler, PlayerInventory inventory, Text title) {
         super(handler, inventory, title);
@@ -31,6 +31,7 @@ public final class MatrixScreen extends HandledScreen<MatrixScreenHandler> {
             case 3 -> "screen.alkahest.matrix.blocked";
             case 4 -> "screen.alkahest.matrix.unformed";
             case 5 -> "screen.alkahest.matrix.no_recipe";
+            case 6 -> "screen.alkahest.matrix.asleep";
             default -> "screen.alkahest.matrix.ready";
         });
     }
@@ -54,7 +55,6 @@ public final class MatrixScreen extends HandledScreen<MatrixScreenHandler> {
             c.fill(x + rivet[0], y + rivet[1], x + rivet[0] + 3, y + rivet[1] + 3, 0xFFD9B36B);
         }
         slotFrame(c, MatrixScreenHandler.BASE_X, MatrixScreenHandler.BASE_Y);
-        for (int i = 0; i < 3; i++) slotFrame(c, MatrixScreenHandler.COMPONENT_X[i], MatrixScreenHandler.COMPONENT_Y);
         slotFrame(c, MatrixScreenHandler.OUTPUT_X, MatrixScreenHandler.OUTPUT_Y);
         for (int row = 0; row < 3; row++) for (int col = 0; col < 9; col++) slotFrame(c, 8 + col * 18, 84 + row * 18);
         for (int col = 0; col < 9; col++) slotFrame(c, 8 + col * 18, 142);
@@ -77,12 +77,13 @@ public final class MatrixScreen extends HandledScreen<MatrixScreenHandler> {
             case 1 -> 0xFFE7D5FF;
             case 2 -> 0xFFFFC27D;
             case 3, 5 -> 0xFFFF9E7A;
+            case 6 -> 0xFF9C8FBF;
             default -> 0xFFD1C6AC;
         };
-        c.drawCenteredTextWithShadow(textRenderer, statusText(), 88, 54, color);
+        c.drawCenteredTextWithShadow(textRenderer, statusText(), 88, 50, color);
 
         List<EssenceStack> requirements = handler.requirements();
-        int lineY = 22;
+        int lineY = 58;
         for (EssenceStack stack : requirements) {
             c.drawTextWithShadow(textRenderer, Text.literal(stack.type().displayName() + " × " + stack.amount()),
                 100, lineY, stack.type().color() | 0xFF000000);

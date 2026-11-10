@@ -16,6 +16,7 @@
     "alkahest:transmutator_pillar",
     "alkahest:matrix_core",
     "alkahest:matrix_pillar",
-    "alkahest:alchemical_brick"
+    "alkahest:alchemical_brick",
+    "alkahest:matrix_pedestal"
   ]
 }

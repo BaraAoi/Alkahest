@@ -337,5 +337,11 @@
   "screen.alkahest.matrix.unformed": "Куб не собран",
   "screen.alkahest.matrix.no_recipe": "Нет синтеза для этой основы",
   "message.alkahest.matrix_unformed": "Матрица не собрана: 8 Опор по углам куба 3×3×3 и 18 Алхимических кирпичей между ними",
-  "screen.alkahest.monocle.matrix_core": "Матрица: куб 3×3×3"
+  "screen.alkahest.monocle.matrix_core": "Матрица: куб 3×3×3",
+  "block.alkahest.matrix_pedestal": "Пьедестал Матрицы",
+  "screen.alkahest.matrix.asleep": "Куб спит: разбудите жезлом",
+  "message.alkahest.matrix_awake": "Матрица пробуждена: кольца пошли вращаться",
+  "message.alkahest.matrix_asleep": "Матрица усыплена: кольца легли в ряд",
+  "message.alkahest.pedestal_empty": "Пьедестал пуст: положите предмет в руке",
+  "message.alkahest.pedestal_status": "На пьедестале: %s × %s"
 }

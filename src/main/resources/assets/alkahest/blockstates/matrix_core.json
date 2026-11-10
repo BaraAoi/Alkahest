@@ -1,9 +1,15 @@
 {
   "variants": {
-    "active=false": {
+    "awake=false,active=false": {
       "model": "alkahest:block/matrix_core"
     },
-    "active=true": {
+    "awake=false,active=true": {
+      "model": "alkahest:block/matrix_core"
+    },
+    "awake=true,active=false": {
+      "model": "alkahest:block/matrix_core"
+    },
+    "awake=true,active=true": {
       "model": "alkahest:block/matrix_core_lit"
     }
   }

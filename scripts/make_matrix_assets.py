@@ -33,6 +33,7 @@ SLATE_DARK = (52, 52, 62)
 SLATE_LIGHT = (98, 98, 112)
 COPPER = (168, 104, 58)
 COPPER_DARK = (118, 68, 36)
+QUARTZ = (224, 218, 203)
 
 
 def noise(x, y, spread=6):
@@ -218,6 +219,87 @@ def brick(lit):
     return rows
 
 
+
+
+# --- pyramid body (the corner blocks) --------------------------------------------------------
+def pillar_body(lit):
+    rows = blank()
+    for y in range(SIZE):
+        for x in range(SIZE):
+            band = (x % 8 == 0) or (y % 8 == 0)
+            base = SLATE if not band else SLATE_DARK
+            if x in (0, 15) or y in (0, 15):
+                base = GOLD_EDGE
+            elif x in (1, 14) or y in (1, 14):
+                base = COPPER_DARK
+            rows[y][x] = (*shift(base, noise(x, y, 4)), 255)
+    for y in range(2, 14):
+        for x in (7, 8):
+            rows[y][x] = (*((VIOLET_GLOW) if lit else GOLD), 255)
+    for y in (4, 11):
+        for x in range(3, 13):
+            rows[y][x] = (*((VIOLET_LIGHT) if lit else COPPER), 255)
+    return rows
+
+
+# --- pedestal --------------------------------------------------------------------------------
+def pedestal_base(lit):
+    rows = blank()
+    for y in range(SIZE):
+        for x in range(SIZE):
+            base = COPPER
+            if x in (0, 15) or y in (0, 15):
+                base = COPPER_DARK
+            rows[y][x] = (*shift(base, noise(x, y, 4)), 255)
+    ring(rows, 7.5, 7.5, 5.0, GOLD_DARK, 1.2)
+    for y in (3, 12):
+        for x in (3, 12):
+            rows[y][x] = (*GOLD_LIGHT, 255)
+    return rows
+
+
+def pedestal_side(lit):
+    rows = blank()
+    for y in range(SIZE):
+        for x in range(SIZE):
+            base = QUARTZ if x not in (0, 15) else GOLD_DARK
+            if x in (7, 8):
+                base = VIOLET_DARK
+            rows[y][x] = (*shift(base, noise(x, y, 4)), 255)
+    for y in range(4, 12):
+        rows[y][7] = (*((VIOLET_GLOW) if lit else VIOLET), 255)
+        rows[y][8] = (*((VIOLET_LIGHT) if lit else VIOLET_DARK), 255)
+    return rows
+
+
+def pedestal_top(lit):
+    rows = blank()
+    for y in range(SIZE):
+        for x in range(SIZE):
+            base = GOLD
+            if x in (0, 15) or y in (0, 15):
+                base = GOLD_EDGE
+            rows[y][x] = (*shift(base, noise(x, y, 4)), 255)
+    ring(rows, 7.5, 7.5, 5.2, GOLD_EDGE, 1.2)
+    ring(rows, 7.5, 7.5, 2.6, VIOLET_LIGHT if lit else VIOLET)
+    disc(rows, 7.5, 7.5, 1.0, VIOLET_GLOW)
+    return rows
+
+
+def ring_texture():
+    """Radial alpha ramp: v=0 is the inner edge and v=1 the outer edge of the halo."""
+    rows = []
+    for y in range(SIZE):
+        radial = 1.0 - abs(y - SIZE / 2) / (SIZE / 2)
+        alpha = int(255 * max(0.0, radial) ** 0.8)
+        row = []
+        for x in range(SIZE):
+            shimmer = 18 if (x * 5 + y * 3) % 7 == 0 else 0
+            row.append((min(255, 210 + shimmer), min(255, 170 + shimmer), 255, alpha))
+        rows.append(row)
+    return rows
+
+
 write_png(BLOCK / 'matrix_core_side.png', core_side(False))
 write_png(BLOCK / 'matrix_core_side_lit.png', core_side(True))
 write_png(BLOCK / 'matrix_core_top.png', core_top(False))
@@ -231,6 +313,13 @@ write_png(BLOCK / 'matrix_pillar_cap.png', pillar_cap(False))
 write_png(BLOCK / 'matrix_pillar_cap_lit.png', pillar_cap(True))
 write_png(BLOCK / 'alchemical_brick.png', brick(False))
 write_png(BLOCK / 'alchemical_brick_lit.png', brick(True))
+write_png(BLOCK / 'matrix_pillar_body.png', pillar_body(False))
+write_png(BLOCK / 'matrix_pillar_body_lit.png', pillar_body(True))
+write_png(BLOCK / 'matrix_pedestal_base.png', pedestal_base(False))
+write_png(BLOCK / 'matrix_pedestal_side.png', pedestal_side(False))
+write_png(BLOCK / 'matrix_pedestal_side_lit.png', pedestal_side(True))
+write_png(BLOCK / 'matrix_pedestal_top.png', pedestal_top(False))
+write_png(BLOCK / 'matrix_ring.png', ring_texture())
 
 
 # --- models ----------------------------------------------------------------------------------
@@ -252,35 +341,62 @@ def cube_model(top, bottom, side):
 
 
 def pillar_model(lit):
-    shaft = 'matrix_pillar_shaft_lit' if lit else 'matrix_pillar_shaft'
+    """A stepped pyramid: the corner block the rings rest on when the Matrix sleeps."""
+    body = 'matrix_pillar_body_lit' if lit else 'matrix_pillar_body'
     plinth = 'matrix_pillar_plinth_lit' if lit else 'matrix_pillar_plinth'
     cap = 'matrix_pillar_cap_lit' if lit else 'matrix_pillar_cap'
 
-    def element(frm, to, mapping):
-        faces = {}
-        for face in FACES:
-            faces[face] = {"texture": f"#{mapping[face]}", "uv": [0, 0, 16, 16]}
+    def element(frm, to, top, side, bottom=None):
+        faces = {"up": {"texture": f"#{top}"}, "down": {"texture": f"#{bottom or 'plinth'}"}}
+        for face in ("north", "south", "east", "west"):
+            faces[face] = {"texture": f"#{side}"}
+        for face, data in faces.items():
+            data["uv"] = [0, 0, 16, 16]
             if face in ("up", "down"):
-                faces[face]["cullface"] = face
+                data["cullface"] = face
         return {"from": list(frm), "to": list(to), "faces": faces}
 
     return {
         "parent": "minecraft:block/block",
         "textures": {
-            "shaft": f"alkahest:block/{shaft}",
+            "body": f"alkahest:block/{body}",
             "plinth": f"alkahest:block/{plinth}",
             "cap": f"alkahest:block/{cap}",
-            "particle": f"alkahest:block/{shaft}",
+            "particle": f"alkahest:block/{body}",
         },
         "elements": [
-            element((0, 0, 0), (16, 3, 16),
-                    {face: "plinth" for face in FACES}),
-            element((2, 3, 2), (14, 14, 14),
-                    {"up": "cap", "down": "plinth", "north": "shaft", "south": "shaft",
-                     "east": "shaft", "west": "shaft"}),
-            element((0, 14, 0), (16, 16, 16),
-                    {"up": "cap", "down": "plinth", "north": "plinth", "south": "plinth",
-                     "east": "plinth", "west": "plinth"}),
+            element((0, 0, 0), (16, 3, 16), "plinth", "plinth"),
+            element((2, 3, 2), (14, 7, 14), "body", "body"),
+            element((4, 7, 4), (12, 11, 12), "body", "body"),
+            element((6, 11, 6), (10, 15, 10), "cap", "body"),
+            element((7, 15, 7), (9, 16, 9), "cap", "cap"),
+        ],
+    }
+
+
+def pedestal_model(lit):
+    side = 'matrix_pedestal_side_lit' if lit else 'matrix_pedestal_side'
+
+    def element(frm, to, top, side_texture, bottom):
+        faces = {"up": {"texture": f"#{top}"}, "down": {"texture": f"#{bottom or 'base'}"}}
+        for face in ("north", "south", "east", "west"):
+            faces[face] = {"texture": f"#{side_texture}"}
+        for face, data in faces.items():
+            data["uv"] = [0, 0, 16, 16]
+        return {"from": list(frm), "to": list(to), "faces": faces}
+
+    return {
+        "parent": "minecraft:block/block",
+        "textures": {
+            "base": "alkahest:block/matrix_pedestal_base",
+            "side": f"alkahest:block/{side}",
+            "top": "alkahest:block/matrix_pedestal_top",
+            "particle": f"alkahest:block/{side}",
+        },
+        "elements": [
+            element((3, 0, 3), (13, 2, 13), "base", "base", "base"),
+            element((5, 2, 5), (11, 10, 11), "side", "side", "base"),
+            element((3, 10, 3), (13, 12, 13), "top", "base", "base"),
         ],
     }
 
@@ -292,6 +408,8 @@ MODELS.mkdir(parents=True, exist_ok=True)
     cube_model('matrix_core_top_lit', 'matrix_core_bottom', 'matrix_core_side_lit'), indent=2) + "\n")
 (MODELS / 'matrix_pillar.json').write_text(json.dumps(pillar_model(False), indent=2) + "\n")
 (MODELS / 'matrix_pillar_lit.json').write_text(json.dumps(pillar_model(True), indent=2) + "\n")
+(MODELS / 'matrix_pedestal.json').write_text(json.dumps(pedestal_model(False), indent=2) + "\n")
+(MODELS / 'matrix_pedestal_lit.json').write_text(json.dumps(pedestal_model(True), indent=2) + "\n")
 (MODELS / 'alchemical_brick.json').write_text(json.dumps(
     cube_model('alchemical_brick', 'alchemical_brick', 'alchemical_brick'), indent=2) + "\n")
 (MODELS / 'alchemical_brick_lit.json').write_text(json.dumps(
@@ -299,8 +417,15 @@ MODELS.mkdir(parents=True, exist_ok=True)
 
 (STATES / 'matrix_core.json').write_text(json.dumps({
     "variants": {
-        "active=false": {"model": "alkahest:block/matrix_core"},
-        "active=true": {"model": "alkahest:block/matrix_core_lit"},
+        "awake=false,active=false": {"model": "alkahest:block/matrix_core"},
+        "awake=false,active=true": {"model": "alkahest:block/matrix_core"},
+        "awake=true,active=false": {"model": "alkahest:block/matrix_core"},
+        "awake=true,active=true": {"model": "alkahest:block/matrix_core_lit"},
+    }
+}, indent=2) + "\n")
+(STATES / 'matrix_pedestal.json').write_text(json.dumps({
+    "variants": {
+        "": {"model": "alkahest:block/matrix_pedestal"},
     }
 }, indent=2) + "\n")
 (STATES / 'matrix_pillar.json').write_text(json.dumps({
@@ -317,8 +442,8 @@ MODELS.mkdir(parents=True, exist_ok=True)
 }, indent=2) + "\n")
 
 ITEM_MODELS.mkdir(parents=True, exist_ok=True)
-for name in ('matrix_core', 'matrix_pillar', 'alchemical_brick'):
-    parent = name if name != 'matrix_pillar' else 'matrix_pillar'
+for name in ('matrix_core', 'matrix_pillar', 'matrix_pedestal', 'alchemical_brick'):
+    parent = name
     (ITEM_MODELS / f'{name}.json').write_text(json.dumps(
         {"parent": f"alkahest:block/{parent}"}, indent=2) + "\n")
 

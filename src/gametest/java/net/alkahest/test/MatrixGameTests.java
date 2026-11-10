@@ -46,11 +46,23 @@ public class MatrixGameTests implements FabricGameTest {
         return (MatrixCoreBlockEntity) c.getWorld().getBlockEntity(c.getAbsolutePos(new BlockPos(CX, CY, CZ)));
     }
 
+    private static void wake(TestContext c) {
+        MatrixCoreBlockEntity core = core(c);
+        core.setAwake(c.getWorld(), c.getAbsolutePos(new BlockPos(CX, CY, CZ)), true);
+    }
+
     private static JarBlockEntity jar(TestContext c, int x, int y, int z, EssenceType type, int amount) {
         c.setBlockState(x, y, z, ModBlocks.JAR);
         JarBlockEntity jar = (JarBlockEntity) c.getWorld().getBlockEntity(c.getAbsolutePos(new BlockPos(x, y, z)));
         jar.setContents(of(type, amount));
         return jar;
+    }
+
+    private static void pedestal(TestContext c, int x, int y, int z, ItemStack stack) {
+        c.setBlockState(x, y, z, ModBlocks.MATRIX_PEDESTAL);
+        var pedestal = (net.alkahest.block.entity.MatrixPedestalBlockEntity)
+            c.getWorld().getBlockEntity(c.getAbsolutePos(new BlockPos(x, y, z)));
+        pedestal.setHeld(stack.copy());
     }
 
     private static void run(World world, BlockPos pos, int ticks) {
@@ -74,10 +86,54 @@ public class MatrixGameTests implements FabricGameTest {
         c.complete();
     }
 
+    /** A newly built cube does nothing at all until a wand wakes it up. */
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void matrixStaysDormantUntilAwoken(TestContext c) {
+        BlockPos pos = build(c);
+        var core = core(c);
+        core.setStack(MatrixCoreBlockEntity.BASE, new ItemStack(Items.STRING));
+        jar(c, CX + 3, CY, CZ, EssenceType.ORDO, 10);
+        jar(c, CX - 3, CY, CZ, EssenceType.AQUA, 10);
+        c.assertFalse(core.awake(), "A fresh Matrix is dormant");
+        c.assertTrue(core.status() == MatrixCoreBlockEntity.STATUS_ASLEEP, "The core reports that it is asleep");
+        run(c.getWorld(), pos, MatrixCoreBlockEntity.DURATION + 20);
+        c.assertTrue(core.getStack(MatrixCoreBlockEntity.OUTPUT).isEmpty(), "A dormant cube never works");
+        c.assertFalse(c.getWorld().getBlockState(pos).get(net.alkahest.block.custom.MatrixCoreBlock.ACTIVE),
+            "A dormant cube does not glow");
+        wake(c);
+        c.assertTrue(c.getWorld().getBlockState(pos).get(net.alkahest.block.custom.MatrixCoreBlock.AWAKE),
+            "The wand switches the cube on");
+        run(c.getWorld(), pos, MatrixCoreBlockEntity.DURATION + 4);
+        c.assertTrue(core.getStack(MatrixCoreBlockEntity.OUTPUT).getItem() == ModItems.BINDING_SALT,
+            "An awakened cube works");
+        c.complete();
+    }
+
+    /** Parts for the synthesis lie on the pedestals around the cube, not in the interface. */
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void pedestalPartsArePulledIntoTheSynthesis(TestContext c) {
+        BlockPos pos = build(c);
+        wake(c);
+        var core = core(c);
+        core.setStack(MatrixCoreBlockEntity.BASE, new ItemStack(Items.GLASS_PANE));
+        pedestal(c, CX + 3, CY, CZ, new ItemStack(Items.GOLD_INGOT));
+        jar(c, CX - 3, CY, CZ, EssenceType.ORDO, 12);
+        jar(c, CX - 3, CY, CZ + 1, EssenceType.LUX, 12);
+        run(c.getWorld(), pos, MatrixCoreBlockEntity.DURATION + 4);
+        c.assertTrue(core.getStack(MatrixCoreBlockEntity.OUTPUT).getItem() == ModItems.ALCHEMISTS_MONOCLE,
+            "The pane and the golden ingot from the pedestal make a monocle");
+        var used = (net.alkahest.block.entity.MatrixPedestalBlockEntity)
+            c.getWorld().getBlockEntity(c.getAbsolutePos(new BlockPos(CX + 3, CY, CZ)));
+        c.assertTrue(used.isEmpty(), "The pedestal gives its item away");
+        c.assertTrue(core.getStack(MatrixCoreBlockEntity.BASE).isEmpty(), "The base is spent as well");
+        c.complete();
+    }
+
     /** String becomes three binding salts, paid for with essence taken straight out of the jars. */
     @GameTest(templateName = EMPTY_STRUCTURE)
     public void synthesisesBindingSaltFromJars(TestContext c) {
         BlockPos pos = build(c);
+        wake(c);
         var core = core(c);
         core.setStack(MatrixCoreBlockEntity.BASE, new ItemStack(Items.STRING, 1));
         JarBlockEntity ordo = jar(c, CX + 3, CY, CZ, EssenceType.ORDO, 10);
@@ -93,28 +149,11 @@ public class MatrixGameTests implements FabricGameTest {
         c.complete();
     }
 
-    /** Both the base and the extra part are consumed by a synthesis. */
+    /** Without the extra part on any pedestal the base just waits inside the core. */
     @GameTest(templateName = EMPTY_STRUCTURE)
-    public void spendsBaseAndComponents(TestContext c) {
+    public void waitsForTheMissingPart(TestContext c) {
         BlockPos pos = build(c);
-        var core = core(c);
-        core.setStack(MatrixCoreBlockEntity.BASE, new ItemStack(Items.GLASS_PANE, 2));
-        core.setStack(MatrixCoreBlockEntity.COMPONENTS[0], new ItemStack(Items.GOLD_INGOT, 2));
-        jar(c, CX + 3, CY, CZ, EssenceType.ORDO, 12);
-        jar(c, CX - 3, CY, CZ, EssenceType.LUX, 12);
-        run(c.getWorld(), pos, MatrixCoreBlockEntity.DURATION + 4);
-
-        c.assertTrue(core.getStack(MatrixCoreBlockEntity.OUTPUT).getItem() == ModItems.ALCHEMISTS_MONOCLE,
-            "A pane and gold make the monocle");
-        c.assertTrue(core.getStack(MatrixCoreBlockEntity.BASE).getCount() == 1, "One pane is spent");
-        c.assertTrue(core.getStack(MatrixCoreBlockEntity.COMPONENTS[0]).getCount() == 1, "One ingot is spent");
-        c.complete();
-    }
-
-    /** Without the extra part the base just waits in the slot. */
-    @GameTest(templateName = EMPTY_STRUCTURE)
-    public void waitsForTheMissingComponent(TestContext c) {
-        BlockPos pos = build(c);
+        wake(c);
         var core = core(c);
         core.setStack(MatrixCoreBlockEntity.BASE, new ItemStack(Items.GLASS_PANE));
         jar(c, CX + 3, CY, CZ, EssenceType.ORDO, 12);
@@ -130,6 +169,7 @@ public class MatrixGameTests implements FabricGameTest {
     @GameTest(templateName = EMPTY_STRUCTURE)
     public void essenceCrossesTheAirFromJars(TestContext c) {
         BlockPos pos = build(c);
+        wake(c);
         var core = core(c);
         core.setStack(MatrixCoreBlockEntity.BASE, new ItemStack(Items.STRING));
         JarBlockEntity ordo = jar(c, CX + 4, CY + 1, CZ, EssenceType.ORDO, 10);
@@ -144,6 +184,7 @@ public class MatrixGameTests implements FabricGameTest {
     @GameTest(templateName = EMPTY_STRUCTURE)
     public void withoutEssenceNothingHappens(TestContext c) {
         BlockPos pos = build(c);
+        wake(c);
         var core = core(c);
         core.setStack(MatrixCoreBlockEntity.BASE, new ItemStack(Items.STRING, 2));
         run(c.getWorld(), pos, MatrixCoreBlockEntity.DURATION * 2);
@@ -157,6 +198,7 @@ public class MatrixGameTests implements FabricGameTest {
     @GameTest(templateName = EMPTY_STRUCTURE)
     public void fullOutputBlocksTheCube(TestContext c) {
         BlockPos pos = build(c);
+        wake(c);
         var core = core(c);
         core.setStack(MatrixCoreBlockEntity.BASE, new ItemStack(Items.STRING));
         core.setStack(MatrixCoreBlockEntity.OUTPUT, new ItemStack(Items.STONE, 64));
@@ -172,6 +214,7 @@ public class MatrixGameTests implements FabricGameTest {
     @GameTest(templateName = EMPTY_STRUCTURE)
     public void brokenShellStopsTheSynthesis(TestContext c) {
         BlockPos pos = build(c);
+        wake(c);
         var core = core(c);
         core.setStack(MatrixCoreBlockEntity.BASE, new ItemStack(Items.STRING));
         jar(c, CX + 3, CY, CZ, EssenceType.ORDO, 10);

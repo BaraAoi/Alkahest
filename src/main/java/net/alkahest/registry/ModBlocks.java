@@ -10,6 +10,7 @@ import net.alkahest.block.custom.JarBlock;
 import net.alkahest.block.custom.Tier2DistilleryBlock;
 import net.alkahest.block.custom.AlchemicalBrickBlock;
 import net.alkahest.block.custom.MatrixCoreBlock;
+import net.alkahest.block.custom.MatrixPedestalBlock;
 import net.alkahest.block.custom.MatrixPillarBlock;
 import net.alkahest.block.custom.TransmutatorCoreBlock;
 import net.alkahest.block.custom.TransmutatorPillarBlock;
@@ -53,6 +54,8 @@ public final class ModBlocks {
     public static final Block MATRIX_CORE = register("matrix_core", new MatrixCoreBlock(
         AbstractBlock.Settings.copy(Blocks.GOLD_BLOCK).nonOpaque().requiresTool().strength(4f, 8f)
             .luminance(state -> state.get(MatrixCoreBlock.ACTIVE) ? 9 : 0)));
+    public static final Block MATRIX_PEDESTAL = register("matrix_pedestal", new MatrixPedestalBlock(
+        AbstractBlock.Settings.copy(Blocks.QUARTZ_BLOCK).nonOpaque().requiresTool().strength(1.5f, 4f)));
     public static final Block MATRIX_PILLAR = register("matrix_pillar", new MatrixPillarBlock(
         AbstractBlock.Settings.copy(Blocks.QUARTZ_BLOCK).nonOpaque().requiresTool().strength(3f, 6f)
             .luminance(state -> state.get(MatrixPillarBlock.ACTIVE) ? 6 : 0)));

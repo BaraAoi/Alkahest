@@ -27,10 +27,14 @@ public class AlchemicalBrickBlock extends Block {
 
     @Override protected ItemActionResult onUseWithItem(ItemStack stack, BlockState state, World world, BlockPos pos,
                                                        PlayerEntity player, Hand hand, BlockHitResult hit) {
+        if (stack.getItem() instanceof net.alkahest.item.custom.CrystalWandItem) {
+            MatrixCoreBlockEntity.toggleAwakeNearby(world, pos, player);
+            return ItemActionResult.success(world.isClient);
+        }
         if (!(stack.getItem() instanceof net.alkahest.item.custom.AlkahestAmuletItem)) {
             return ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
         }
-        if (MatrixCoreBlockEntity.nearbyCore(world, pos)) MatrixCoreBlockEntity.openNearby(world, pos, player);
+        MatrixCoreBlockEntity.openNearby(world, pos, player);
         return ItemActionResult.success(world.isClient);
     }
 }

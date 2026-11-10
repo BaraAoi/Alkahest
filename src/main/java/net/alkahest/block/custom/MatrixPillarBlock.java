@@ -28,6 +28,10 @@ public class MatrixPillarBlock extends Block {
     /** Clicking a corner with the amulet opens the interface of the cube it belongs to. */
     @Override protected ItemActionResult onUseWithItem(ItemStack stack, BlockState state, World world, BlockPos pos,
                                                        PlayerEntity player, Hand hand, BlockHitResult hit) {
+        if (stack.getItem() instanceof net.alkahest.item.custom.CrystalWandItem) {
+            MatrixCoreBlockEntity.toggleAwakeNearby(world, pos, player);
+            return ItemActionResult.success(world.isClient);
+        }
         if (!(stack.getItem() instanceof net.alkahest.item.custom.AlkahestAmuletItem)) {
             return ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
         }

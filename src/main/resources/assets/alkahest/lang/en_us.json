@@ -337,5 +337,11 @@
   "screen.alkahest.matrix.unformed": "Cube is not assembled",
   "screen.alkahest.matrix.no_recipe": "No synthesis for this base",
   "message.alkahest.matrix_unformed": "Matrix is not assembled: 8 pillars on the corners of a 3×3×3 cube and 18 alchemical bricks between them",
-  "screen.alkahest.monocle.matrix_core": "Matrix: 3×3×3 cube"
+  "screen.alkahest.monocle.matrix_core": "Matrix: 3×3×3 cube",
+  "block.alkahest.matrix_pedestal": "Matrix Pedestal",
+  "screen.alkahest.matrix.asleep": "Dormant: wake it with a wand",
+  "message.alkahest.matrix_awake": "Matrix awakened: the rings begin to turn",
+  "message.alkahest.matrix_asleep": "Matrix asleep: the rings settle into a row",
+  "message.alkahest.pedestal_empty": "The pedestal is empty: hold an item to place it",
+  "message.alkahest.pedestal_status": "On the pedestal: %s × %s"
 }
