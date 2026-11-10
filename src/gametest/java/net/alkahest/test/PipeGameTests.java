@@ -116,4 +116,18 @@ public class PipeGameTests implements FabricGameTest {
         c.complete();
     }
 
+    @GameTest(templateName=EMPTY_STRUCTURE)
+    public void monoclePipeFilterSyncsToClients(TestContext c) {
+        c.setBlockState(3,2,3,ModBlocks.ALCHEMY_PIPE); BlockPos pos=c.getAbsolutePos(new BlockPos(3,2,3));
+        var pipe=(AlchemyPipeBlockEntity)c.getWorld().getBlockEntity(pos); pipe.nextFilter();
+        var replica=new AlchemyPipeBlockEntity(pos,pipe.getCachedState());
+        replica.readComponentlessNbt(pipe.toInitialChunkDataNbt(c.getWorld().getRegistryManager()),c.getWorld().getRegistryManager());
+        c.assertTrue(replica.filter()==EssenceType.IGNIS, "Initial chunk data includes filter");
+        pipe.nextFilter(); var packet=pipe.toUpdatePacket();
+        c.assertTrue(packet!=null && packet.getNbt()!=null, "Changing filter produces update data");
+        replica.readComponentlessNbt(packet.getNbt(),c.getWorld().getRegistryManager());
+        c.assertTrue(replica.filter()==EssenceType.AQUA, "Filter change reaches the client copy");
+        c.complete();
+    }
+
 }

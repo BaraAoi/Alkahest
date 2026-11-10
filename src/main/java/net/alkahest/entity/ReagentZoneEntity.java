@@ -34,7 +34,7 @@ import java.util.LinkedHashMap;
 /** Server-authoritative, saved zone. Only fire blocks created by this zone are removed at expiry. */
 public class ReagentZoneEntity extends Entity {
     public enum Kind {
-        FIRE(2.5f, 100), SLIME(3.0f, 120), NAPALM(3.5f, 200);
+        FIRE(2.5f, 100), SLIME(3.0f, 120), NAPALM(3.5f, 200), MIASMA(4.0f, 240);
         final float radius; final int duration;
         Kind(float radius, int duration) { this.radius = radius; this.duration = duration; }
     }
@@ -93,7 +93,10 @@ public class ReagentZoneEntity extends Entity {
         int elapsed = kind.duration - remaining;
         if (kind == Kind.NAPALM && elapsed % 5 == 0) placeNapalmFlames();
         if (elapsed % 5 == 0) {
-            world.spawnParticles(kind == Kind.SLIME ? ParticleTypes.ITEM_SLIME : ParticleTypes.FLAME,
+            if (kind == Kind.MIASMA) {
+                var dust = new net.minecraft.particle.DustParticleEffect(new org.joml.Vector3f(.42f, .22f, .46f), 1.2f);
+                world.spawnParticles(dust, getX(), getY() + .45, getZ(), 18, kind.radius / 2, .35, kind.radius / 2, .01);
+            } else world.spawnParticles(kind == Kind.SLIME ? ParticleTypes.ITEM_SLIME : ParticleTypes.FLAME,
                 getX(), getY() + 0.15, getZ(), 8, kind.radius / 2, 0.1, kind.radius / 2, 0.01);
         }
         if (elapsed % 10 == 0) {
@@ -105,6 +108,21 @@ public class ReagentZoneEntity extends Entity {
                 switch (kind) {
                     case FIRE -> { if (elapsed == 0) target.setOnFireFor(5); }
                     case SLIME -> target.addStatusEffect(new StatusEffectInstance(StatusEffects.SLOWNESS, 25, 1));
+                    case MIASMA -> {
+                        if (elapsed % 20 == 0) {
+                            // Refresh only near expiry: constantly resetting duration can prevent vanilla's periodic damage ticks.
+                            var wither = target.getStatusEffect(StatusEffects.WITHER);
+                            if (wither == null || wither.getDuration() <= 20)
+                                target.addStatusEffect(new StatusEffectInstance(StatusEffects.WITHER, 60, 1));
+                            var poison = target.getStatusEffect(StatusEffects.POISON);
+                            if (poison == null || poison.getDuration() <= 20)
+                                target.addStatusEffect(new StatusEffectInstance(StatusEffects.POISON, 75, 0));
+                            for (var slot : new net.minecraft.entity.EquipmentSlot[]{
+                                    net.minecraft.entity.EquipmentSlot.HEAD, net.minecraft.entity.EquipmentSlot.CHEST,
+                                    net.minecraft.entity.EquipmentSlot.LEGS, net.minecraft.entity.EquipmentSlot.FEET})
+                                target.getEquippedStack(slot).damage(5, target, slot);
+                        }
+                    }
                     case NAPALM -> {
                         // Eight seconds after leaving the zone, plus ordinary fire's remaining burn time.
                         target.addStatusEffect(new StatusEffectInstance(ModEffects.IN_NAPALM, 160, 0, false, true, true));

@@ -30,6 +30,8 @@ public final class AlkahestClient implements ClientModInitializer {
     public void onInitializeClient() {
         net.minecraft.client.gui.screen.ingame.HandledScreens.register(net.alkahest.registry.ModScreenHandlers.DISTILLERY,
             net.alkahest.client.gui.DistilleryScreen::new);
+        net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback.EVENT.register((context, tickCounter) ->
+            net.alkahest.client.gui.MonocleHud.render(context));
         ClientPlayNetworking.registerGlobalReceiver(OpenJournalPayload.ID, (payload, context) ->
             context.client().execute(() -> context.client().setScreen(new JournalScreen(payload.flags()))));
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.NAPALM_FLAME, RenderLayer.getCutout());

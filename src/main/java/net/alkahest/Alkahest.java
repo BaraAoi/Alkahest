@@ -37,6 +37,8 @@ public final class Alkahest implements ModInitializer {
                     player.openHandledScreen(d);
                 return net.minecraft.util.ActionResult.success(world.isClient);
             }
+            if (!player.isSpectator() && player.isSneaking() && world.getBlockState(hit.getBlockPos()).isOf(ModBlocks.JAR))
+                return net.alkahest.block.custom.JarBlock.fillCrystalStack(world, hit.getBlockPos(), player, hand);
             return net.minecraft.util.ActionResult.PASS;
         });
     }

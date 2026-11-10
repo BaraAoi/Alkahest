@@ -168,4 +168,34 @@ public class JarGameTests implements FabricGameTest {
         });
     }
 
+    @GameTest(templateName=EMPTY_STRUCTURE)
+    public void bulkCrystalsAreBoundedAndKeepSingleType(TestContext c) {
+        BlockPos pos=c.getAbsolutePos(new BlockPos(3,2,3)); c.setBlockState(3,2,3,ModBlocks.JAR);
+        var jar=(JarBlockEntity)c.getWorld().getBlockEntity(pos);
+        var player=c.createMockPlayer(net.minecraft.world.GameMode.SURVIVAL);
+        player.setSneaking(true);
+        var hit=new net.minecraft.util.hit.BlockHitResult(net.minecraft.util.math.Vec3d.ofCenter(pos),net.minecraft.util.math.Direction.UP,pos,false);
+        jar.setContents(of(EssenceType.ORDO,90,.4f));
+        var crystals=new ItemStack(ModItems.CRYSTALS.get(EssenceType.ORDO),16); crystals.set(ModDataComponents.ESSENCE_STABILITY,.2f);
+        player.setStackInHand(net.minecraft.util.Hand.MAIN_HAND,crystals);
+        var result=net.fabricmc.fabric.api.event.player.UseBlockCallback.EVENT.invoker().interact(player,c.getWorld(),net.minecraft.util.Hand.MAIN_HAND,hit);
+        c.assertTrue(result.isAccepted() && jar.contents().total()==100 && crystals.getCount()==6, "Sneak click fills remaining room and preserves excess");
+        c.assertTrue(Math.abs(jar.contents().contents().getFirst().stability()-.38f)<.0001f, "Only inserted crystals affect weighted stability");
+        net.fabricmc.fabric.api.event.player.UseBlockCallback.EVENT.invoker().interact(player,c.getWorld(),net.minecraft.util.Hand.MAIN_HAND,hit);
+        c.assertTrue(crystals.getCount()==6 && jar.contents().total()==100, "A full jar cannot consume or evaporate bulk crystals");
+        var wrong=new ItemStack(ModItems.CRYSTALS.get(EssenceType.AQUA),4);player.setStackInHand(net.minecraft.util.Hand.MAIN_HAND,wrong);
+        net.fabricmc.fabric.api.event.player.UseBlockCallback.EVENT.invoker().interact(player,c.getWorld(),net.minecraft.util.Hand.MAIN_HAND,hit);
+        c.assertTrue(wrong.getCount()==4 && jar.contents().contents().getFirst().type()==EssenceType.ORDO, "Wrong type cannot mix or consume");
+        var legacy=new JarContentsComponent(List.of(new EssenceStack(EssenceType.ORDO,3,.3f),new EssenceStack(EssenceType.AQUA,4,.4f)));
+        jar.setContents(legacy); player.setStackInHand(net.minecraft.util.Hand.MAIN_HAND,crystals);
+        net.fabricmc.fabric.api.event.player.UseBlockCallback.EVENT.invoker().interact(player,c.getWorld(),net.minecraft.util.Hand.MAIN_HAND,hit);
+        c.assertTrue(jar.contents().equals(legacy) && crystals.getCount()==6, "Legacy mixture stays untouched");
+        var creative=c.createMockPlayer(net.minecraft.world.GameMode.CREATIVE);
+        jar.setContents(JarContentsComponent.EMPTY); var creativeCrystals=new ItemStack(ModItems.CRYSTALS.get(EssenceType.AQUA),12);
+        creative.setStackInHand(net.minecraft.util.Hand.MAIN_HAND,creativeCrystals);
+        net.alkahest.block.custom.JarBlock.fillCrystalStack(c.getWorld(),pos,creative,net.minecraft.util.Hand.MAIN_HAND);
+        c.assertTrue(creativeCrystals.getCount()==12 && jar.contents().total()==12, "Creative bulk fill keeps the held stack");
+        c.complete();
+    }
+
 }

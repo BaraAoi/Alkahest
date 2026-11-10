@@ -204,4 +204,54 @@ public class ReagentGameTests implements FabricGameTest {
         });
     }
 
+    @GameTest(templateName=EMPTY_STRUCTURE,tickLimit=300)
+    public void miasmaDamagesArmorAndExpires(TestContext c) {
+        var center=c.getAbsolutePos(new BlockPos(2,2,2));
+        var near=c.spawnEntity(EntityType.PIG,2,2,2); near.setAiDisabled(true); near.setNoGravity(true);
+        var far=c.spawnEntity(EntityType.PIG,7,2,2); far.setAiDisabled(true); far.setNoGravity(true);
+        float initialHealth=near.getHealth();
+        var helmet=new ItemStack(Items.IRON_HELMET); var boots=new ItemStack(Items.IRON_BOOTS);
+        near.equipStack(EquipmentSlot.HEAD,helmet); near.equipStack(EquipmentSlot.FEET,boots);
+        ReagentZoneEntity.spawn(c.getWorld(),Vec3d.ofCenter(center),ReagentZoneEntity.Kind.MIASMA);
+        var zones=c.getWorld().getEntitiesByClass(ReagentZoneEntity.class,new net.minecraft.util.math.Box(center).expand(1),e->true);
+        c.assertTrue(zones.size()==1, "Miasma zone is spawned"); var zone=zones.getFirst();
+        c.runAtTick(5,()->{
+            var wither=near.getStatusEffect(StatusEffects.WITHER);var poison=near.getStatusEffect(StatusEffects.POISON);
+            c.assertTrue(wither!=null && wither.getAmplifier()==1 && poison!=null && poison.getAmplifier()==0, "Inside target gets Wither II and Poison I");
+            c.assertTrue(helmet.getDamage()==5 && boots.getDamage()==5, "Each equipped armor piece loses 5 durability per second");
+            c.assertFalse(far.hasStatusEffect(StatusEffects.WITHER), "Outside radius remains unaffected");
+        });
+        c.runAtTick(25,()->{
+            c.assertTrue(helmet.getDamage()==10 && boots.getDamage()==10, "Armor is damaged again after one second");
+            c.assertTrue(near.getHealth()<initialHealth, "Refreshing potion effects must not suppress their damage ticks");
+        });
+        c.runAtTick(245,()->{ c.assertTrue(zone.isRemoved(), "Miasma expires after 12 seconds"); c.complete(); });
+    }
+    @GameTest(templateName=EMPTY_STRUCTURE,tickLimit=80)
+    public void lightningBottleMakesRealLightning(TestContext c) {
+        c.setBlockState(3,1,3,Blocks.STONE);
+        var projectile=c.spawnEntity(ModEntities.THROWN_REAGENT,3.5f,3.5f,3.5f);
+        projectile.setItem(new ItemStack(ModItems.LIGHTNING_IN_A_BOTTLE)); projectile.setVelocity(0,-.7,0);
+        var pos=c.getAbsolutePos(new BlockPos(3,2,3));
+        c.runAtTick(4,()->{
+            c.assertTrue(projectile.isRemoved(), "Lightning projectile disappears on impact");
+            var bolts=c.getWorld().getEntitiesByClass(net.minecraft.entity.LightningEntity.class,new net.minecraft.util.math.Box(pos).expand(2),e->true);
+            c.assertTrue(!bolts.isEmpty(), "Impact creates a real vanilla lightning bolt");
+            c.complete();
+        });
+    }
+    @GameTest(templateName=EMPTY_STRUCTURE,tickLimit=80)
+    public void miasmaBottleCreatesZoneOnImpact(TestContext c) {
+        c.setBlockState(3,1,3,Blocks.STONE);
+        var projectile=c.spawnEntity(ModEntities.THROWN_REAGENT,3.5f,3.5f,3.5f);
+        projectile.setItem(new ItemStack(ModItems.MIASMA)); projectile.setVelocity(0,-.7,0);
+        var pos=c.getAbsolutePos(new BlockPos(3,2,3));
+        c.runAtTick(5,()->{
+            c.assertTrue(projectile.isRemoved(), "Miasma projectile disappears on impact");
+            var zones=c.getWorld().getEntitiesByClass(ReagentZoneEntity.class,new net.minecraft.util.math.Box(pos).expand(2),e->true);
+            c.assertTrue(!zones.isEmpty(), "Impact creates a persistent effect zone");
+            c.complete();
+        });
+    }
+
 }

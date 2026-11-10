@@ -99,6 +99,29 @@ public class JarBlock extends Block implements BlockEntityProvider {
         } else describe(player, jar.contents());
         return ItemActionResult.SUCCESS;
     }
+    /** Sneak-use crystals in bulk: never consume beyond free capacity or create a mixed jar. */
+    public static ActionResult fillCrystalStack(World world, BlockPos pos, PlayerEntity player, Hand hand) {
+        ItemStack held = player.getStackInHand(hand);
+        EssenceType type = null;
+        for (var entry : ModItems.CRYSTALS.entrySet()) if (held.isOf(entry.getValue())) { type = entry.getKey(); break; }
+        if (type == null) return ActionResult.PASS;
+        if (world.isClient) return ActionResult.SUCCESS;
+        if (!(world.getBlockEntity(pos) instanceof JarBlockEntity jar)) return ActionResult.FAIL;
+        var current = jar.contents();
+        if (!JarItem.allowed(current)) { player.sendMessage(Text.translatable("message.alkahest.jar_invalid"), true); return ActionResult.SUCCESS; }
+        float stability = held.getOrDefault(ModDataComponents.ESSENCE_STABILITY, 1.0f);
+        var one = new JarContentsComponent(List.of(new EssenceStack(type, 1, stability)));
+        if (!JarItem.compatible(current, one)) {
+            player.sendMessage(Text.translatable("message.alkahest.jar_single_type"), true); return ActionResult.SUCCESS;
+        }
+        int count = Math.min(held.getCount(), JarItem.CAPACITY - current.total());
+        if (count <= 0) { player.sendMessage(Text.translatable("message.alkahest.jar_bulk_full"), true); return ActionResult.SUCCESS; }
+        var addition = new JarContentsComponent(List.of(new EssenceStack(type, count, stability)));
+        jar.setContents(current.merge(addition, JarItem.CAPACITY));
+        held.decrementUnlessCreative(count, player);
+        player.sendMessage(Text.translatable("message.alkahest.jar_bulk_added", count, jar.contents().total()), true);
+        return ActionResult.SUCCESS;
+    }
     private static void describe(PlayerEntity player, JarContentsComponent contents) {
         player.sendMessage(Text.translatable("message.alkahest.jar_total", contents.total()), false);
         if (!JarItem.singleType(contents)) player.sendMessage(Text.translatable("message.alkahest.jar_legacy"), false);

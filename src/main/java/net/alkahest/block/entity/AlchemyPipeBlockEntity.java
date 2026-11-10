@@ -30,7 +30,15 @@ public class AlchemyPipeBlockEntity extends BlockEntity {
         int next = filter == null ? 0 : filter.ordinal()+1;
         filter = next >= all.length || all[next] == EssenceType.VACUUM ? null : all[next];
         markDirty();
+        if (world != null && !world.isClient) {
+            BlockState state = world.getBlockState(pos);
+            world.updateListeners(pos, state, state, net.minecraft.block.Block.NOTIFY_LISTENERS);
+        }
     }
+    @Override public net.minecraft.network.packet.s2c.play.BlockEntityUpdateS2CPacket toUpdatePacket() {
+        return net.minecraft.network.packet.s2c.play.BlockEntityUpdateS2CPacket.create(this);
+    }
+    @Override public NbtCompound toInitialChunkDataNbt(RegistryWrapper.WrapperLookup registry) { return createNbt(registry); }
     public void describe(net.minecraft.entity.player.PlayerEntity player) {
         Direction out = world.getBlockState(pos).get(AlchemyPipeBlock.FACING);
         player.sendMessage(Text.translatable("message.alkahest.pipe_status", Text.translatable("direction.alkahest."+out.asString()),

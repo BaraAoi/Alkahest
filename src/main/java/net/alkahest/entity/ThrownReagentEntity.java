@@ -25,7 +25,14 @@ public class ThrownReagentEntity extends ThrownItemEntity {
         super.onCollision(hit);
         if (!(getWorld() instanceof ServerWorld world)) return;
         ItemStack reagent = getStack();
-        if (reagent.isOf(ModItems.ACID_BOMB)) {
+        if (reagent.isOf(ModItems.LIGHTNING_IN_A_BOTTLE)) {
+            var bolt = EntityType.LIGHTNING_BOLT.create(world);
+            if (bolt != null) {
+                bolt.setPosition(hit.getPos());
+                if (getOwner() instanceof net.minecraft.server.network.ServerPlayerEntity player) bolt.setChanneler(player);
+                world.spawnEntity(bolt);
+            }
+        } else if (reagent.isOf(ModItems.ACID_BOMB)) {
             float radius = 3.5f;
             for (LivingEntity target : world.getEntitiesByClass(LivingEntity.class, new Box(getPos(), getPos()).expand(radius),
                     entity -> !entity.isSpectator() && entity.squaredDistanceTo(this) <= radius * radius)) {
@@ -43,7 +50,8 @@ public class ThrownReagentEntity extends ThrownItemEntity {
         } else {
             ReagentZoneEntity.Kind kind = reagent.isOf(ModItems.FIRE_DUST) ? ReagentZoneEntity.Kind.FIRE
                 : reagent.isOf(ModItems.CAUSTIC_SLIME) ? ReagentZoneEntity.Kind.SLIME
-                : reagent.isOf(ModItems.NAPALM) ? ReagentZoneEntity.Kind.NAPALM : null;
+                : reagent.isOf(ModItems.NAPALM) ? ReagentZoneEntity.Kind.NAPALM
+                : reagent.isOf(ModItems.MIASMA) ? ReagentZoneEntity.Kind.MIASMA : null;
             if (kind != null) ReagentZoneEntity.spawn(world, getPos(), kind);
             world.playSound(null, getBlockPos(), SoundEvents.BLOCK_FIRE_EXTINGUISH, SoundCategory.PLAYERS, 0.7f, 1.0f);
         }

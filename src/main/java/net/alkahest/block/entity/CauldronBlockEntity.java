@@ -145,6 +145,12 @@ public class CauldronBlockEntity extends BlockEntity {
         // Gunpowder is an additional early-game recipe; the specification's blaze-powder recipe remains valid.
         if (items.size() == 2 && items.contains(Items.REDSTONE) && (items.contains(Items.BLAZE_POWDER) || items.contains(Items.GUNPOWDER))) return new ItemStack(ModItems.FIRE_DUST, 2);
         if (items.size() == 2 && items.contains(Items.SPIDER_EYE) && items.contains(Items.CACTUS)) return new ItemStack(ModItems.CAUSTIC_SLIME, 2);
+        // Temporary pre-Matrix recipes: items are usable before their future research and multiblock.
+        if (items.size() == 3 && items.contains(Items.GLASS_BOTTLE) &&
+            items.contains(ModItems.CRYSTALS.get(net.alkahest.essence.EssenceType.IGNIS)) &&
+            items.contains(ModItems.CRYSTALS.get(net.alkahest.essence.EssenceType.AER))) return new ItemStack(ModItems.LIGHTNING_IN_A_BOTTLE);
+        if (items.size() == 3 && items.contains(Items.GLASS_BOTTLE) && items.contains(ModItems.CAUSTIC_SLIME) &&
+            items.contains(ModItems.CRYSTALS.get(net.alkahest.essence.EssenceType.MORTUUS))) return new ItemStack(ModItems.MIASMA);
         if (items.size() == 3 && items.contains(ModItems.SALT) && items.contains(ModItems.CRYSTALS.get(net.alkahest.essence.EssenceType.ORDO)) && items.contains(Items.STRING)) return new ItemStack(ModItems.BINDING_SALT, 2);
         // The original three-ingredient recipe stays available; the researched pair can also be repeated for a monocle.
         if ((items.size() == 2 || (items.size() == 3 && items.contains(Items.GOLD_INGOT))) &&

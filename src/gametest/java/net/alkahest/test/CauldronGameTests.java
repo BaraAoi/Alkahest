@@ -156,4 +156,29 @@ public class CauldronGameTests implements FabricGameTest {
         context.complete();
     }
 
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void advancedReagentsAreCraftableBeforeResearch(TestContext context) {
+        CauldronBlockEntity cauldron=cauldron(context);
+        PlayerEntity player=fill(context,cauldron);
+        cauldron.stacks().set(0,new ItemStack(Items.GLASS_BOTTLE));
+        cauldron.stacks().set(1,new ItemStack(ModItems.CRYSTALS.get(EssenceType.IGNIS)));
+        cauldron.stacks().set(2,new ItemStack(ModItems.CRYSTALS.get(EssenceType.AER)));
+        context.assertTrue(cauldron.activate(player), "Lightning bottle must brew without research");
+        context.assertTrue(player.getInventory().contains(new ItemStack(ModItems.LIGHTNING_IN_A_BOTTLE)), "Lightning result is delivered");
+        context.assertTrue(cauldron.stacks().stream().allMatch(ItemStack::isEmpty), "Recipe consumes exactly its ingredients");
+        BlockPos pos=context.getAbsolutePos(new BlockPos(3,2,3));
+        context.assertFalse(context.getWorld().getBlockState(pos).get(AlchemyCauldronBlock.FILLED), "Brewing consumes water");
+        player.setStackInHand(Hand.MAIN_HAND,new ItemStack(Items.WATER_BUCKET)); cauldron.fill(player,Hand.MAIN_HAND);
+        cauldron.stacks().set(0,new ItemStack(Items.GLASS_BOTTLE));
+        cauldron.stacks().set(1,new ItemStack(ModItems.CAUSTIC_SLIME));
+        cauldron.stacks().set(2,new ItemStack(ModItems.CRYSTALS.get(EssenceType.MORTUUS)));
+        cauldron.stacks().set(3,new ItemStack(Items.STONE));
+        context.assertFalse(cauldron.activate(player), "Extra ingredient is not a recipe");
+        context.assertTrue(!cauldron.stacks().get(0).isEmpty() && context.getWorld().getBlockState(pos).get(AlchemyCauldronBlock.FILLED), "Rejected combination preserves ingredients and water");
+        cauldron.stacks().set(3,ItemStack.EMPTY);
+        context.assertTrue(cauldron.activate(player), "Miasma must brew without research");
+        context.assertTrue(player.getInventory().contains(new ItemStack(ModItems.MIASMA)), "Miasma reaches inventory");
+        context.complete();
+    }
+
 }
