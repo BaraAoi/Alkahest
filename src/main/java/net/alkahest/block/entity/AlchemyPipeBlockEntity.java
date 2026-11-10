@@ -66,8 +66,10 @@ public class AlchemyPipeBlockEntity extends BlockEntity {
             BlockPos next=cursor.offset(state.get(AlchemyPipeBlock.FACING));
             if (!world.isChunkLoaded(next)) return false;
             if (world.getBlockEntity(next) instanceof JarBlockEntity target) {
-                if (target == source || !JarItem.allowed(target.contents()) || target.contents().total() >= JarItem.CAPACITY) return false;
-                var item=source.contents().contents().stream().filter(e -> e.type() != EssenceType.VACUUM && required.stream().allMatch(f -> f == e.type())).findFirst().orElse(null);
+                if (target == source || !JarItem.allowed(target.contents()) || !JarItem.singleType(target.contents()) || target.contents().total() >= JarItem.CAPACITY) return false;
+                var item=source.contents().contents().stream().filter(e -> e.type() != EssenceType.VACUUM &&
+                    required.stream().allMatch(f -> f == e.type()) &&
+                    (target.contents().total() == 0 || target.contents().contents().getFirst().type() == e.type())).findFirst().orElse(null);
                 if (item == null) return false;
                 List<EssenceStack> remainder=new ArrayList<>(source.contents().contents());
                 remainder.remove(item);

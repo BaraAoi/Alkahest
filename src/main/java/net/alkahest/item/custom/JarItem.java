@@ -23,6 +23,13 @@ public class JarItem extends BlockItem {
     public static boolean allowed(JarContentsComponent contents) {
         return contents.total() <= CAPACITY && contents.contents().stream().noneMatch(s -> s.type() == net.alkahest.essence.EssenceType.VACUUM);
     }
+    /** Legacy mixed jars stay readable, but no transfer may create or add to a mixture. */
+    public static boolean singleType(JarContentsComponent contents) { return contents.contents().size() <= 1; }
+    public static boolean compatible(JarContentsComponent target, JarContentsComponent addition) {
+        if (!allowed(target) || !allowed(addition) || !singleType(target) || !singleType(addition)) return false;
+        return target.total() == 0 || addition.total() == 0 ||
+            target.contents().getFirst().type() == addition.contents().getFirst().type();
+    }
     public static void set(ItemStack stack, JarContentsComponent contents) {
         if (contents.total() == 0) stack.remove(ModDataComponents.JAR_CONTENTS);
         else stack.set(ModDataComponents.JAR_CONTENTS, contents);
@@ -31,7 +38,7 @@ public class JarItem extends BlockItem {
     public static boolean pour(ItemStack source, ItemStack target) {
         if (!(source.getItem() instanceof JarItem) || !(target.getItem() instanceof JarItem) || source == target) return false;
         var from = contents(source); var into = contents(target);
-        if (from.total() == 0 || !allowed(from) || !allowed(into)) return false;
+        if (from.total() == 0 || !compatible(into, from)) return false;
         set(target, into.merge(from, CAPACITY)); set(source, JarContentsComponent.EMPTY);
         return true;
     }
@@ -46,14 +53,23 @@ public class JarItem extends BlockItem {
                 world.spawnParticles(net.minecraft.particle.ParticleTypes.SMOKE, player.getX(), player.getY() + 1, player.getZ(), 12, .2, .2, .2, .02);
         }
     }
-    @Override public boolean onStackClicked(ItemStack stack, Slot slot, ClickType click, PlayerEntity player) {
-        boolean overflow = contents(stack).total() + contents(slot.getStack()).total() > CAPACITY;
-        if (!validSlot(slot, player, click) || !pour(stack, slot.getStack())) return false;
+    private static boolean tryInventoryPour(ItemStack source, ItemStack target, Slot slot, ClickType click, PlayerEntity player) {
+        if (!validSlot(slot, player, click) || !(source.getItem() instanceof JarItem) || !(target.getItem() instanceof JarItem) || source == target) return false;
+        var from = contents(source); var into = contents(target);
+        if (from.total() == 0) return false;
+        if (!compatible(into, from)) {
+            if (!player.getWorld().isClient) player.sendMessage(Text.translatable("message.alkahest.jar_single_type"), true);
+            return true; // Do not let vanilla rearrange or consume either jar on a refused pour.
+        }
+        boolean overflow = from.total() + into.total() > CAPACITY;
+        if (!pour(source, target)) return false;
         overflowFeedback(player, overflow); slot.markDirty(); return true;
+    }
+    @Override public boolean onStackClicked(ItemStack stack, Slot slot, ClickType click, PlayerEntity player) {
+        return tryInventoryPour(stack, slot.getStack(), slot, click, player);
     }
     @Override public boolean onClicked(ItemStack stack, ItemStack cursor, Slot slot, ClickType click, PlayerEntity player, StackReference reference) {
-        boolean overflow = contents(cursor).total() + contents(stack).total() > CAPACITY;
-        if (!validSlot(slot, player, click) || !pour(cursor, stack)) return false;
-        overflowFeedback(player, overflow); slot.markDirty(); return true;
+        return tryInventoryPour(cursor, stack, slot, click, player);
     }
+
 }

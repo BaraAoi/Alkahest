@@ -84,6 +84,10 @@ public class JarBlock extends Block implements BlockEntityProvider {
             }
         }
         if (addition == null || addition.total() == 0) { describe(player, current); return ItemActionResult.SUCCESS; }
+        if (!JarItem.compatible(current, addition)) {
+            player.sendMessage(Text.translatable("message.alkahest.jar_single_type"), true);
+            return ItemActionResult.SUCCESS;
+        }
         int before = current.total(), amount = addition.total();
         jar.setContents(current.merge(addition, JarItem.CAPACITY));
         if (fromJar) JarItem.set(stack, JarContentsComponent.EMPTY);
@@ -97,6 +101,7 @@ public class JarBlock extends Block implements BlockEntityProvider {
     }
     private static void describe(PlayerEntity player, JarContentsComponent contents) {
         player.sendMessage(Text.translatable("message.alkahest.jar_total", contents.total()), false);
+        if (!JarItem.singleType(contents)) player.sendMessage(Text.translatable("message.alkahest.jar_legacy"), false);
         for (EssenceStack e : contents.contents())
             player.sendMessage(Text.literal("◆ " + e.type().displayName() + ": " + e.amount() + " · " + Math.round(e.stability() * 100) + "%").styled(style -> style.withColor(e.type().color())), false);
     }

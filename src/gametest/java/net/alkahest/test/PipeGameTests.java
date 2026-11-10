@@ -94,4 +94,26 @@ public class PipeGameTests implements FabricGameTest {
         c.complete();
     }
 
+    @GameTest(templateName=EMPTY_STRUCTURE)
+    public void pipesNeverCreateNewMixtures(TestContext c) {
+        c.setBlockState(1,2,3,ModBlocks.JAR);
+        c.setBlockState(2,2,3,ModBlocks.ALCHEMY_PIPE.getDefaultState().with(AlchemyPipeBlock.FACING,Direction.EAST));
+        c.setBlockState(3,2,3,ModBlocks.JAR);
+        BlockPos pipe=c.getAbsolutePos(new BlockPos(2,2,3));
+        var source=(JarBlockEntity)c.getWorld().getBlockEntity(pipe.west());
+        var target=(JarBlockEntity)c.getWorld().getBlockEntity(pipe.east());
+        source.setContents(of(EssenceType.AQUA,4,.2f)); target.setContents(of(EssenceType.ORDO,3,.7f));
+        c.assertFalse(AlchemyPipeBlockEntity.transfer(c.getWorld(),pipe,source),"Incompatible destination must block transfer");
+        c.assertTrue(source.contents().total()==4 && target.contents().total()==3,"Blocked transfer preserves both quantities");
+        var legacy=new JarContentsComponent(List.of(new EssenceStack(EssenceType.AQUA,4,.2f),new EssenceStack(EssenceType.ORDO,3,.7f)));
+        target.setContents(legacy);
+        c.assertFalse(AlchemyPipeBlockEntity.transfer(c.getWorld(),pipe,source),"Cannot add to a legacy mixed jar");
+        c.assertTrue(target.contents().equals(legacy) && source.contents().total()==4,"Legacy destination remains untouched");
+        source.setContents(legacy); target.setContents(of(EssenceType.ORDO,2,.5f));
+        c.assertTrue(AlchemyPipeBlockEntity.transfer(c.getWorld(),pipe,source),"An old mixture can drain its compatible type");
+        c.assertTrue(target.contents().contents().size()==1 && target.contents().contents().getFirst().type()==EssenceType.ORDO && target.contents().total()==3, "Destination never becomes mixed");
+        c.assertTrue(source.contents().total()==6,"Legacy source loses just the accepted unit");
+        c.complete();
+    }
+
 }

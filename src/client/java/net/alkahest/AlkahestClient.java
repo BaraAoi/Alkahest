@@ -53,6 +53,7 @@ public final class AlkahestClient implements ClientModInitializer {
             if (stack.getItem() instanceof net.alkahest.item.custom.JarItem) {
                 var contents = net.alkahest.item.custom.JarItem.contents(stack);
                 lines.add(Text.translatable("message.alkahest.jar_total", contents.total()));
+                if (!net.alkahest.item.custom.JarItem.singleType(contents)) lines.add(Text.translatable("message.alkahest.jar_legacy").formatted(net.minecraft.util.Formatting.GOLD));
                 for (var essence : contents.contents()) lines.add(Text.literal("◆ " + essence.type().displayName() + ": " + essence.amount() + " · " + Math.round(essence.stability() * 100) + "%")
                     .styled(style -> style.withColor(essence.type().color())));
             }
