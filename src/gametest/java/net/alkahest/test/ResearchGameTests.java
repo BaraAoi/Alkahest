@@ -157,7 +157,8 @@ public class ResearchGameTests implements FabricGameTest {
         context.setBlockState(5, 2, 3, ModBlocks.DISTILLERY);
         DistilleryBlockEntity distillery = (DistilleryBlockEntity) context.getWorld().getBlockEntity(distPos);
         distillery.stacks().set(1, new ItemStack(ModItems.ASH));
-        distillery.collect(player);
+        var ashScreen = (net.alkahest.screen.DistilleryScreenHandler) distillery.createMenu(1, player.getInventory(), player);
+        ashScreen.quickMove(player, 1);
         context.assertTrue((EarlyResearch.flags(player) & EarlyResearch.SIGHT_DISCOVERED) == 0, "Ash does not count as a crystal");
         distillery.stacks().set(1, new ItemStack(ModItems.CRYSTALS.get(EssenceType.AQUA)));
         var distilleryScreen = (net.alkahest.screen.DistilleryScreenHandler) distillery.createMenu(2, player.getInventory(), player);

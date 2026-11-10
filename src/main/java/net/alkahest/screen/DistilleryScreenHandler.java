@@ -12,37 +12,37 @@ import net.minecraft.screen.PropertyDelegate;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.slot.Slot;
 
-/** Two-slot early distillery; the server owns progress and output. */
+/** Queued early distillery; the server owns progress and output. */
 public class DistilleryScreenHandler extends ScreenHandler {
     private final Inventory inventory;
     private final PropertyDelegate properties;
     public DistilleryScreenHandler(int syncId, PlayerInventory playerInventory) {
-        this(syncId, playerInventory, new SimpleInventory(2), new ArrayPropertyDelegate(2));
+        this(syncId, playerInventory, new SimpleInventory(DistilleryBlockEntity.SIZE), new ArrayPropertyDelegate(2));
     }
     public DistilleryScreenHandler(int syncId, PlayerInventory playerInventory, Inventory inventory, PropertyDelegate properties) {
         super(ModScreenHandlers.DISTILLERY, syncId);
-        checkSize(inventory, 2); checkDataCount(properties, 2);
+        checkSize(inventory, DistilleryBlockEntity.SIZE); checkDataCount(properties, 2);
         this.inventory = inventory; this.properties = properties;
         inventory.onOpen(playerInventory.player);
-        addSlot(new Slot(inventory, 0, 44, 32) {
+        addSlot(new Slot(inventory, 0, 80, 23) {
             @Override public boolean canInsert(ItemStack stack) { return DistilleryBlockEntity.accepts(stack); }
-            @Override public int getMaxItemCount() { return 1; }
-            @Override public int getMaxItemCount(ItemStack stack) { return 1; }
             @Override public void onTakeItem(PlayerEntity player, ItemStack stack) {
                 if (inventory instanceof DistilleryBlockEntity distillery) distillery.cancelProgress();
                 super.onTakeItem(player, stack);
             }
         });
-        addSlot(new Slot(inventory, 1, 116, 32) {
-            @Override public boolean canInsert(ItemStack stack) { return false; }
-            @Override public void onTakeItem(PlayerEntity player, ItemStack stack) {
-                if (inventory instanceof DistilleryBlockEntity distillery) distillery.discoverOutput(player, stack);
-                super.onTakeItem(player, stack);
-            }
-        });
+        for (int i = 1; i < DistilleryBlockEntity.OUTPUT_END; i++) {
+            addSlot(new Slot(inventory, i, 26 + (i - 1) * 18, 65) {
+                @Override public boolean canInsert(ItemStack stack) { return false; }
+                @Override public void onTakeItem(PlayerEntity player, ItemStack stack) {
+                    if (inventory instanceof DistilleryBlockEntity distillery) distillery.discoverOutput(player, stack);
+                    super.onTakeItem(player, stack);
+                }
+            });
+        }
         for (int row=0; row<3; row++) for (int col=0; col<9; col++)
-            addSlot(new Slot(playerInventory, col + row * 9 + 9, 8 + col * 18, 84 + row * 18));
-        for (int col=0; col<9; col++) addSlot(new Slot(playerInventory, col, 8 + col * 18, 142));
+            addSlot(new Slot(playerInventory, col + row * 9 + 9, 8 + col * 18, 108 + row * 18));
+        for (int col=0; col<9; col++) addSlot(new Slot(playerInventory, col, 8 + col * 18, 166));
         addProperties(properties);
     }
     public int progress() { return properties.get(0); }
@@ -54,8 +54,8 @@ public class DistilleryScreenHandler extends ScreenHandler {
         Slot slot = slots.get(index);
         if (!slot.hasStack()) return ItemStack.EMPTY;
         ItemStack stack = slot.getStack(); ItemStack original = stack.copy();
-        if (index < 2) {
-            if (!insertItem(stack, 2, slots.size(), true)) return ItemStack.EMPTY;
+        if (index < DistilleryBlockEntity.OUTPUT_END) {
+            if (!insertItem(stack, DistilleryBlockEntity.OUTPUT_END, slots.size(), true)) return ItemStack.EMPTY;
         } else {
             if (!insertItem(stack, 0, 1, false)) return ItemStack.EMPTY;
         }

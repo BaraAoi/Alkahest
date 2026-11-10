@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "alkahest:crystal_aqua"
+    },
+    {
+      "item": "alkahest:crystal_ignis"
+    }
+  ],
+  "result": {
+    "id": "alkahest:crystal_vapor",
+    "count": 1,
+    "components": {
+      "alkahest:essence_stability": 0.15
+    }
+  }
+}

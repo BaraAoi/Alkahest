@@ -24,17 +24,14 @@ public class DistilleryBlock extends Block implements BlockEntityProvider {
     @Override public <T extends BlockEntity> BlockEntityTicker<T> getTicker(World world, BlockState state, BlockEntityType<T> type) {
         return !world.isClient && type == ModBlockEntities.DISTILLERY ? (w, p, s, be) -> DistilleryBlockEntity.tick(w, p, (DistilleryBlockEntity) be) : null;
     }
+    private void open(World world, BlockPos pos, PlayerEntity player) {
+        if (!world.isClient && world.getBlockEntity(pos) instanceof DistilleryBlockEntity distillery) player.openHandledScreen(distillery);
+    }
     @Override protected ItemActionResult onUseWithItem(ItemStack stack, BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
-        if (stack.isEmpty()) return ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
-        if (!world.isClient && world.getBlockEntity(pos) instanceof DistilleryBlockEntity distillery) distillery.insert(player, hand);
-        return ItemActionResult.success(world.isClient);
+        open(world, pos, player); return ItemActionResult.success(world.isClient);
     }
     @Override protected ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, BlockHitResult hit) {
-        if (!world.isClient && world.getBlockEntity(pos) instanceof DistilleryBlockEntity distillery) {
-            if (player.isSneaking()) player.openHandledScreen(distillery);
-            else distillery.collect(player);
-        }
-        return ActionResult.success(world.isClient);
+        open(world, pos, player); return ActionResult.success(world.isClient);
     }
     @Override protected void onStateReplaced(BlockState state, World world, BlockPos pos, BlockState newState, boolean moved) {
         if (!state.isOf(newState.getBlock()) && world.getBlockEntity(pos) instanceof DistilleryBlockEntity distillery)

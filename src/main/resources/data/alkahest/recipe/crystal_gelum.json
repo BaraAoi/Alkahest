@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "alkahest:crystal_aqua"
+    },
+    {
+      "item": "alkahest:crystal_ordo"
+    }
+  ],
+  "result": {
+    "id": "alkahest:crystal_gelum",
+    "count": 1,
+    "components": {
+      "alkahest:essence_stability": 0.15
+    }
+  }
+}

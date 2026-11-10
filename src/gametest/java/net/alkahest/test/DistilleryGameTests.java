@@ -1,127 +1,141 @@
 package net.alkahest.test;
 
 import net.alkahest.block.entity.DistilleryBlockEntity;
+import net.alkahest.essence.EssenceStack;
+import net.alkahest.essence.EssenceType;
+import net.alkahest.essence.ItemEssenceMap;
 import net.alkahest.registry.ModBlocks;
 import net.alkahest.registry.ModDataComponents;
 import net.alkahest.registry.ModItems;
+import net.alkahest.screen.DistilleryScreenHandler;
 import net.fabricmc.fabric.api.gametest.v1.FabricGameTest;
+import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
-import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.test.GameTest;
 import net.minecraft.test.TestContext;
 import net.minecraft.util.Hand;
+import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.GameMode;
+import java.util.List;
+import java.util.Set;
+import static net.alkahest.essence.EssenceType.*;
 
 public class DistilleryGameTests implements FabricGameTest {
-    @GameTest(templateName = EMPTY_STRUCTURE)
-    public void rawDistillationPersistsAndProducesOutput(TestContext context) {
-        context.setBlockState(3, 2, 3, ModBlocks.DISTILLERY);
-        BlockPos pos = context.getAbsolutePos(new BlockPos(3, 2, 3));
-        var distillery = (DistilleryBlockEntity) context.getWorld().getBlockEntity(pos);
-        PlayerEntity player = context.createMockPlayer(GameMode.SURVIVAL);
-        player.setStackInHand(Hand.MAIN_HAND, new ItemStack(Items.STONE));
-        distillery.insert(player, Hand.MAIN_HAND);
-        context.assertTrue(distillery.stacks().get(0).isEmpty(), "Inorganic stone must be rejected");
-        context.assertTrue(player.getStackInHand(Hand.MAIN_HAND).isOf(Items.STONE), "Rejected input remains with player");
-        player.setStackInHand(Hand.MAIN_HAND, new ItemStack(Items.APPLE, 2));
-        distillery.insert(player, Hand.MAIN_HAND);
-        context.assertTrue(distillery.stacks().get(0).isOf(Items.APPLE), "Organic apple must be accepted");
-        context.assertTrue(player.getStackInHand(Hand.MAIN_HAND).getCount() == 1, "Exactly one input is consumed");
-        var registry = context.getWorld().getRegistryManager();
-        var saved = distillery.createNbt(registry);
-        saved.putInt("Progress", 1199);
-        distillery.readComponentlessNbt(saved, registry);
-        context.assertTrue(distillery.createNbt(registry).getInt("Progress") == 1199, "Progress must survive NBT round trip");
-        DistilleryBlockEntity.tick(context.getWorld(), pos, distillery);
-        context.assertTrue(distillery.stacks().get(0).isEmpty(), "Input must be consumed at completion");
-        ItemStack result = distillery.stacks().get(1).copy();
-        context.assertTrue(!result.isEmpty(), "Distillation must produce a result");
-        boolean ash = result.isOf(ModItems.ASH);
-        boolean crystal = ModItems.CRYSTALS.containsValue(result.getItem());
-        context.assertTrue(ash || crystal, "Raw distillation produces only ash or a crystal");
-        if (crystal) {
-            Float stability = result.get(ModDataComponents.ESSENCE_STABILITY);
-            context.assertTrue(result.getCount() >= 1 && result.getCount() <= 3, "Crystal output must be 1–3");
-            context.assertTrue(stability != null && stability >= .15f && stability <= .30f, "Crystal stability must be in the specified range");
-        }
-        distillery.collect(player);
-        context.assertTrue(distillery.stacks().get(1).isEmpty(), "Collecting must clear the output");
-        context.assertTrue(player.getInventory().contains(result), "The result must reach the player");
-        context.complete();
+    @GameTest(templateName=EMPTY_STRUCTURE)
+    public void primalCandidates(TestContext c) {
+        c.assertTrue(Set.copyOf(DistilleryBlockEntity.primaryCandidates(ItemEssenceMap.get(new ItemStack(Items.APPLE)))).equals(Set.of(TERRA, AQUA, ORDO)), "Apple must resolve Herba and direct primaries");
+        c.assertTrue(Set.copyOf(DistilleryBlockEntity.primaryCandidates(ItemEssenceMap.get(new ItemStack(Items.GLOW_BERRIES)))).equals(Set.of(TERRA,AQUA,IGNIS,AER,ORDO)), "Glow berries resolve Lux, Potentia and Herba");
+        var nested = List.of(new EssenceStack(SPIRITUS,1,1),new EssenceStack(VACUUM,1,1));
+        c.assertTrue(Set.copyOf(DistilleryBlockEntity.primaryCandidates(nested)).equals(Set.of(PERDITIO,AQUA,ORDO)), "Spiritus recursively resolves Mortuus; Vacuum is not a primal");
+        for (var t : EssenceType.values()) for (var base : DistilleryBlockEntity.primaryCandidates(List.of(new EssenceStack(t,1,1))))
+            c.assertTrue(base.tier()==EssenceType.Tier.PRIMA, "All resolved essences must be primary");
+        c.complete();
     }
-    @GameTest(templateName = EMPTY_STRUCTURE)
-    public void organicPotentiaSourceIsDistillable(TestContext context) {
-        context.setBlockState(3, 2, 3, ModBlocks.DISTILLERY);
-        var distillery = (DistilleryBlockEntity) context.getWorld().getBlockEntity(context.getAbsolutePos(new BlockPos(3, 2, 3)));
-        PlayerEntity player = context.createMockPlayer(GameMode.SURVIVAL);
-        player.setStackInHand(Hand.MAIN_HAND, new ItemStack(Items.GLOW_BERRIES));
-        distillery.insert(player, Hand.MAIN_HAND);
-        context.assertTrue(!distillery.stacks().get(0).isEmpty(), "Glow berries must be accepted as organic input");
-        context.assertTrue(net.alkahest.essence.ItemEssenceMap.get(distillery.stacks().get(0)).stream().anyMatch(e -> e.type() == net.alkahest.essence.EssenceType.POTENTIA), "Input must be able to produce Potentia");
-        context.complete();
-    }
-
-    @GameTest(templateName = EMPTY_STRUCTURE)
-    public void rawChickenCanYieldAer(TestContext context) {
-        context.setBlockState(3, 2, 3, ModBlocks.DISTILLERY);
-        var distillery = (DistilleryBlockEntity)context.getWorld().getBlockEntity(context.getAbsolutePos(new BlockPos(3,2,3)));
-        var player = context.createMockPlayer(GameMode.SURVIVAL);
-        player.setStackInHand(Hand.MAIN_HAND, new ItemStack(Items.CHICKEN));
-        distillery.insert(player, Hand.MAIN_HAND);
-        context.assertTrue(!distillery.stacks().get(0).isEmpty(), "Raw chicken is accepted as organic matter");
-        context.assertTrue(net.alkahest.essence.ItemEssenceMap.get(distillery.stacks().get(0)).stream().anyMatch(e -> e.type() == net.alkahest.essence.EssenceType.AER), "Aer is a possible crystal output");
-        context.complete();
-    }
-
-    @GameTest(templateName = EMPTY_STRUCTURE)
-    public void screenInputQuickMoveAndCancellation(TestContext context) {
-        context.setBlockState(3,2,3,ModBlocks.DISTILLERY);
-        BlockPos pos=context.getAbsolutePos(new BlockPos(3,2,3));
-        var distillery=(DistilleryBlockEntity)context.getWorld().getBlockEntity(pos);
-        var player=context.createMockPlayer(GameMode.SURVIVAL);
-        player.setPosition(pos.getX()+2,pos.getY(),pos.getZ());
-        var handler=(net.alkahest.screen.DistilleryScreenHandler)distillery.createMenu(1,player.getInventory(),player);
-        context.assertTrue(handler.canUse(player), "Nearby player can use the real block inventory");
-        context.assertFalse(handler.getSlot(0).canInsert(new ItemStack(Items.STONE)), "Inorganic input is rejected");
-        context.assertTrue(handler.getSlot(0).canInsert(new ItemStack(Items.APPLE)) && handler.getSlot(0).getMaxItemCount()==1, "Only one valid input per slot");
-        context.assertFalse(handler.getSlot(1).canInsert(new ItemStack(Items.APPLE)), "Output must never accept items");
-        player.getInventory().setStack(9,new ItemStack(Items.APPLE,8));
-        context.assertFalse(handler.quickMove(player,2).isEmpty(), "Shift-click from player inventory inserts input");
-        context.assertTrue(distillery.getStack(0).getCount()==1 && player.getInventory().getStack(9).getCount()==7, "Only one ingredient moves without losing the rest");
-        context.assertTrue(handler.quickMove(player,2).isEmpty(), "An occupied input cannot accept more via shift-click");
-        context.assertTrue(distillery.getStack(0).getCount()==1 && player.getInventory().getStack(9).getCount()==7, "Repeated shift-click cannot overfill input");
-        for(int i=0;i<37;i++) DistilleryBlockEntity.tick(context.getWorld(),pos,distillery);
-        context.assertTrue(handler.progress()==37 && handler.maxProgress()==1200, "Screen properties expose live progress and duration");
-        context.assertFalse(handler.quickMove(player,0).isEmpty(), "Shift-click removes the input");
-        context.assertTrue(distillery.getStack(0).isEmpty() && handler.progress()==0, "Removing input resets progress");
-        player.getInventory().setStack(9,new ItemStack(Items.STONE,2));
-        context.assertTrue(handler.quickMove(player,2).isEmpty() && player.getInventory().getStack(9).getCount()==2, "Inorganic shift-click leaves inventory unchanged");
-        distillery.setStack(1,new ItemStack(ModItems.ASH,3));
-        context.assertFalse(handler.quickMove(player,1).isEmpty(), "Shift-click extracts output");
-        context.assertTrue(distillery.getStack(1).isEmpty() && player.getInventory().contains(new ItemStack(ModItems.ASH,3)), "Output is moved intact");
-        player.setPosition(pos.getX()+20,pos.getY(),pos.getZ());
-        context.assertFalse(handler.canUse(player), "Distant player cannot keep using screen");
-        context.complete();
-    }
-    @GameTest(templateName = EMPTY_STRUCTURE)
-    public void hopperRulesAndExistingStacksAreSafe(TestContext context) {
-        context.setBlockState(3,2,3,ModBlocks.DISTILLERY);
-        BlockPos pos=context.getAbsolutePos(new BlockPos(3,2,3));
-        var d=(DistilleryBlockEntity)context.getWorld().getBlockEntity(pos);
-        context.assertTrue(d.canInsert(0,new ItemStack(Items.APPLE),net.minecraft.util.math.Direction.UP), "Hopper above may insert organic input");
-        context.assertFalse(d.canInsert(0,new ItemStack(Items.STONE),net.minecraft.util.math.Direction.UP), "Hopper must reject stone");
-        context.assertFalse(d.canInsert(1,new ItemStack(Items.APPLE),net.minecraft.util.math.Direction.DOWN), "Hopper cannot insert output");
-        context.assertFalse(d.canExtract(0,new ItemStack(Items.APPLE),net.minecraft.util.math.Direction.DOWN), "Hopper cannot remove input");
+    @GameTest(templateName=EMPTY_STRUCTURE)
+    public void stackedInputAndProcessing(TestContext c) {
+        c.setBlockState(3,2,3,ModBlocks.DISTILLERY);
+        BlockPos pos=c.getAbsolutePos(new BlockPos(3,2,3));
+        var d=(DistilleryBlockEntity)c.getWorld().getBlockEntity(pos);
+        var p=c.createMockPlayer(GameMode.SURVIVAL); p.setPosition(pos.getX()+1,pos.getY(),pos.getZ());
+        var h=(DistilleryScreenHandler)d.createMenu(1,p.getInventory(),p);
+        c.assertTrue(h.canUse(p), "Nearby player can use interface");
+        c.assertFalse(h.getSlot(0).canInsert(new ItemStack(Items.STONE)), "Stone rejected");
+        c.assertTrue(h.getSlot(0).canInsert(new ItemStack(Items.APPLE)) && h.getSlot(0).getMaxItemCount()>1, "Organic input accepts a stack");
+        for(int i=1;i<8;i++) c.assertFalse(h.getSlot(i).canInsert(new ItemStack(Items.APPLE)), "Outputs reject insertion");
+        p.getInventory().setStack(9,new ItemStack(Items.APPLE,8));
+        c.assertFalse(h.quickMove(p,8).isEmpty(), "Shift-click loads the input stack");
+        c.assertTrue(d.getStack(0).getCount()==8 && p.getInventory().getStack(9).isEmpty(), "All eight moved without loss");
+        for(int i=0;i<37;i++) DistilleryBlockEntity.tick(c.getWorld(),pos,d);
+        c.assertTrue(h.progress()==37 && h.maxProgress()==1200, "Progress visible to screen");
+        c.assertFalse(h.quickMove(p,0).isEmpty(), "Shift-click can take input back");
+        c.assertTrue(d.getStack(0).isEmpty() && h.progress()==0, "Taking input cancels progress");
         d.setStack(0,new ItemStack(Items.APPLE,3));
-        context.assertFalse(d.canInsert(0,new ItemStack(Items.APPLE),net.minecraft.util.math.Direction.UP), "Hopper cannot add to occupied input");
-        var nbt=d.createNbt(context.getWorld().getRegistryManager()); nbt.putInt("Progress",1199);
-        d.readComponentlessNbt(nbt,context.getWorld().getRegistryManager());
-        DistilleryBlockEntity.tick(context.getWorld(),pos,d);
-        context.assertTrue(d.getStack(0).getCount()==2 && !d.getStack(1).isEmpty(), "A larger legacy or external input consumes one item, not the entire stack");
-        context.assertTrue(d.canExtract(1,d.getStack(1),net.minecraft.util.math.Direction.DOWN), "Hopper can extract output");
-        context.complete();
+        var nbt=d.createNbt(c.getWorld().getRegistryManager()); nbt.putInt("Progress",1199);
+        d.readComponentlessNbt(nbt,c.getWorld().getRegistryManager());
+        DistilleryBlockEntity.tick(c.getWorld(),pos,d);
+        c.assertTrue(d.getStack(0).getCount()==2 && !d.getStack(1).isEmpty(), "First minute consumes one item");
+        ItemStack out=d.getStack(1);
+        if (!out.isOf(ModItems.ASH)) {
+            c.assertTrue(List.of(TERRA,AQUA,ORDO).stream().anyMatch(t -> out.isOf(ModItems.CRYSTALS.get(t))), "Only apple's primal components may be produced");
+            float stability=out.get(ModDataComponents.ESSENCE_STABILITY);
+            c.assertTrue(stability>=.15f && stability<=.30f, "Crystal stability remains low");
+        }
+        nbt=d.createNbt(c.getWorld().getRegistryManager()); nbt.putInt("Progress",1199); d.readComponentlessNbt(nbt,c.getWorld().getRegistryManager());
+        DistilleryBlockEntity.tick(c.getWorld(),pos,d);
+        c.assertTrue(d.getStack(0).getCount()==1, "Next item continues without taking the previous output");
+        p.setPosition(pos.getX()+20,pos.getY(),pos.getZ()); c.assertFalse(h.canUse(p), "Remote player cannot use interface");
+        c.complete();
     }
-
+    @GameTest(templateName=EMPTY_STRUCTURE)
+    public void blockedOutputPersistsAndRecovers(TestContext c) {
+        c.setBlockState(3,2,3,ModBlocks.DISTILLERY); BlockPos pos=c.getAbsolutePos(new BlockPos(3,2,3));
+        var d=(DistilleryBlockEntity)c.getWorld().getBlockEntity(pos);
+        d.setStack(0,new ItemStack(Items.APPLE,2));
+        for(int i=1;i<8;i++) d.setStack(i,new ItemStack(Items.STONE,64));
+        var nbt=d.createNbt(c.getWorld().getRegistryManager()); nbt.putInt("Progress",1199); d.readComponentlessNbt(nbt,c.getWorld().getRegistryManager());
+        DistilleryBlockEntity.tick(c.getWorld(),pos,d);
+        c.assertTrue(d.getStack(0).getCount()==1 && !d.getStack(8).isEmpty(), "Blocked product is stored, not lost or rerolled");
+        ItemStack pending=d.getStack(8).copy();
+        var saved=d.createNbt(c.getWorld().getRegistryManager());
+        var restored=new DistilleryBlockEntity(pos,d.getCachedState()); restored.readComponentlessNbt(saved,c.getWorld().getRegistryManager());
+        c.assertTrue(ItemStack.areEqual(pending,restored.getStack(8)), "Pending result survives save/load");
+        DistilleryBlockEntity.tick(c.getWorld(),pos,d); c.assertTrue(ItemStack.areEqual(pending,d.getStack(8)) && d.getStack(0).getCount()==1, "Blocked machine waits without consuming or rerolling");
+        d.removeStack(3); DistilleryBlockEntity.tick(c.getWorld(),pos,d);
+        c.assertTrue(d.getStack(8).isEmpty() && ItemStack.areEqual(pending,d.getStack(3)), "Unblocking deposits the same saved result");
+        c.assertFalse(d.canExtract(8,pending,Direction.DOWN), "Hoppers cannot access pending slot");
+        c.complete();
+    }
+    @GameTest(templateName=EMPTY_STRUCTURE)
+    public void hopperRulesAndMerge(TestContext c) {
+        c.setBlockState(3,2,3,ModBlocks.DISTILLERY); BlockPos pos=c.getAbsolutePos(new BlockPos(3,2,3));
+        var d=(DistilleryBlockEntity)c.getWorld().getBlockEntity(pos);
+        c.assertTrue(d.canInsert(0,new ItemStack(Items.APPLE),Direction.UP), "Hopper above can insert");
+        c.assertFalse(d.canInsert(0,new ItemStack(Items.STONE),Direction.UP), "Hopper rejects stone");
+        c.assertFalse(d.canInsert(0,new ItemStack(Items.APPLE),Direction.NORTH), "Side cannot insert");
+        d.setStack(0,new ItemStack(Items.APPLE,3));
+        c.assertTrue(d.canInsert(0,new ItemStack(Items.APPLE),Direction.UP), "Hopper can add to input stack");
+        c.assertFalse(d.canExtract(0,new ItemStack(Items.APPLE),Direction.DOWN), "Hopper cannot extract input");
+        c.assertTrue(d.canExtract(7,new ItemStack(ModItems.ASH),Direction.DOWN), "Last output can be extracted");
+        ItemStack oldCrystal=new ItemStack(ModItems.CRYSTALS.get(AQUA),3); oldCrystal.set(ModDataComponents.ESSENCE_STABILITY,.18f);
+        ItemStack newCrystal=new ItemStack(ModItems.CRYSTALS.get(AQUA),2); newCrystal.set(ModDataComponents.ESSENCE_STABILITY,.28f);
+        d.setStack(1,oldCrystal); d.setStack(8,newCrystal); DistilleryBlockEntity.tick(c.getWorld(),pos,d);
+        c.assertTrue(d.getStack(1).getCount()==5 && d.getStack(8).isEmpty() && Math.abs(d.getStack(1).get(ModDataComponents.ESSENCE_STABILITY)-.22f)<.0001f, "Merged crystals retain weighted mean stability");
+        c.complete();
+    }
+    @GameTest(templateName=EMPTY_STRUCTURE)
+    public void compositeCrystalsHaveWorkingRecipes(TestContext c) {
+        for (var type : EssenceType.values()) {
+            if (type.tier()!=EssenceType.Tier.COMPOSITA) continue;
+            var a=new ItemStack(ModItems.CRYSTALS.get(type.parents().get(0)));
+            var b=new ItemStack(ModItems.CRYSTALS.get(type.parents().get(1)));
+            a.set(ModDataComponents.ESSENCE_STABILITY,.23f); b.set(ModDataComponents.ESSENCE_STABILITY,.28f);
+            var input=net.minecraft.recipe.input.CraftingRecipeInput.create(2,1,List.of(a,b));
+            var recipe=c.getWorld().getServer().getRecipeManager().getFirstMatch(net.minecraft.recipe.RecipeType.CRAFTING,input,c.getWorld());
+            c.assertTrue(recipe.isPresent(), "Composite crystal recipe loaded: " + type);
+            var result=recipe.get().value().craft(input,c.getWorld().getRegistryManager());
+            c.assertTrue(result.isOf(ModItems.CRYSTALS.get(type)) && result.getCount()==1, "Correct composite crystal: " + type);
+            c.assertTrue(result.get(ModDataComponents.ESSENCE_STABILITY)==.15f, "Crafting does not grant full stability");
+        }
+        c.complete();
+    }
+    @GameTest(templateName=EMPTY_STRUCTURE)
+    public void allInteractionsOpenScreen(TestContext c) {
+        c.setBlockState(3,2,3,ModBlocks.DISTILLERY); BlockPos pos=c.getAbsolutePos(new BlockPos(3,2,3));
+        var player=c.createMockCreativeServerPlayerInWorld(); player.setPosition(pos.getX()+1,pos.getY(),pos.getZ());
+        var hit=new BlockHitResult(Vec3d.ofCenter(pos),Direction.UP,pos,false);
+        var held=new ItemStack(Items.APPLE,5); player.setStackInHand(Hand.MAIN_HAND,held);
+        c.getWorld().getBlockState(pos).onUseWithItem(held,c.getWorld(),player,Hand.MAIN_HAND,hit);
+        c.assertTrue(player.currentScreenHandler instanceof DistilleryScreenHandler && held.getCount()==5, "Item click opens screen without consuming held item");
+        player.closeHandledScreen(); player.setStackInHand(Hand.MAIN_HAND,ItemStack.EMPTY);
+        c.getWorld().getBlockState(pos).onUse(c.getWorld(),player,hit);
+        c.assertTrue(player.currentScreenHandler instanceof DistilleryScreenHandler, "Empty click opens screen");
+        player.closeHandledScreen(); player.setSneaking(true); player.setStackInHand(Hand.MAIN_HAND,new ItemStack(Items.APPLE));
+        var action=UseBlockCallback.EVENT.invoker().interact(player,c.getWorld(),Hand.MAIN_HAND,hit);
+        c.assertTrue(action.isAccepted() && player.currentScreenHandler instanceof DistilleryScreenHandler, "Sneaking with an item also opens screen via callback");
+        c.complete();
+    }
 }

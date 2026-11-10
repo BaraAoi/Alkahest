@@ -30,5 +30,14 @@ public final class Alkahest implements ModInitializer {
         ModScreenHandlers.register();
         ModEntities.register();
         ModWorldGen.register();
+        // Vanilla skips block interaction while sneaking with an item; this block always opens its GUI.
+        net.fabricmc.fabric.api.event.player.UseBlockCallback.EVENT.register((player, world, hand, hit) -> {
+            if (!player.isSpectator() && world.getBlockState(hit.getBlockPos()).isOf(ModBlocks.DISTILLERY)) {
+                if (!world.isClient && world.getBlockEntity(hit.getBlockPos()) instanceof net.alkahest.block.entity.DistilleryBlockEntity d)
+                    player.openHandledScreen(d);
+                return net.minecraft.util.ActionResult.success(world.isClient);
+            }
+            return net.minecraft.util.ActionResult.PASS;
+        });
     }
 }
