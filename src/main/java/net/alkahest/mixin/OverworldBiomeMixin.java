@@ -16,6 +16,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.ArrayList;
+import java.util.List;
 
 @Mixin(MultiNoiseBiomeSourceParameterList.class)
 public abstract class OverworldBiomeMixin {
@@ -34,23 +35,50 @@ public abstract class OverworldBiomeMixin {
             return;
         }
         biomeLookup.getOptional(ModWorldGen.ALCHEMICAL_WASTES).ifPresent(wastes -> {
-            // Place narrow niche hypercubes ahead of full-coverage vanilla regions so R-tree distance-0 ties pick Wastes inside its niche only.
-            var merged = new ArrayList<Pair<MultiNoiseUtil.NoiseHypercube, RegistryEntry<Biome>>>();
-            var temp = MultiNoiseUtil.ParameterRange.of(-0.15f, 0.25f);
+            var temp = MultiNoiseUtil.ParameterRange.of(-0.15f, 0.20f);
             var humidity = MultiNoiseUtil.ParameterRange.of(0.40f, 0.85f);
             var continentalness = MultiNoiseUtil.ParameterRange.of(0.10f, 0.45f);
             var erosion = MultiNoiseUtil.ParameterRange.of(0.20f, 0.55f);
-            var posWeird = MultiNoiseUtil.ParameterRange.of(0.65f, 0.88f);
-            var negWeird = MultiNoiseUtil.ParameterRange.of(-0.88f, -0.65f);
-            for (float depth : new float[]{0.0f, 1.0f}) {
-                var depthRange = MultiNoiseUtil.ParameterRange.of(depth);
-                merged.add(Pair.of(MultiNoiseUtil.createNoiseHypercube(
-                    temp, humidity, continentalness, erosion, depthRange, posWeird, 0.0f), wastes));
-                merged.add(Pair.of(MultiNoiseUtil.createNoiseHypercube(
-                    temp, humidity, continentalness, erosion, depthRange, negWeird, 0.0f), wastes));
+            var surfaceDepth = MultiNoiseUtil.ParameterRange.of(0.0f);
+            var weirdNiches = List.of(
+                MultiNoiseUtil.ParameterRange.of(0.68f, 0.86f),
+                MultiNoiseUtil.ParameterRange.of(-0.86f, -0.68f)
+            );
+
+            List<Pair<MultiNoiseUtil.NoiseHypercube, RegistryEntry<Biome>>> current =
+                new ArrayList<>(this.entries.getEntries());
+            for (MultiNoiseUtil.ParameterRange wNiche : weirdNiches) {
+                List<Pair<MultiNoiseUtil.NoiseHypercube, RegistryEntry<Biome>>> next =
+                    new ArrayList<>(current.size() + 8);
+                for (var entry : current) {
+                    var c = entry.getFirst();
+                    if (c.temperature().getDistance(temp) == 0L
+                        && c.humidity().getDistance(humidity) == 0L
+                        && c.continentalness().getDistance(continentalness) == 0L
+                        && c.erosion().getDistance(erosion) == 0L
+                        && c.depth().getDistance(surfaceDepth) == 0L
+                        && c.weirdness().getDistance(wNiche) == 0L) {
+                        long wMin = c.weirdness().min();
+                        long wMax = c.weirdness().max();
+                        if (wMin < wNiche.min()) {
+                            next.add(Pair.of(new MultiNoiseUtil.NoiseHypercube(
+                                c.temperature(), c.humidity(), c.continentalness(), c.erosion(), c.depth(),
+                                new MultiNoiseUtil.ParameterRange(wMin, wNiche.min() - 1L), c.offset()), entry.getSecond()));
+                        }
+                        if (wMax > wNiche.max()) {
+                            next.add(Pair.of(new MultiNoiseUtil.NoiseHypercube(
+                                c.temperature(), c.humidity(), c.continentalness(), c.erosion(), c.depth(),
+                                new MultiNoiseUtil.ParameterRange(wNiche.max() + 1L, wMax), c.offset()), entry.getSecond()));
+                        }
+                    } else {
+                        next.add(entry);
+                    }
+                }
+                next.add(Pair.of(MultiNoiseUtil.createNoiseHypercube(
+                    temp, humidity, continentalness, erosion, surfaceDepth, wNiche, 0.0f), wastes));
+                current = next;
             }
-            merged.addAll(this.entries.getEntries());
-            this.entries = new MultiNoiseUtil.Entries<>(merged);
+            this.entries = new MultiNoiseUtil.Entries<>(current);
         });
     }
 }

@@ -278,6 +278,7 @@ public class AlkahestGameTests implements FabricGameTest {
         PlayerEntity survival = c.createMockPlayer(GameMode.SURVIVAL);
         ItemStack amulet = new ItemStack(ModItems.ALKAHEST_AMULET);
         for (int i = 0; i < 5; i++) {
+            c.setBlockState(5, 2, 3, Blocks.AIR);
             c.setBlockState(5, 2, 3, ModBlocks.ALCHEMY_CAULDRON);
             CauldronBlockEntity dry = (CauldronBlockEntity) c.getWorld().getBlockEntity(c.getAbsolutePos(new BlockPos(5, 2, 3)));
             c.assertTrue(clickCauldron(dry, survival, amulet), "Amulet fills dry cauldron on use #" + (i + 1));
