@@ -45,6 +45,9 @@ public class ChargerGameTests implements FabricGameTest {
         context.setBlockState(3, 2, 3, ModBlocks.ESSENCE_CHARGER);
         var player = context.createMockCreativeServerPlayerInWorld();
         player.setPosition(pos.getX() + 2.5, pos.getY(), pos.getZ() + .5);
+        context.assertTrue(player.isAlive(), "Mock player alive immediately after creation: health=" + player.getHealth() + ", removed=" + player.isRemoved());
+        var near = net.minecraft.util.math.Box.of(net.minecraft.util.math.Vec3d.ofCenter(pos), 64, 64, 64);
+        context.assertTrue(context.getWorld().getEntitiesByClass(net.minecraft.entity.player.PlayerEntity.class, near, p -> p == player).contains(player), "Mock player should be in server entity lookup on creation");
         ItemStack jarItem = new ItemStack(ModBlocks.JAR);
         JarItem.set(jarItem, new JarContentsComponent(List.of(new EssenceStack(EssenceType.ORDO, 3, .5f))));
         player.setStackInHand(Hand.MAIN_HAND, jarItem);
