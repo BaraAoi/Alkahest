@@ -1,6 +1,7 @@
 package net.alkahest.client.render;
 
 import net.alkahest.Alkahest;
+import net.minecraft.client.MinecraftClient;
 import net.alkahest.block.custom.MatrixCoreBlock;
 import net.alkahest.block.entity.MatrixCoreBlockEntity;
 import net.minecraft.block.BlockState;
@@ -11,7 +12,11 @@ import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.block.entity.BlockEntityRenderer;
 import net.minecraft.client.render.block.entity.BlockEntityRendererFactory;
+import net.minecraft.client.render.item.ItemRenderer;
+import net.minecraft.client.render.model.BakedModel;
+import net.minecraft.client.render.model.json.ModelTransformationMode;
 import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.item.ItemStack;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.RotationAxis;
 import net.minecraft.world.World;
@@ -40,7 +45,11 @@ public final class MatrixCoreRenderer implements BlockEntityRenderer<MatrixCoreB
     private static final float PYRAMID_ORBIT = 0.018f;
     private static final float PYRAMID_ORBIT_WORKING = 0.055f;
 
-    public MatrixCoreRenderer(BlockEntityRendererFactory.Context context) { }
+    private final ItemRenderer itemRenderer;
+
+    public MatrixCoreRenderer(BlockEntityRendererFactory.Context context) {
+        this.itemRenderer = MinecraftClient.getInstance().getItemRenderer();
+    }
 
     @Override public void render(MatrixCoreBlockEntity entity, float tickDelta, MatrixStack matrices,
                                  VertexConsumerProvider vertexConsumers, int light, int overlay) {
@@ -91,6 +100,20 @@ public final class MatrixCoreRenderer implements BlockEntityRenderer<MatrixCoreB
             }
         }
         matrices.pop();
+
+        // The item the player put in floats in the hollow of the cube and is drunk by the essence.
+        ItemStack held = entity.getStack(MatrixCoreBlockEntity.BASE);
+        if (!held.isEmpty()) {
+            float bob = (float) Math.sin(time * 0.06) * 0.04f;
+            matrices.push();
+            matrices.translate(0.5f, 1.05f + bob, 0.5f);
+            matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees((float) time * 1.2f));
+            matrices.scale(0.8f, 0.8f, 0.8f);
+            BakedModel model = itemRenderer.getModel(held, world, null, 0);
+            itemRenderer.renderItem(held, ModelTransformationMode.GROUND, false, matrices, vertexConsumers,
+                LightmapTextureManager.MAX_LIGHT_COORDINATE, OverlayTexture.DEFAULT_UV, model);
+            matrices.pop();
+        }
     }
 
     @Override public boolean rendersOutsideBoundingBox(MatrixCoreBlockEntity entity) { return true; }
@@ -133,25 +156,30 @@ public final class MatrixCoreRenderer implements BlockEntityRenderer<MatrixCoreB
         vertex(buffer, entry, d, u1, v1, shade);
     }
 
-    /** A small cast-metal pyramid that circles the core, one shade per face. */
+    /**
+     * A small cast-metal pyramid that circles the core, one shade per face.
+     *
+     * <p>Entity layers draw in QUADS mode, so a face has to be sent as four vertices: the two
+     * bottom corners and the apex written twice. Sending three vertices (as an earlier version
+     * did) shifts the whole vertex stream and smears neighbouring pyramids into each other.
+     */
     private static void pyramid(VertexConsumer buffer, MatrixStack.Entry entry, float half, float height) {
         float[][] base = {{-half, 0, -half}, {half, 0, -half}, {half, 0, half}, {-half, 0, half}};
         float[] apex = {0, height, 0};
-        float[] shades = {0.95f, 0.76f, 0.86f, 0.68f};
+        float[] shades = {0.98f, 0.72f, 0.86f, 0.62f};
         for (int i = 0; i < 4; i++) {
-            float[] p0 = base[i];
-            float[] p1 = base[(i + 1) % 4];
-            tri(buffer, entry, p0, p1, apex, shades[i]);
-            tri(buffer, entry, apex, p1, p0, shades[i] * 0.82f);
+            float[] left = base[i];
+            float[] right = base[(i + 1) % 4];
+            float u0 = 0.02f + i * 0.24f, u1 = u0 + 0.22f;
+            vertex(buffer, entry, right, u0, 0.95f, shades[i]);
+            vertex(buffer, entry, left, u1, 0.95f, shades[i]);
+            vertex(buffer, entry, apex, u1, 0.12f, shades[i]);
+            vertex(buffer, entry, apex, u0, 0.12f, shades[i]);
         }
-        tri(buffer, entry, base[0], base[2], base[1], 0.5f);
-        tri(buffer, entry, base[0], base[3], base[2], 0.5f);
-    }
-
-    private static void tri(VertexConsumer buffer, MatrixStack.Entry entry, float[] a, float[] b, float[] c, float shade) {
-        vertex(buffer, entry, a, 0.3f, 0.5f, shade);
-        vertex(buffer, entry, b, 0.7f, 0.5f, shade);
-        vertex(buffer, entry, c, 0.5f, 0.95f, shade);
+        vertex(buffer, entry, base[0], 0.05f, 0.55f, 0.45f);
+        vertex(buffer, entry, base[1], 0.45f, 0.55f, 0.45f);
+        vertex(buffer, entry, base[2], 0.45f, 0.95f, 0.45f);
+        vertex(buffer, entry, base[3], 0.05f, 0.95f, 0.45f);
     }
 
     private static void vertex(VertexConsumer buffer, MatrixStack.Entry entry, float[] position, float u, float v, float shade) {

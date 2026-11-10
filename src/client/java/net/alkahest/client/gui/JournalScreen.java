@@ -2,11 +2,13 @@ package net.alkahest.client.gui;
 
 import net.alkahest.Alkahest;
 import net.alkahest.essence.EssenceType;
+import net.alkahest.matrix.MatrixRecipe;
 import net.alkahest.registry.ModBlocks;
 import net.alkahest.registry.ModItems;
 import net.alkahest.research.EarlyResearch;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.text.Text;
@@ -14,10 +16,16 @@ import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
 /** An original arcane research map and field notes. Progress remains server-authoritative. */
 public final class JournalScreen extends Screen {
     private static final Identifier BACKGROUND = Alkahest.id("textures/gui/journal_background.png");
-    private static final int GUIDE_PAGES = 9;
+    private static final int GUIDE_PAGES = 10;
+    /** The last page of the field notes is not text: it lists every synthesis of the Matrix. */
+    private static final int RECIPES_PAGE = GUIDE_PAGES - 1;
     private record Node(String key, long parents, long discovered, long completed, int x, int y,
                         ItemStack icon, String[] choices, long[] failed) { }
     private static final Node[] NODES = {
@@ -80,7 +88,7 @@ public final class JournalScreen extends Screen {
         context.drawTextWithShadow(textRenderer, "✦", left + bookWidth - 25, top + 15, 0xFFD5B873);
         tab(context, left + 14, top + 32, 116, "screen.alkahest.journal.map", !guide);
         tab(context, left + 134, top + 32, 100, "screen.alkahest.journal.notes", guide);
-        if (guide) renderGuide(context);
+        if (guide) renderGuide(context, mouseX, mouseY);
         else if (selected != null) renderDetails(context, selected);
         else renderMap(context, mouseX, mouseY);
         super.render(context, mouseX, mouseY, delta);
@@ -167,19 +175,90 @@ public final class JournalScreen extends Screen {
         if (maxScroll > 0) c.drawTextWithShadow(textRenderer, Text.translatable("screen.alkahest.journal.scroll"), left + bookWidth - 100, top + bookHeight - 21, 0xFFD8C69D);
         button(c, left + 15, top + bookHeight - 25, 92, "screen.alkahest.journal.back");
     }
-    private void renderGuide(DrawContext c) {
+    private void renderGuide(DrawContext c, int mouseX, int mouseY) {
         int x = mapX(), y = mapY(), w = mapW(), h = mapH();
         panel(c, x, y, w, h);
         c.fill(x + 5, y + 5, x + w - 5, y + h - 5, 0xF4E7D4A7);
-        c.enableScissor(x + 7, y + 7, x + w - 7, y + h - 7);
-        int contentHeight = wrapped(c, Text.translatable("screen.alkahest.journal.page." + guidePage), x + 12, y + 12 - scroll, w - 24, 0xFF30251C);
-        maxScroll = Math.max(0, contentHeight - (h - 21));
-        c.disableScissor();
+        if (guidePage == RECIPES_PAGE) {
+            renderRecipes(c, x, y, w, h, mouseX, mouseY);
+        } else {
+            c.enableScissor(x + 7, y + 7, x + w - 7, y + h - 7);
+            int contentHeight = wrapped(c, Text.translatable("screen.alkahest.journal.page." + guidePage), x + 12, y + 12 - scroll, w - 24, 0xFF30251C);
+            maxScroll = Math.max(0, contentHeight - (h - 21));
+            c.disableScissor();
+        }
         if (maxScroll > 0) c.drawTextWithShadow(textRenderer, Text.translatable("screen.alkahest.journal.scroll"), left + bookWidth / 2 - 45, top + bookHeight - 34, 0xFFD8C69D);
         button(c, left + 15, top + bookHeight - 25, 44, "screen.alkahest.journal.prev");
         button(c, left + bookWidth - 59, top + bookHeight - 25, 44, "screen.alkahest.journal.next");
         c.drawCenteredTextWithShadow(textRenderer, (guidePage + 1) + " / " + GUIDE_PAGES, left + bookWidth / 2, top + bookHeight - 21, 0xFFD8C69D);
     }
+    /** The synthesis page: one row per Matrix recipe, icons first, names and prices on hover. */
+    private void renderRecipes(DrawContext c, int x, int y, int w, int h, int mouseX, int mouseY) {
+        maxScroll = 0;
+        c.drawText(c, Text.translatable("screen.alkahest.journal.recipes"), x + 12, y + 10, 0xFF4F3520, false);
+        c.fill(x + 12, y + 22, x + w - 12, y + 23, 0xFFB19A6E);
+        List<MatrixRecipe> recipes = MatrixRecipe.all();
+        for (int i = 0; i < recipes.size(); i++) {
+            int rowY = y + 27 + i * 17;
+            if (rowY + 16 > y + h - 6) break;
+            if (i % 2 == 0) c.fill(x + 8, rowY, x + w - 8, rowY + 16, 0x1A4F3520);
+            drawRecipeRow(c, recipes.get(i), x + 12, rowY);
+        }
+        if (mouseX < x + 8 || mouseX >= x + w - 8) return;
+        for (int i = 0; i < recipes.size(); i++) {
+            int rowY = y + 27 + i * 17;
+            if (rowY + 16 > y + h - 6) break;
+            if (mouseY < rowY || mouseY >= rowY + 16) continue;
+            c.drawTooltip(textRenderer, describe(recipes.get(i)), mouseX, mouseY);
+            return;
+        }
+    }
+
+    private void drawRecipeRow(DrawContext c, MatrixRecipe recipe, int iconX, int iconY) {
+        int cursor = iconX;
+        c.drawItem(new ItemStack(recipe.base()), cursor, iconY);
+        cursor += 17;
+        for (Item component : recipe.components()) {
+            c.drawText(c, "+", cursor, iconY + 4, 0xFF594633, false);
+            cursor += 7;
+            c.drawItem(new ItemStack(component), cursor, iconY);
+            cursor += 17;
+        }
+        c.drawText(c, "→", cursor, iconY + 4, 0xFF977E50, false);
+        cursor += 11;
+        ItemStack output = recipe.output();
+        c.drawItem(output, cursor, iconY);
+        if (output.getCount() > 1) {
+            String amount = String.valueOf(output.getCount());
+            c.drawText(c, amount, cursor + 17 - textRenderer.getWidth(amount), iconY + 9, 0xFF20140C, false);
+        }
+        String price = "◆ " + MatrixRecipe.price(recipe.cost());
+        c.drawText(c, price, mapX() + mapW() - 12 - textRenderer.getWidth(price), iconY + 4, 0xFF7A5A20, false);
+    }
+
+    private List<Text> describe(MatrixRecipe recipe) {
+        List<Text> lines = new ArrayList<>();
+        ItemStack output = recipe.output();
+        lines.add(Text.literal(output.getName().getString() + (output.getCount() > 1 ? " ×" + output.getCount() : ""))
+            .formatted(Formatting.GOLD));
+        StringBuilder parts = new StringBuilder();
+        for (Item component : recipe.components()) {
+            if (parts.length() > 0) parts.append(" + ");
+            parts.append(new ItemStack(component).getName().getString());
+        }
+        lines.add(Text.literal(Text.translatable("screen.alkahest.matrix.index_from").getString() + ": "
+            + recipe.base().getName().getString() + (parts.length() > 0 ? " + " + parts : ""))
+            .formatted(Formatting.GRAY));
+        StringBuilder cost = new StringBuilder();
+        for (Map.Entry<EssenceType, Integer> entry : recipe.cost().entrySet()) {
+            if (cost.length() > 0) cost.append("  ");
+            cost.append(entry.getKey().displayName()).append(' ').append(entry.getValue());
+        }
+        lines.add(Text.literal(Text.translatable("screen.alkahest.matrix.index_cost").getString() + ": " + cost)
+            .formatted(Formatting.DARK_PURPLE));
+        return lines;
+    }
+
     private void button(DrawContext c, int x, int y, int width, String key) {
         c.fill(x, y, x + width, y + 16, 0xFF977E50);
         c.fill(x + 1, y + 1, x + width - 1, y + 15, 0xFF222B39);

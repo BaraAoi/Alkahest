@@ -8,12 +8,10 @@ import net.alkahest.essence.EssenceType;
 import net.alkahest.essence.JarContentsComponent;
 import net.alkahest.matrix.MatrixRecipe;
 import net.alkahest.registry.ModBlockEntities;
-import net.alkahest.screen.MatrixScreenHandler;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.inventory.Inventories;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.item.ItemStack;
@@ -22,9 +20,6 @@ import net.minecraft.nbt.NbtOps;
 import net.minecraft.network.packet.s2c.play.BlockEntityUpdateS2CPacket;
 import net.minecraft.particle.DustParticleEffect;
 import net.minecraft.registry.RegistryWrapper;
-import net.minecraft.screen.NamedScreenHandlerFactory;
-import net.minecraft.screen.PropertyDelegate;
-import net.minecraft.screen.ScreenHandler;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
@@ -35,6 +30,7 @@ import net.minecraft.world.World;
 import org.joml.Vector3f;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -43,7 +39,7 @@ import java.util.Map;
  * pedestals around the cube; essence is drawn out of the jars through the air. A freshly built
  * cube is dormant — a wand has to wake it up before any ring starts to turn.
  */
-public class MatrixCoreBlockEntity extends BlockEntity implements Inventory, NamedScreenHandlerFactory {
+public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
     public static final int DURATION = 160;
     public static final int BUFFER = 128;
     public static final int REACH = 12;
@@ -58,18 +54,8 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory, Nam
     private int progress;
     private boolean awake;
 
-    private final PropertyDelegate properties = new PropertyDelegate() {
-        @Override public int get(int index) {
-            return switch (index) {
-                case 0 -> progress;
-                case 1 -> DURATION;
-                case 2 -> status();
-                default -> 0;
-            };
-        }
-        @Override public void set(int index, int value) { if (index == 0) progress = value; }
-        @Override public int size() { return 3; }
-    };
+    /** Essence streams that are still crossing the air; purely a visual, never saved. */
+    private final List<EssenceFlight> flights = new ArrayList<>();
 
     public MatrixCoreBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.MATRIX_CORE, pos, state);
@@ -182,6 +168,7 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory, Nam
 
     public static void tick(World world, BlockPos pos, MatrixCoreBlockEntity self) {
         if (world.isClient) return;
+        if (world instanceof ServerWorld server) self.advanceFlights(server);
         if (!self.formed()) {
             if (self.awake) self.setAwake(world, pos, false);
             if (self.progress != 0) { self.progress = 0; self.markDirty(); }
@@ -280,7 +267,7 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory, Nam
         jar.setContents(new JarContentsComponent(remainder));
         buffer = buffer.merge(new JarContentsComponent(
             List.of(new EssenceStack(type, want, source.stability()))), BUFFER);
-        flyTrail(world, jar.getPos(), type, want);
+        launchFlight(world, jar.getPos(), type, want);
         markDirty();
         return want;
     }
@@ -329,23 +316,169 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory, Nam
         return best;
     }
 
-    /** Essence visibly crosses the air from the jar to the core. */
-    private void flyTrail(World world, BlockPos from, EssenceType type, int units) {
-        if (!(world instanceof ServerWorld server)) return;
-        int color = type.color();
-        DustParticleEffect dust = new DustParticleEffect(
-            new Vector3f(((color >> 16) & 255) / 255f, ((color >> 8) & 255) / 255f, (color & 255) / 255f), 0.8f);
-        double x0 = from.getX() + 0.5, y0 = from.getY() + 1.05, z0 = from.getZ() + 0.5;
-        double x1 = pos.getX() + 0.5, y1 = pos.getY() + 0.5, z1 = pos.getZ() + 0.5;
-        int count = Math.min(18, 6 + units * 3);
-        for (int i = 0; i < count; i++) {
-            double t = i / (double) count;
-            double arc = Math.sin(t * Math.PI) * 0.35;
-            double x = x0 + (x1 - x0) * t;
-            double y = y0 + (y1 - y0) * t + arc;
-            double z = z0 + (z1 - z0) * t;
-            server.spawnParticles(dust, x, y, z, 0, (x1 - x) * 0.3, (y1 - y) * 0.3, (z1 - z) * 0.3, 1.0);
+    /** Ticks one unit of essence spends leaving the jar, crossing the air and soaking into the core. */
+    public static final int FLIGHT_TICKS = 52;
+    private static final int FLIGHT_OOZE = 14;
+    private static final int FLIGHT_SOAK = 12;
+
+    /** A stream that is still on its way; purely visual, so it is never written to disk. */
+    private record EssenceFlight(BlockPos from, EssenceType type, long start, int units) { }
+
+    /** Queues a slow, clearly visible stream from the jar mouth to the item waiting in the core. */
+    private void launchFlight(World world, BlockPos from, EssenceType type, int units) {
+        if (flights.size() >= 20) flights.remove(0);
+        flights.add(new EssenceFlight(from.immutable(), type, world.getTime(), units));
+    }
+
+    /**
+     * Advances every stream by one tick. The essence does not simply appear on the item: it first
+     * wells out of the jar as a fat liquid bead, then sails across the air as a comet, and only at
+     * the very end spirals down and is drunk by the item in the core.
+     */
+    private void advanceFlights(ServerWorld server) {
+        if (flights.isEmpty()) return;
+        long now = server.getTime();
+        Iterator<EssenceFlight> iterator = flights.iterator();
+        while (iterator.hasNext()) {
+            EssenceFlight flight = iterator.next();
+            int age = (int) (now - flight.start());
+            if (age < 0 || age > FLIGHT_TICKS) { iterator.remove(); continue; }
+            emitFlight(server, flight, age);
         }
+    }
+
+    private void emitFlight(ServerWorld server, EssenceFlight flight, int age) {
+        int rgb = flight.type().color();
+        Vector3f tint = new Vector3f(((rgb >> 16) & 255) / 255f, ((rgb >> 8) & 255) / 255f, (rgb & 255) / 255f);
+        double x0 = flight.from().getX() + 0.5, y0 = flight.from().getY() + 1.02, z0 = flight.from().getZ() + 0.5;
+        double x1 = pos.getX() + 0.5, y1 = pos.getY() + 1.05, z1 = pos.getZ() + 0.5;
+        double distance = Math.sqrt((x1 - x0) * (x1 - x0) + (y1 - y0) * (y1 - y0) + (z1 - z0) * (z1 - z0));
+
+        if (age <= FLIGHT_OOZE) {
+            // Liquid wells up out of the jar: a bead that grows, wobbles and finally lets go.
+            double swell = age / (double) FLIGHT_OOZE;
+            DustParticleEffect bead = new DustParticleEffect(tint, 1.1f + (float) swell * 0.8f);
+            server.spawnParticles(bead, x0, y0 + 0.05 + swell * 0.32, z0,
+                3, 0.09 - swell * 0.05, 0.04, 0.09 - swell * 0.05, 0.0);
+            if (age % 3 == 0) {
+                server.spawnParticles(new DustParticleEffect(tint, 0.7f),
+                    x0 + (server.random.nextDouble() - 0.5) * 0.22, y0 + 0.02,
+                    z0 + (server.random.nextDouble() - 0.5) * 0.22, 1, 0.0, -0.02, 0.0, 0.01);
+            }
+            return;
+        }
+
+        int travelEnd = FLIGHT_TICKS - FLIGHT_SOAK;
+        if (age < travelEnd) {
+            double t = (age - FLIGHT_OOZE) / (double) (travelEnd - FLIGHT_OOZE);
+            double rise = Math.sin(t * Math.PI) * (0.55 + distance * 0.06);
+            double head = t * t * (3 - 2 * t); // ease in and out, so it does not jerk away from the jar
+            double x = x0 + (x1 - x0) * head;
+            double y = y0 + (y1 - y0) * head + rise;
+            double z = z0 + (z1 - z0) * head;
+            server.spawnParticles(new DustParticleEffect(tint, 1.35f), x, y, z, 2, 0.02, 0.02, 0.02, 0.0);
+            // A short tail so the bead reads as a streak of liquid rather than a dot.
+            double tail = Math.max(0.0, head - 0.06);
+            if (age % 2 == 0) {
+                server.spawnParticles(new DustParticleEffect(tint, 0.85f),
+                    x0 + (x1 - x0) * tail, y0 + (y1 - y0) * tail + Math.sin(tail * Math.PI) * (0.55 + distance * 0.06),
+                    z0 + (z1 - z0) * tail, 1, 0.015, 0.015, 0.015, 0.0);
+            }
+            return;
+        }
+
+        // Absorption: the essence circles the item once and is pulled into it.
+        double soak = (age - travelEnd) / (double) FLIGHT_SOAK;
+        double radius = 0.42 * (1 - soak);
+        double angle = soak * Math.PI * 3;
+        double x = x1 + Math.cos(angle) * radius;
+        double z = z1 + Math.sin(angle) * radius;
+        double y = y1 + 0.22 * (1 - soak);
+        server.spawnParticles(new DustParticleEffect(tint, 1.2f - (float) soak * 0.7f), x, y, z,
+            2, 0.01, 0.01, 0.01, 0.0);
+        if (age == FLIGHT_TICKS) {
+            server.spawnParticles(new DustParticleEffect(tint, 1.0f), x1, y1, z1, 8, 0.12, 0.12, 0.12, 0.02);
+        }
+    }
+
+    /** Wakes the finished cube through a wand click on any of its blocks. */
+    public Text statusText() {
+        return Text.translatable("screen.alkahest.matrix." + switch (status()) {
+            case STATUS_WORKING -> "working";
+            case STATUS_NO_ESSENCE -> "no_essence";
+            case STATUS_BLOCKED -> "blocked";
+            case STATUS_UNFORMED -> "unformed";
+            case STATUS_NO_RECIPE -> "no_recipe";
+            case STATUS_ASLEEP -> "asleep";
+            default -> "ready";
+        });
+    }
+
+    /** Puts the held item into the empty core, where it floats until the Matrix uses it. */
+    public boolean insertBase(ItemStack stack, PlayerEntity player) {
+        if (stack.isEmpty() || world == null) return false;
+        if (!stacks.get(BASE).isEmpty()) {
+            player.sendMessage(Text.translatable("message.alkahest.matrix_core_full",
+                stacks.get(BASE).getName(), stacks.get(BASE).getCount()), true);
+            return false;
+        }
+        stacks.set(BASE, stack.copyWithCount(1));
+        progress = 0;
+        if (!player.isCreative()) stack.decrement(1);
+        markDirty();
+        sync();
+        world.playSound(null, pos, SoundEvents.BLOCK_AMETHYST_BLOCK_PLACE, SoundCategory.BLOCKS, 0.6f, 1.2f);
+        if (world instanceof ServerWorld server) {
+            server.spawnParticles(new DustParticleEffect(new Vector3f(0.85f, 0.55f, 1f), 0.9f),
+                pos.getX() + 0.5, pos.getY() + 1.05, pos.getZ() + 0.5, 12, 0.2, 0.2, 0.2, 0.02);
+        }
+        player.sendMessage(Text.translatable("message.alkahest.matrix_core_holds", stacks.get(BASE).getName()), true);
+        return true;
+    }
+
+    /** Hands the finished product over, then the leftovers of the base, and finally just reports. */
+    public boolean takeFromCore(PlayerEntity player) {
+        if (world == null) return false;
+        ItemStack product = stacks.get(OUTPUT);
+        if (!product.isEmpty()) {
+            stacks.set(OUTPUT, ItemStack.EMPTY);
+            give(player, product);
+            markDirty();
+            sync();
+            world.playSound(null, pos, SoundEvents.BLOCK_AMETHYST_BLOCK_BREAK, SoundCategory.BLOCKS, 0.6f, 1.5f);
+            return true;
+        }
+        ItemStack base = stacks.get(BASE);
+        if (!base.isEmpty()) {
+            stacks.set(BASE, ItemStack.EMPTY);
+            progress = 0;
+            give(player, base);
+            markDirty();
+            sync();
+            world.playSound(null, pos, SoundEvents.BLOCK_AMETHYST_BLOCK_BREAK, SoundCategory.BLOCKS, 0.5f, 1.6f);
+            return true;
+        }
+        player.sendMessage(statusText(), true);
+        MatrixRecipe recipe = recipe();
+        if (recipe != null && !recipe.cost().isEmpty()) {
+            StringBuilder price = new StringBuilder();
+            for (Map.Entry<EssenceType, Integer> entry : recipe.cost().entrySet()) {
+                if (price.length() > 0) price.append(", ");
+                price.append(entry.getKey().displayName()).append(' ').append(entry.getValue());
+            }
+            player.sendMessage(Text.translatable("message.alkahest.matrix_price", price.toString()), false);
+        }
+        return false;
+    }
+
+    private static void give(PlayerEntity player, ItemStack stack) {
+        if (!player.getInventory().insertStack(stack)) player.dropItem(stack, false);
+    }
+
+    private void sync() {
+        if (world == null) return;
+        BlockState state = world.getBlockState(pos);
+        world.updateListeners(pos, state, state, Block.NOTIFY_LISTENERS);
     }
 
     private static void celebrate(World world, BlockPos pos) {
@@ -429,11 +562,6 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory, Nam
     @Override public boolean canPlayerUse(PlayerEntity player) { return Inventory.canPlayerUse(this, player); }
     @Override public boolean isValid(int slot, ItemStack stack) { return slot != OUTPUT; }
 
-    @Override public Text getDisplayName() { return Text.translatable("screen.alkahest.matrix.title"); }
-    @Override public ScreenHandler createMenu(int syncId, PlayerInventory playerInventory, PlayerEntity player) {
-        return new MatrixScreenHandler(syncId, playerInventory, this, properties);
-    }
-
     @Override protected void writeNbt(NbtCompound nbt, RegistryWrapper.WrapperLookup registries) {
         super.writeNbt(nbt, registries);
         Inventories.writeNbt(nbt, stacks, registries);
@@ -465,16 +593,12 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory, Nam
         progress = 0;
     }
 
-    /** Finds the built Matrix a clicked shell block belongs to and opens its interface. */
-    public static boolean openNearby(World world, BlockPos clicked, PlayerEntity player) {
-        if (world.isClient) return true;
+    /** The built Matrix that owns a clicked shell block, or null when the cube is not complete. */
+    public static MatrixCoreBlockEntity coreNearby(World world, BlockPos clicked) {
         for (BlockPos candidate : BlockPos.iterate(clicked.add(-2, -2, -2), clicked.add(2, 2, 2))) {
-            if (!(world.getBlockEntity(candidate) instanceof MatrixCoreBlockEntity core) || !core.formed()) continue;
-            player.openHandledScreen(core);
-            return true;
+            if (world.getBlockEntity(candidate) instanceof MatrixCoreBlockEntity core && core.formed()) return core;
         }
-        player.sendMessage(Text.translatable("message.alkahest.matrix_unformed"), true);
-        return false;
+        return null;
     }
 
     /** Wakes the built Matrix next to a clicked shell block. The awakening happens only once. */
@@ -494,10 +618,4 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory, Nam
         return false;
     }
 
-    public static boolean nearbyCore(World world, BlockPos clicked) {
-        for (BlockPos candidate : BlockPos.iterate(clicked.add(-2, -2, -2), clicked.add(2, 2, 2))) {
-            if (world.getBlockEntity(candidate) instanceof MatrixCoreBlockEntity core && core.formed()) return true;
-        }
-        return false;
-    }
 }

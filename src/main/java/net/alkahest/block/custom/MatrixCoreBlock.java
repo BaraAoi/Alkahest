@@ -49,15 +49,23 @@ public class MatrixCoreBlock extends Block implements BlockEntityProvider {
             ? (w, p, s, be) -> MatrixCoreBlockEntity.tick(w, p, (MatrixCoreBlockEntity) be) : null;
     }
 
-    /** A wand wakes the cube once; anything else opens the interface of a built cube. */
+    /**
+     * No window: the altar is physical. A wand wakes it, a held item is placed inside the core and
+     * floats there, and an empty hand takes the product (or the untouched base) back out.
+     */
     private void interact(World world, BlockPos pos, PlayerEntity player, ItemStack held) {
         if (world.isClient || player.isSneaking()) return;
         if (held.getItem() instanceof CrystalWandItem) {
             MatrixCoreBlockEntity.awakenNearby(world, pos, player);
             return;
         }
-        if (MatrixCoreBlockEntity.nearbyCore(world, pos)) MatrixCoreBlockEntity.openNearby(world, pos, player);
-        else player.sendMessage(net.minecraft.text.Text.translatable("message.alkahest.matrix_unformed"), true);
+        MatrixCoreBlockEntity core = MatrixCoreBlockEntity.coreNearby(world, pos);
+        if (core == null) {
+            player.sendMessage(net.minecraft.text.Text.translatable("message.alkahest.matrix_unformed"), true);
+            return;
+        }
+        if (!held.isEmpty()) core.insertBase(held, player);
+        else core.takeFromCore(player);
     }
 
     @Override protected ItemActionResult onUseWithItem(ItemStack stack, BlockState state, World world, BlockPos pos,

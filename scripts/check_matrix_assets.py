@@ -14,6 +14,7 @@ A = Path('src/main/resources/assets/alkahest')
 DATA = Path('src/main/resources/data/alkahest')
 JAVA = Path('src/main/java/net/alkahest')
 CLIENT = Path('src/client/java/net/alkahest')
+MAIN = JAVA
 GAMETEST = Path('src/gametest')
 
 failures = []
@@ -129,13 +130,13 @@ for lang in ('ru_ru', 'en_us'):
                 'message.alkahest.pedestal_status',
                 'block.alkahest.matrix_pedestal'):
         check(key in strings, f'{lang} misses {key}')
-    for key in ('screen.alkahest.matrix.index_title', 'screen.alkahest.matrix.index_from',
-                'screen.alkahest.matrix.index_cost'):
+    for key in ('screen.alkahest.matrix.index_from', 'screen.alkahest.matrix.index_cost',
+                'screen.alkahest.journal.recipes', 'message.alkahest.matrix_core_full',
+                'message.alkahest.matrix_core_holds', 'message.alkahest.matrix_price'):
         check(key in strings, f'{lang} misses {key}')
 
 # --- client and tests ---------------------------------------------------------------------------
 client = (CLIENT / 'AlkahestClient.java').read_text()
-check('MatrixScreen::new' in client, 'the client must register the matrix screen')
 check('MatrixCoreRenderer::new' in client, 'the halo renderer must be registered')
 check('MatrixPedestalRenderer::new' in client, 'the pedestal item renderer must be registered')
 renderer = (CLIENT / 'client/render/MatrixCoreRenderer.java').read_text()
@@ -143,10 +144,15 @@ check('ring(' in renderer and 'pyramid(' in renderer, 'the halo needs rings and 
 check('MatrixCoreBlock.AWAKE' in renderer, 'the halo must follow the awake state')
 check('matrix_ring_metal.png' in renderer, 'the rings are drawn with the forged metal texture')
 check('getEntitySolid' in renderer, 'the rings must read as solid metal, not glass')
-screen = (CLIENT / 'client/gui/MatrixScreen.java').read_text()
-check('MatrixRecipe.all()' in screen, 'the matrix screen must list the syntheses')
-check('screen.alkahest.matrix.index_title' in screen, 'the synthesis index needs its title')
-check('recipe.cost()' in screen, 'the index must show what a synthesis costs in essence')
+journal = (CLIENT / 'client/gui/JournalScreen.java').read_text()
+check('tri(' not in renderer, 'a QUADS layer cannot take three-vertex triangles')
+check('MatrixRecipe.all()' in journal, 'the journal must list the matrix syntheses')
+check('RECIPES_PAGE' in journal, 'the synthesis list needs its own page in the journal')
+check('recipe.cost()' in journal, 'the list must show what a synthesis costs in essence')
+core = (JAVA / 'block/entity/MatrixCoreBlockEntity.java').read_text()
+check('insertBase' in core and 'takeFromCore' in core, 'the core must accept and hand back items')
+check('launchFlight' in core and 'FLIGHT_TICKS' in core, 'the essence must fly as an animation')
+check('openHandledScreen' not in core, 'the matrix has no window any more')
 check('PYRAMID_ORBIT' in renderer, 'the pyramid orbit speed must stay an explicit constant')
 orbit = float(re.search(r'PYRAMID_ORBIT\s*=\s*([0-9.]+)f', renderer).group(1))
 check(orbit <= 0.05, f'the pyramids must glide, not spin ({orbit} rad/tick)')

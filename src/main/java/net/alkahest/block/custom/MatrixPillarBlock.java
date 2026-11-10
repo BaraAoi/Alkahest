@@ -39,15 +39,10 @@ public class MatrixPillarBlock extends Block {
             MatrixCoreBlockEntity.awakenNearby(world, pos, player);
             return ItemActionResult.success(world.isClient);
         }
-        if (!(stack.getItem() instanceof net.alkahest.item.custom.AlkahestAmuletItem)) {
-            return ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
-        }
-        MatrixCoreBlockEntity.openNearby(world, pos, player);
-        return ItemActionResult.success(world.isClient);
+        return ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
     }
 
     @Override protected ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, BlockHitResult hit) {
-        MatrixCoreBlockEntity.openNearby(world, pos, player);
-        return ActionResult.success(world.isClient);
+        return ActionResult.PASS;
     }
 }
