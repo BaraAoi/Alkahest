@@ -1,20 +1,22 @@
 package net.alkahest.research;
 
 import net.alkahest.Alkahest;
-import net.alkahest.registry.ModItems;
 import net.alkahest.essence.EssenceType;
 import net.minecraft.advancement.AdvancementEntry;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.Text;
-import net.minecraft.world.World;
-import net.minecraft.util.math.BlockPos;
 import net.minecraft.particle.ParticleTypes;
+import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
-import java.util.List;
+import net.minecraft.text.Text;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.World;
+
+import java.util.Map;
+
+import static net.alkahest.essence.EssenceType.*;
 
 /** Server-owned early research, persisted per player by hidden vanilla advancements. */
 public final class EarlyResearch {
@@ -32,6 +34,11 @@ public final class EarlyResearch {
         SIGHT_DISCOVERED, FAILED_EYE, FAILED_TORCH, SIGHT_COMPLETED};
     public enum Attempt { NONE, SAND, SUGAR, COAL, FEATHER, CLAY, REDSTONE,
         RAW_IRON, RAW_COBBLE, RAW_COPPER, SIGHT_EYE, SIGHT_TORCH, SIGHT_GLASS, ALREADY_FAILED }
+
+    private static final Map<EssenceType, Integer> BASICS_COST = Map.of(IGNIS, 3, TERRA, 1);
+    private static final Map<EssenceType, Integer> REACTIVE_COST = Map.of(PERDITIO, 5, IGNIS, 4);
+    private static final Map<EssenceType, Integer> RAW_COST = Map.of(HERBA, 3, AQUA, 1);
+    private static final Map<EssenceType, Integer> SIGHT_COST = Map.of(ORDO, 1);
 
     private static AdvancementEntry entry(ServerPlayerEntity player, String name) {
         return player.getServer().getAdvancementLoader().get(Alkahest.id("research/" + name));
@@ -52,19 +59,11 @@ public final class EarlyResearch {
     public static void openJournal(ServerPlayerEntity player) { grant(player, "root"); }
     public static void discoverCauldron(ServerPlayerEntity player, World world, BlockPos pos) {
         if (!has(player, "root") || has(player, "cauldron_discovered")) return;
-        if (grant(player, "cauldron_discovered")) {
-            player.sendMessage(Text.translatable("message.alkahest.research.insight"), false);
-            player.sendMessage(Text.translatable("message.alkahest.research.insight"), true);
-            world.playSound(null, pos, SoundEvents.ENTITY_EXPERIENCE_ORB_PICKUP, SoundCategory.PLAYERS, 0.7f, 1.0f);
-        }
+        if (grant(player, "cauldron_discovered")) insight(player, world, pos);
     }
     public static void discoverReactive(ServerPlayerEntity player, World world, BlockPos pos) {
         if (!has(player, "cauldron_complete") || has(player, "reactive_discovered")) return;
-        if (grant(player, "reactive_discovered")) {
-            player.sendMessage(Text.translatable("message.alkahest.research.insight"), false);
-            player.sendMessage(Text.translatable("message.alkahest.research.insight"), true);
-            world.playSound(null, pos, SoundEvents.ENTITY_EXPERIENCE_ORB_PICKUP, SoundCategory.PLAYERS, 0.7f, 1.0f);
-        }
+        if (grant(player, "reactive_discovered")) insight(player, world, pos);
     }
     public static void discoverRaw(ServerPlayerEntity player, World world, BlockPos pos) {
         if (has(player, "cauldron_complete") && !has(player, "raw_discovered") && grant(player, "raw_discovered"))
@@ -80,31 +79,46 @@ public final class EarlyResearch {
         player.sendMessage(Text.translatable("message.alkahest.research.insight"), true);
         world.playSound(null, pos, SoundEvents.ENTITY_EXPERIENCE_ORB_PICKUP, SoundCategory.PLAYERS, 0.7f, 1.0f);
     }
-    /** Only exact two-item inputs count; unrelated recipes are never intercepted. */
-    public static Attempt identify(int flags, List<ItemStack> inputs) {
-        if (inputs.size() != 2) return Attempt.NONE;
-        if ((flags & DISCOVERED) != 0 && (flags & COMPLETED) == 0 && inputs.stream().anyMatch(s -> s.isOf(Items.CHARCOAL))) {
-            if (inputs.stream().anyMatch(s -> s.isOf(Items.SAND))) return (flags & FAILED_SAND) == 0 ? Attempt.SAND : Attempt.ALREADY_FAILED;
-            if (inputs.stream().anyMatch(s -> s.isOf(Items.SUGAR))) return (flags & FAILED_SUGAR) == 0 ? Attempt.SUGAR : Attempt.ALREADY_FAILED;
-            if (inputs.stream().anyMatch(s -> s.isOf(Items.COAL))) return Attempt.COAL;
+    private static boolean hasAll(Map<EssenceType, Integer> available, Map<EssenceType, Integer> required) {
+        return required.entrySet().stream().allMatch(e -> available.getOrDefault(e.getKey(), 0) >= e.getValue());
+    }
+
+    /** Matches an active hypothesis when the subject's essences are dissolved and a candidate catalyst is applied. */
+    public static Attempt identify(int flags, Map<EssenceType, Integer> essences, ItemStack catalyst) {
+        if (catalyst.isEmpty()) return Attempt.NONE;
+        if ((flags & DISCOVERED) != 0 && (flags & COMPLETED) == 0 && hasAll(essences, BASICS_COST)) {
+            if (catalyst.isOf(Items.SAND)) return (flags & FAILED_SAND) == 0 ? Attempt.SAND : Attempt.ALREADY_FAILED;
+            if (catalyst.isOf(Items.SUGAR)) return (flags & FAILED_SUGAR) == 0 ? Attempt.SUGAR : Attempt.ALREADY_FAILED;
+            if (catalyst.isOf(Items.COAL)) return Attempt.COAL;
         }
-        if ((flags & REACTIVE_DISCOVERED) != 0 && (flags & REACTIVE_COMPLETED) == 0 && inputs.stream().anyMatch(s -> s.isOf(Items.GUNPOWDER))) {
-            if (inputs.stream().anyMatch(s -> s.isOf(Items.FEATHER))) return (flags & FAILED_FEATHER) == 0 ? Attempt.FEATHER : Attempt.ALREADY_FAILED;
-            if (inputs.stream().anyMatch(s -> s.isOf(Items.CLAY_BALL))) return (flags & FAILED_CLAY) == 0 ? Attempt.CLAY : Attempt.ALREADY_FAILED;
-            if (inputs.stream().anyMatch(s -> s.isOf(Items.REDSTONE))) return Attempt.REDSTONE;
+        if ((flags & REACTIVE_DISCOVERED) != 0 && (flags & REACTIVE_COMPLETED) == 0 && hasAll(essences, REACTIVE_COST)) {
+            if (catalyst.isOf(Items.FEATHER)) return (flags & FAILED_FEATHER) == 0 ? Attempt.FEATHER : Attempt.ALREADY_FAILED;
+            if (catalyst.isOf(Items.CLAY_BALL)) return (flags & FAILED_CLAY) == 0 ? Attempt.CLAY : Attempt.ALREADY_FAILED;
+            if (catalyst.isOf(Items.REDSTONE)) return Attempt.REDSTONE;
         }
-        if ((flags & RAW_DISCOVERED) != 0 && (flags & RAW_COMPLETED) == 0 && inputs.stream().anyMatch(s -> s.isOf(ModItems.HERBAL_PASTE))) {
-            if (inputs.stream().anyMatch(s -> s.isOf(Items.IRON_INGOT))) return (flags & FAILED_IRON) == 0 ? Attempt.RAW_IRON : Attempt.ALREADY_FAILED;
-            if (inputs.stream().anyMatch(s -> s.isOf(Items.COBBLESTONE))) return (flags & FAILED_COBBLE) == 0 ? Attempt.RAW_COBBLE : Attempt.ALREADY_FAILED;
-            if (inputs.stream().anyMatch(s -> s.isOf(Items.COPPER_INGOT))) return Attempt.RAW_COPPER;
+        if ((flags & RAW_DISCOVERED) != 0 && (flags & RAW_COMPLETED) == 0 && hasAll(essences, RAW_COST)) {
+            if (catalyst.isOf(Items.IRON_INGOT)) return (flags & FAILED_IRON) == 0 ? Attempt.RAW_IRON : Attempt.ALREADY_FAILED;
+            if (catalyst.isOf(Items.COBBLESTONE)) return (flags & FAILED_COBBLE) == 0 ? Attempt.RAW_COBBLE : Attempt.ALREADY_FAILED;
+            if (catalyst.isOf(Items.COPPER_INGOT)) return Attempt.RAW_COPPER;
         }
-        if ((flags & SIGHT_DISCOVERED) != 0 && (flags & SIGHT_COMPLETED) == 0 && inputs.stream().anyMatch(s -> s.isOf(ModItems.CRYSTALS.get(EssenceType.ORDO)))) {
-            if (inputs.stream().anyMatch(s -> s.isOf(Items.SPIDER_EYE))) return (flags & FAILED_EYE) == 0 ? Attempt.SIGHT_EYE : Attempt.ALREADY_FAILED;
-            if (inputs.stream().anyMatch(s -> s.isOf(Items.TORCH))) return (flags & FAILED_TORCH) == 0 ? Attempt.SIGHT_TORCH : Attempt.ALREADY_FAILED;
-            if (inputs.stream().anyMatch(s -> s.isOf(Items.GLASS_PANE))) return Attempt.SIGHT_GLASS;
+        if ((flags & SIGHT_DISCOVERED) != 0 && (flags & SIGHT_COMPLETED) == 0 && hasAll(essences, SIGHT_COST)) {
+            if (catalyst.isOf(Items.SPIDER_EYE)) return (flags & FAILED_EYE) == 0 ? Attempt.SIGHT_EYE : Attempt.ALREADY_FAILED;
+            if (catalyst.isOf(Items.TORCH)) return (flags & FAILED_TORCH) == 0 ? Attempt.SIGHT_TORCH : Attempt.ALREADY_FAILED;
+            if (catalyst.isOf(Items.GLASS_PANE)) return Attempt.SIGHT_GLASS;
         }
         return Attempt.NONE;
     }
+
+    public static Map<EssenceType, Integer> cost(Attempt attempt) {
+        return switch (attempt) {
+            case SAND, SUGAR, COAL -> BASICS_COST;
+            case FEATHER, CLAY, REDSTONE -> REACTIVE_COST;
+            case RAW_IRON, RAW_COBBLE, RAW_COPPER -> RAW_COST;
+            case SIGHT_EYE, SIGHT_TORCH, SIGHT_GLASS -> SIGHT_COST;
+            default -> Map.of();
+        };
+    }
+
     /** Returns true only if persistence succeeded, so missing datapack entries cannot consume inputs. */
     public static boolean record(ServerPlayerEntity player, Attempt attempt, ServerWorld world, BlockPos pos) {
         String id = switch (attempt) {

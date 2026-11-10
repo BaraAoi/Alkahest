@@ -39,6 +39,8 @@ public final class Alkahest implements ModInitializer {
             }
             if (!player.isSpectator() && player.isSneaking() && world.getBlockState(hit.getBlockPos()).isOf(ModBlocks.JAR))
                 return net.alkahest.block.custom.JarBlock.fillCrystalStack(world, hit.getBlockPos(), player, hand);
+            if (!player.isSpectator() && player.isSneaking() && world.getBlockState(hit.getBlockPos()).isOf(ModBlocks.ALCHEMY_CAULDRON))
+                return net.alkahest.block.custom.AlchemyCauldronBlock.sneakUseWithItem(world, hit.getBlockPos(), player, hand);
             return net.minecraft.util.ActionResult.PASS;
         });
     }

@@ -1,54 +1,61 @@
 package net.alkahest.test;
 
+import net.alkahest.block.custom.AlchemyCauldronBlock;
 import net.alkahest.block.entity.CauldronBlockEntity;
 import net.alkahest.block.entity.DistilleryBlockEntity;
 import net.alkahest.essence.EssenceType;
-import net.alkahest.block.custom.AlchemyCauldronBlock;
 import net.alkahest.registry.ModBlocks;
 import net.alkahest.registry.ModItems;
 import net.alkahest.research.EarlyResearch;
 import net.fabricmc.fabric.api.gametest.v1.FabricGameTest;
 import net.minecraft.block.Blocks;
 import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NbtCompound;
 import net.minecraft.item.Items;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.test.GameTest;
 import net.minecraft.test.TestContext;
 import net.minecraft.util.Hand;
 import net.minecraft.util.math.BlockPos;
 
-import java.util.List;
+import java.util.Map;
 
 public class ResearchGameTests implements FabricGameTest {
+    private static boolean useOnCauldron(CauldronBlockEntity cauldron, ServerPlayerEntity player, ItemStack stack) {
+        player.setStackInHand(Hand.MAIN_HAND, stack);
+        return cauldron.useItem(player, Hand.MAIN_HAND);
+    }
+
     @GameTest(templateName = EMPTY_STRUCTURE)
     public void hypothesisMatching(TestContext context) {
-        var charcoal = new ItemStack(Items.CHARCOAL);
         var coal = new ItemStack(Items.COAL);
         var sand = new ItemStack(Items.SAND);
         var sugar = new ItemStack(Items.SUGAR);
-        context.assertTrue(EarlyResearch.identify(0, List.of(charcoal, coal)) == EarlyResearch.Attempt.NONE, "Locked research cannot trigger");
+        var basicsEssences = Map.of(EssenceType.IGNIS, 3, EssenceType.TERRA, 1);
+        context.assertTrue(EarlyResearch.identify(0, basicsEssences, coal) == EarlyResearch.Attempt.NONE, "Locked research cannot trigger");
         int f = EarlyResearch.DISCOVERED;
-        context.assertTrue(EarlyResearch.identify(f, List.of(coal, charcoal)) == EarlyResearch.Attempt.COAL, "Inputs may be reversed");
-        context.assertTrue(EarlyResearch.identify(f, List.of(charcoal, sand)) == EarlyResearch.Attempt.SAND, "Sand must fail");
-        context.assertTrue(EarlyResearch.identify(f, List.of(sugar, charcoal)) == EarlyResearch.Attempt.SUGAR, "Sugar must fail");
-        context.assertTrue(EarlyResearch.identify(f | EarlyResearch.FAILED_SAND, List.of(charcoal, sand)) == EarlyResearch.Attempt.ALREADY_FAILED, "Failed choice must be remembered");
-        context.assertTrue(EarlyResearch.identify(f | EarlyResearch.COMPLETED, List.of(charcoal, coal)) == EarlyResearch.Attempt.NONE, "Completed research must not repeat");
-        context.assertTrue(EarlyResearch.identify(f, List.of(charcoal, coal, sugar)) == EarlyResearch.Attempt.NONE, "Extra ingredients are not a hypothesis");
-        context.assertTrue(EarlyResearch.identify(f, List.of(coal, new ItemStack(Items.GLASS_BOTTLE))) == EarlyResearch.Attempt.NONE, "Normal recipe must not be intercepted");
-        var paste = new ItemStack(ModItems.HERBAL_PASTE);
+        context.assertTrue(EarlyResearch.identify(f, Map.of(EssenceType.IGNIS, 2), coal) == EarlyResearch.Attempt.NONE, "Insufficient subject essences must not trigger");
+        context.assertTrue(EarlyResearch.identify(f, basicsEssences, coal) == EarlyResearch.Attempt.COAL, "Coal catalyst with charcoal essences must match");
+        context.assertTrue(EarlyResearch.identify(f, basicsEssences, sand) == EarlyResearch.Attempt.SAND, "Sand must fail");
+        context.assertTrue(EarlyResearch.identify(f, basicsEssences, sugar) == EarlyResearch.Attempt.SUGAR, "Sugar must fail");
+        context.assertTrue(EarlyResearch.identify(f | EarlyResearch.FAILED_SAND, basicsEssences, sand) == EarlyResearch.Attempt.ALREADY_FAILED, "Failed choice must be remembered");
+        context.assertTrue(EarlyResearch.identify(f | EarlyResearch.COMPLETED, basicsEssences, coal) == EarlyResearch.Attempt.NONE, "Completed research must not repeat");
+        context.assertTrue(EarlyResearch.identify(f, basicsEssences, new ItemStack(Items.GLASS_BOTTLE)) == EarlyResearch.Attempt.NONE, "Normal recipe catalyst must not be intercepted");
+
+        var rawEssences = Map.of(EssenceType.HERBA, 3, EssenceType.AQUA, 1);
         var copper = new ItemStack(Items.COPPER_INGOT);
-        var ordo = new ItemStack(ModItems.CRYSTALS.get(EssenceType.ORDO));
+        var sightEssences = Map.of(EssenceType.ORDO, 1);
         var glass = new ItemStack(Items.GLASS_PANE);
-        context.assertTrue(EarlyResearch.identify(0, List.of(paste, copper)) == EarlyResearch.Attempt.NONE, "Locked distillation must not trigger");
-        context.assertTrue(EarlyResearch.identify(EarlyResearch.RAW_DISCOVERED, List.of(copper, paste)) == EarlyResearch.Attempt.RAW_COPPER, "Raw research must accept reversed inputs");
-        context.assertTrue(EarlyResearch.identify(EarlyResearch.RAW_DISCOVERED | EarlyResearch.FAILED_IRON, List.of(paste, new ItemStack(Items.IRON_INGOT))) == EarlyResearch.Attempt.ALREADY_FAILED, "Raw failures must be remembered");
-        context.assertTrue(EarlyResearch.identify(0, List.of(ordo, glass)) == EarlyResearch.Attempt.NONE, "Locked sight must not trigger");
-        context.assertTrue(EarlyResearch.identify(EarlyResearch.SIGHT_DISCOVERED, List.of(glass, ordo)) == EarlyResearch.Attempt.SIGHT_GLASS, "Sight research must accept reversed inputs");
-        context.assertTrue(EarlyResearch.identify(EarlyResearch.SIGHT_DISCOVERED | EarlyResearch.FAILED_TORCH, List.of(ordo, new ItemStack(Items.TORCH))) == EarlyResearch.Attempt.ALREADY_FAILED, "Sight failures must be remembered");
-        context.assertTrue(EarlyResearch.identify(EarlyResearch.SIGHT_COMPLETED | EarlyResearch.SIGHT_DISCOVERED, List.of(ordo, glass)) == EarlyResearch.Attempt.NONE, "Completed sight must not repeat");
+        context.assertTrue(EarlyResearch.identify(0, rawEssences, copper) == EarlyResearch.Attempt.NONE, "Locked distillation must not trigger");
+        context.assertTrue(EarlyResearch.identify(EarlyResearch.RAW_DISCOVERED, rawEssences, copper) == EarlyResearch.Attempt.RAW_COPPER, "Raw research matches dissolved paste + copper");
+        context.assertTrue(EarlyResearch.identify(EarlyResearch.RAW_DISCOVERED | EarlyResearch.FAILED_IRON, rawEssences, new ItemStack(Items.IRON_INGOT)) == EarlyResearch.Attempt.ALREADY_FAILED, "Raw failures must be remembered");
+        context.assertTrue(EarlyResearch.identify(0, sightEssences, glass) == EarlyResearch.Attempt.NONE, "Locked sight must not trigger");
+        context.assertTrue(EarlyResearch.identify(EarlyResearch.SIGHT_DISCOVERED, sightEssences, glass) == EarlyResearch.Attempt.SIGHT_GLASS, "Sight research matches dissolved Ordo + glass pane");
+        context.assertTrue(EarlyResearch.identify(EarlyResearch.SIGHT_DISCOVERED | EarlyResearch.FAILED_TORCH, sightEssences, new ItemStack(Items.TORCH)) == EarlyResearch.Attempt.ALREADY_FAILED, "Sight failures must be remembered");
+        context.assertTrue(EarlyResearch.identify(EarlyResearch.SIGHT_COMPLETED | EarlyResearch.SIGHT_DISCOVERED, sightEssences, glass) == EarlyResearch.Attempt.NONE, "Completed sight must not repeat");
         context.complete();
     }
+
     @GameTest(templateName = EMPTY_STRUCTURE)
     public void researchViaCauldron(TestContext context) {
         context.setBlockState(3, 1, 3, Blocks.MAGMA_BLOCK);
@@ -59,14 +66,14 @@ public class ResearchGameTests implements FabricGameTest {
         EarlyResearch.openJournal(player);
         EarlyResearch.discoverCauldron(player, context.getWorld(), pos);
         context.assertTrue((EarlyResearch.flags(player) & EarlyResearch.DISCOVERED) != 0, "Research should be unlocked");
-        player.setStackInHand(Hand.MAIN_HAND, new ItemStack(Items.WATER_BUCKET));
-        cauldron.fill(player, Hand.MAIN_HAND);
-        cauldron.stacks().set(0, new ItemStack(Items.CHARCOAL));
-        cauldron.stacks().set(1, new ItemStack(Items.SAND));
-        context.assertTrue(cauldron.activate(player), "Wrong hypothesis should be processed");
+
+        useOnCauldron(cauldron, player, new ItemStack(Items.WATER_BUCKET));
+        context.assertTrue(useOnCauldron(cauldron, player, new ItemStack(Items.CHARCOAL)), "Charcoal dissolves directly on right-click");
+        context.assertTrue(useOnCauldron(cauldron, player, new ItemStack(Items.SAND)), "Sand hypothesis should be processed");
         context.assertTrue((EarlyResearch.flags(player) & EarlyResearch.FAILED_SAND) != 0, "Wrong hypothesis must be recorded");
-        context.assertTrue(cauldron.stacks().stream().allMatch(ItemStack::isEmpty), "Failed ingredients must be consumed");
+        context.assertTrue(cauldron.essences().isEmpty(), "Subject essences must be consumed by hypothesis");
         context.assertTrue(context.getWorld().getBlockState(pos).get(AlchemyCauldronBlock.DIRTY), "Sand should visibly dirty the water");
+
         var saved = cauldron.createNbt(context.getWorld().getRegistryManager());
         CauldronBlockEntity restored = new CauldronBlockEntity(pos, cauldron.getCachedState());
         restored.readComponentlessNbt(saved, context.getWorld().getRegistryManager());
@@ -76,85 +83,81 @@ public class ResearchGameTests implements FabricGameTest {
         restored.readComponentlessNbt(oldSave, context.getWorld().getRegistryManager());
         var migrated = restored.createNbt(context.getWorld().getRegistryManager());
         context.assertTrue(migrated.getBoolean("Water") && !migrated.getBoolean("DirtyWater"), "Old water should migrate as clean water");
-        player.setStackInHand(Hand.MAIN_HAND, new ItemStack(Items.WATER_BUCKET));
-        cauldron.fill(player, Hand.MAIN_HAND);
+
+        useOnCauldron(cauldron, player, new ItemStack(Items.WATER_BUCKET));
         context.assertFalse(context.getWorld().getBlockState(pos).get(AlchemyCauldronBlock.DIRTY), "A water bucket should clean dirty water");
-        cauldron.stacks().set(0, new ItemStack(Items.CHARCOAL));
-        cauldron.stacks().set(1, new ItemStack(Items.SUGAR));
-        context.assertTrue(cauldron.activate(player), "Sugar hypothesis should be processed");
+        context.assertTrue(useOnCauldron(cauldron, player, new ItemStack(Items.CHARCOAL)), "Charcoal dissolves");
+        context.assertTrue(useOnCauldron(cauldron, player, new ItemStack(Items.SUGAR)), "Sugar hypothesis should be processed");
         context.assertTrue((EarlyResearch.flags(player) & EarlyResearch.FAILED_SUGAR) != 0, "Sugar failure must be recorded");
         context.assertFalse(context.getWorld().getBlockState(pos).get(AlchemyCauldronBlock.DIRTY), "Sugar should not dirty the water");
-        cauldron.stacks().set(0, new ItemStack(Items.CHARCOAL));
-        cauldron.stacks().set(1, new ItemStack(Items.SAND));
-        context.assertFalse(cauldron.activate(player), "Repeated failed hypothesis should be rejected");
-        context.assertTrue(!cauldron.stacks().get(0).isEmpty(), "Repeated attempt must not consume ingredients");
-        cauldron.stacks().set(1, new ItemStack(Items.COAL));
-        context.assertTrue(cauldron.activate(player), "Correct hypothesis should work");
+
+        context.assertTrue(useOnCauldron(cauldron, player, new ItemStack(Items.CHARCOAL)), "Charcoal dissolves");
+        context.assertFalse(useOnCauldron(cauldron, player, new ItemStack(Items.SAND)), "Repeated failed hypothesis should be rejected");
+        context.assertTrue(!cauldron.essences().isEmpty(), "Rejected repeat must preserve dissolved essences");
+        context.assertTrue(useOnCauldron(cauldron, player, new ItemStack(Items.COAL)), "Correct coal hypothesis should work");
         context.assertTrue((EarlyResearch.flags(player) & EarlyResearch.COMPLETED) != 0, "Completion must be recorded");
         player.getAdvancementTracker().save();
         player.getAdvancementTracker().reload(context.getWorld().getServer().getAdvancementLoader());
         context.assertTrue((EarlyResearch.flags(player) & (EarlyResearch.COMPLETED | EarlyResearch.FAILED_SAND)) == (EarlyResearch.COMPLETED | EarlyResearch.FAILED_SAND), "Completion and failed choices must survive save and reload");
-        context.assertTrue(cauldron.dissolveOne(new ItemStack(Items.COAL)), "Coal dissolves for Ignis");
-        context.assertTrue(cauldron.dissolveOne(new ItemStack(Items.APPLE)), "Apple dissolves for Aqua");
-        cauldron.stacks().set(0, new ItemStack(Items.GLASS_BOTTLE));
-        context.assertTrue(cauldron.activate(player), "Research must not prevent essence recipes");
-        context.assertTrue((EarlyResearch.flags(player) & EarlyResearch.REACTIVE_DISCOVERED) != 0, "Purified water should unlock the second research");
-        player.setStackInHand(Hand.MAIN_HAND, new ItemStack(Items.WATER_BUCKET));
-        cauldron.fill(player, Hand.MAIN_HAND);
-        cauldron.stacks().set(0, new ItemStack(Items.GUNPOWDER));
-        cauldron.stacks().set(1, new ItemStack(Items.FEATHER));
-        context.assertTrue(cauldron.activate(player), "Second research wrong hypothesis should be processed");
-        context.assertTrue((EarlyResearch.flags(player) & EarlyResearch.FAILED_FEATHER) != 0, "Feather failure must be recorded");
-        cauldron.stacks().set(0, new ItemStack(Items.GUNPOWDER));
-        cauldron.stacks().set(1, new ItemStack(Items.CLAY_BALL));
-        context.assertTrue(cauldron.activate(player), "Clay hypothesis should be processed");
-        context.assertTrue((EarlyResearch.flags(player) & EarlyResearch.FAILED_CLAY) != 0, "Clay failure must be recorded");
-        cauldron.stacks().set(0, new ItemStack(Items.GUNPOWDER));
-        cauldron.stacks().set(1, new ItemStack(Items.REDSTONE));
-        context.assertFalse(player.getInventory().contains(new ItemStack(ModItems.FIRE_DUST)), "Hypothesis should not produce the ordinary recipe result");
-        context.assertTrue(cauldron.activate(player), "Second research correct hypothesis should work");
-        context.assertFalse(player.getInventory().contains(new ItemStack(ModItems.FIRE_DUST)), "The research attempt itself should only complete research");
+
+        // Brew purified water via dissolved essences + bottle catalyst.
+        context.assertTrue(useOnCauldron(cauldron, player, new ItemStack(Items.COAL)), "Coal dissolves for Ignis");
+        context.assertTrue(useOnCauldron(cauldron, player, new ItemStack(Items.APPLE)), "Apple dissolves for Aqua");
+        context.assertTrue(useOnCauldron(cauldron, player, new ItemStack(Items.GLASS_BOTTLE)), "Bottle catalyst brews purified water");
+        context.assertTrue((EarlyResearch.flags(player) & EarlyResearch.REACTIVE_DISCOVERED) != 0, "Purified water should unlock reactive research");
+
+        useOnCauldron(cauldron, player, new ItemStack(Items.WATER_BUCKET));
+        context.assertTrue(useOnCauldron(cauldron, player, new ItemStack(Items.GUNPOWDER)), "Gunpowder dissolves");
+        context.assertTrue(useOnCauldron(cauldron, player, new ItemStack(Items.FEATHER)), "Feather failure processed");
+        context.assertTrue((EarlyResearch.flags(player) & EarlyResearch.FAILED_FEATHER) != 0, "Feather failure recorded");
+        context.assertTrue(useOnCauldron(cauldron, player, new ItemStack(Items.GUNPOWDER)), "Gunpowder dissolves");
+        context.assertTrue(useOnCauldron(cauldron, player, new ItemStack(Items.CLAY_BALL)), "Clay failure processed");
+        context.assertTrue((EarlyResearch.flags(player) & EarlyResearch.FAILED_CLAY) != 0, "Clay failure recorded");
+        context.assertTrue(useOnCauldron(cauldron, player, new ItemStack(Items.GUNPOWDER)), "Gunpowder dissolves");
+        context.assertFalse(player.getInventory().contains(new ItemStack(ModItems.FIRE_DUST)), "Hypothesis should not produce fire dust");
+        context.assertTrue(useOnCauldron(cauldron, player, new ItemStack(Items.REDSTONE)), "Redstone completes reactive research");
+        context.assertFalse(player.getInventory().contains(new ItemStack(ModItems.FIRE_DUST)), "Research attempt only completes research");
         context.assertTrue(context.getWorld().getBlockState(pos).get(AlchemyCauldronBlock.FILLED), "Research leaves water in the cauldron");
+
         player.getAdvancementTracker().save();
         player.getAdvancementTracker().reload(context.getWorld().getServer().getAdvancementLoader());
         context.assertTrue((EarlyResearch.flags(player) & (EarlyResearch.REACTIVE_COMPLETED | EarlyResearch.FAILED_FEATHER)) == (EarlyResearch.REACTIVE_COMPLETED | EarlyResearch.FAILED_FEATHER), "Second research must survive save and reload");
-        context.assertTrue(cauldron.dissolveOne(new ItemStack(Items.COAL)), "Coal dissolves for Ignis");
-        context.assertTrue(cauldron.dissolveOne(new ItemStack(Items.REDSTONE)), "Redstone dissolves for Potentia");
-        cauldron.stacks().set(0, new ItemStack(Items.GUNPOWDER));
-        context.assertTrue(cauldron.activate(player), "After research, gunpowder catalyst with dissolved essences must cook fire dust");
+
+        // Brew fire dust via dissolved essences + gunpowder catalyst.
+        cauldron.crystallize(); // clear any leftover residue from earlier apple
+        context.assertTrue(useOnCauldron(cauldron, player, new ItemStack(Items.COAL)), "Coal dissolves for Ignis");
+        context.assertTrue(useOnCauldron(cauldron, player, new ItemStack(Items.REDSTONE)), "Redstone dissolves for Potentia");
+        context.assertTrue(useOnCauldron(cauldron, player, new ItemStack(Items.GUNPOWDER)), "Gunpowder catalyst brews fire dust");
         int result = 0;
         for (int i = 0; i < player.getInventory().size(); i++) {
             ItemStack stack = player.getInventory().getStack(i);
             if (stack.isOf(ModItems.FIRE_DUST)) result += stack.getCount();
         }
-        context.assertTrue(result == 2, "Repeat recipe should produce exactly two fire dust: " + result);
-        context.assertTrue(cauldron.stacks().stream().allMatch(ItemStack::isEmpty), "Recipe must consume ingredients");
-        context.assertFalse(context.getWorld().getBlockState(pos).get(AlchemyCauldronBlock.FILLED), "Recipe must consume water");
+        context.assertTrue(result == 2, "Recipe should produce two fire dust: " + result);
+        context.assertFalse(context.getWorld().getBlockState(pos).get(AlchemyCauldronBlock.FILLED), "Recipe consumes water");
+
         EarlyResearch.discoverSight(player, context.getWorld(), pos);
         context.assertTrue((EarlyResearch.flags(player) & EarlyResearch.SIGHT_DISCOVERED) == 0, "Sight needs both parents");
-        player.setStackInHand(Hand.MAIN_HAND, new ItemStack(Items.WATER_BUCKET));
-        cauldron.fill(player, Hand.MAIN_HAND);
-        context.assertTrue(cauldron.dissolveOne(new ItemStack(Items.DANDELION)), "Dandelion dissolves");
-        context.assertTrue(cauldron.dissolveOne(new ItemStack(Items.POPPY)), "Poppy dissolves");
-        cauldron.stacks().set(0, new ItemStack(Items.WHEAT_SEEDS));
-        context.assertTrue(cauldron.activate(player), "Herbal paste essence recipe must unlock raw distillation");
-        context.assertTrue((EarlyResearch.flags(player) & EarlyResearch.RAW_DISCOVERED) != 0, "Herbal paste should unlock raw distillation");
-        player.setStackInHand(Hand.MAIN_HAND, new ItemStack(Items.WATER_BUCKET));
-        cauldron.fill(player, Hand.MAIN_HAND);
-        cauldron.stacks().set(0, new ItemStack(ModItems.HERBAL_PASTE));
-        cauldron.stacks().set(1, new ItemStack(Items.IRON_INGOT));
-        context.assertTrue(cauldron.activate(player), "Iron hypothesis should be processed");
-        context.assertTrue((EarlyResearch.flags(player) & EarlyResearch.FAILED_IRON) != 0, "Iron failure must persist");
-        cauldron.stacks().set(0, new ItemStack(ModItems.HERBAL_PASTE));
-        cauldron.stacks().set(1, new ItemStack(Items.IRON_INGOT));
-        context.assertFalse(cauldron.activate(player), "Repeated iron failure must not consume items");
-        context.assertTrue(!cauldron.stacks().get(0).isEmpty(), "Repeated hypothesis keeps ingredients");
-        cauldron.stacks().set(1, new ItemStack(Items.COBBLESTONE));
-        context.assertTrue(cauldron.activate(player), "Cobblestone hypothesis should be processed");
-        cauldron.stacks().set(0, new ItemStack(ModItems.HERBAL_PASTE));
-        cauldron.stacks().set(1, new ItemStack(Items.COPPER_INGOT));
-        context.assertTrue(cauldron.activate(player), "Copper hypothesis should complete raw distillation");
-        context.assertTrue((EarlyResearch.flags(player) & EarlyResearch.RAW_COMPLETED) != 0, "Raw research completion should persist");
+
+        useOnCauldron(cauldron, player, new ItemStack(Items.WATER_BUCKET));
+        context.assertTrue(useOnCauldron(cauldron, player, new ItemStack(Items.DANDELION)), "Dandelion dissolves");
+        context.assertTrue(useOnCauldron(cauldron, player, new ItemStack(Items.POPPY)), "Poppy dissolves");
+        context.assertTrue(useOnCauldron(cauldron, player, new ItemStack(Items.WHEAT_SEEDS)), "Wheat seeds catalyst brews herbal paste");
+        context.assertTrue((EarlyResearch.flags(player) & EarlyResearch.RAW_DISCOVERED) != 0, "Herbal paste unlocks raw distillation");
+
+        useOnCauldron(cauldron, player, new ItemStack(Items.WATER_BUCKET));
+        cauldron.crystallize();
+        context.assertTrue(useOnCauldron(cauldron, player, new ItemStack(ModItems.HERBAL_PASTE)), "Herbal paste dissolves for raw hypothesis");
+        context.assertTrue(useOnCauldron(cauldron, player, new ItemStack(Items.IRON_INGOT)), "Iron hypothesis fails");
+        context.assertTrue((EarlyResearch.flags(player) & EarlyResearch.FAILED_IRON) != 0, "Iron failure persists");
+        context.assertTrue(useOnCauldron(cauldron, player, new ItemStack(ModItems.HERBAL_PASTE)), "Herbal paste dissolves");
+        context.assertFalse(useOnCauldron(cauldron, player, new ItemStack(Items.IRON_INGOT)), "Repeated iron failure rejected");
+        context.assertTrue(!cauldron.essences().isEmpty(), "Repeated hypothesis preserves dissolved essences");
+        context.assertTrue(useOnCauldron(cauldron, player, new ItemStack(Items.COBBLESTONE)), "Cobblestone hypothesis fails");
+        context.assertTrue(useOnCauldron(cauldron, player, new ItemStack(ModItems.HERBAL_PASTE)), "Herbal paste dissolves");
+        context.assertTrue(useOnCauldron(cauldron, player, new ItemStack(Items.COPPER_INGOT)), "Copper hypothesis completes raw distillation");
+        context.assertTrue((EarlyResearch.flags(player) & EarlyResearch.RAW_COMPLETED) != 0, "Raw research completion persists");
+
         BlockPos distPos = context.getAbsolutePos(new BlockPos(5, 2, 3));
         context.setBlockState(5, 2, 3, ModBlocks.DISTILLERY);
         DistilleryBlockEntity distillery = (DistilleryBlockEntity) context.getWorld().getBlockEntity(distPos);
@@ -165,25 +168,24 @@ public class ResearchGameTests implements FabricGameTest {
         distillery.stacks().set(1, new ItemStack(ModItems.CRYSTALS.get(EssenceType.AQUA)));
         var distilleryScreen = (net.alkahest.screen.DistilleryScreenHandler) distillery.createMenu(2, player.getInventory(), player);
         context.assertFalse(distilleryScreen.quickMove(player, 1).isEmpty(), "Taking a crystal via GUI shift-click should succeed");
-        context.assertTrue((EarlyResearch.flags(player) & EarlyResearch.SIGHT_DISCOVERED) != 0, "GUI output collection should unlock true sight");
-        cauldron.stacks().set(0, new ItemStack(ModItems.CRYSTALS.get(EssenceType.ORDO)));
-        cauldron.stacks().set(1, new ItemStack(Items.SPIDER_EYE));
-        context.assertTrue(cauldron.activate(player), "Spider eye hypothesis should fail");
-        context.assertTrue((EarlyResearch.flags(player) & EarlyResearch.FAILED_EYE) != 0, "Eye failure should persist");
-        cauldron.stacks().set(0, new ItemStack(ModItems.CRYSTALS.get(EssenceType.ORDO)));
-        cauldron.stacks().set(1, new ItemStack(Items.TORCH));
-        context.assertTrue(cauldron.activate(player), "Torch hypothesis should fail");
-        context.assertTrue((EarlyResearch.flags(player) & EarlyResearch.FAILED_TORCH) != 0, "Torch failure should persist");
-        cauldron.stacks().set(0, new ItemStack(ModItems.CRYSTALS.get(EssenceType.ORDO)));
-        cauldron.stacks().set(1, new ItemStack(Items.GLASS_PANE));
-        context.assertTrue(cauldron.activate(player), "Glass hypothesis should complete true sight");
+        context.assertTrue((EarlyResearch.flags(player) & EarlyResearch.SIGHT_DISCOVERED) != 0, "GUI output collection unlocks true sight");
+
+        context.assertTrue(useOnCauldron(cauldron, player, new ItemStack(ModItems.CRYSTALS.get(EssenceType.ORDO))), "Ordo crystal dissolves");
+        context.assertTrue(useOnCauldron(cauldron, player, new ItemStack(Items.SPIDER_EYE)), "Spider eye hypothesis fails");
+        context.assertTrue((EarlyResearch.flags(player) & EarlyResearch.FAILED_EYE) != 0, "Eye failure persists");
+        context.assertTrue(useOnCauldron(cauldron, player, new ItemStack(ModItems.CRYSTALS.get(EssenceType.ORDO))), "Ordo crystal dissolves");
+        context.assertTrue(useOnCauldron(cauldron, player, new ItemStack(Items.TORCH)), "Torch hypothesis fails");
+        context.assertTrue((EarlyResearch.flags(player) & EarlyResearch.FAILED_TORCH) != 0, "Torch failure persists");
+        context.assertTrue(useOnCauldron(cauldron, player, new ItemStack(ModItems.CRYSTALS.get(EssenceType.ORDO))), "Ordo crystal dissolves");
+        context.assertTrue(useOnCauldron(cauldron, player, new ItemStack(Items.GLASS_PANE)), "Glass pane completes true sight");
+
         player.getAdvancementTracker().save();
         player.getAdvancementTracker().reload(context.getWorld().getServer().getAdvancementLoader());
         int expected = EarlyResearch.REACTIVE_COMPLETED | EarlyResearch.RAW_COMPLETED | EarlyResearch.FAILED_IRON | EarlyResearch.FAILED_COBBLE | EarlyResearch.SIGHT_COMPLETED | EarlyResearch.FAILED_EYE | EarlyResearch.FAILED_TORCH;
-        context.assertTrue((EarlyResearch.flags(player) & expected) == expected, "Old and new research should survive save and reload");
-        context.assertTrue(cauldron.dissolveOne(new ItemStack(Items.AMETHYST_SHARD)), "Amethyst shard supplies Ordo and Lux");
-        cauldron.stacks().set(0, new ItemStack(Items.GLASS_PANE));
-        context.assertTrue(cauldron.activate(player), "Glass pane catalyst with dissolved Ordo and Lux must make a monocle");
+        context.assertTrue((EarlyResearch.flags(player) & expected) == expected, "Old and new research survive save and reload");
+
+        context.assertTrue(useOnCauldron(cauldron, player, new ItemStack(Items.AMETHYST_SHARD)), "Amethyst shard dissolves Ordo and Lux");
+        context.assertTrue(useOnCauldron(cauldron, player, new ItemStack(Items.GLASS_PANE)), "Glass pane catalyst brews monocle");
         context.assertTrue(player.getInventory().contains(new ItemStack(ModItems.ALCHEMISTS_MONOCLE)), "Monocle must be delivered");
         context.complete();
     }

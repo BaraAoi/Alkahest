@@ -47,10 +47,14 @@ public final class AlkahestClient implements ClientModInitializer {
                 ? net.alkahest.essence.JarVisuals.color(jar.contents()) : 0xffffff, ModBlocks.JAR);
         EntityRendererRegistry.register(ModEntities.THROWN_REAGENT, FlyingItemEntityRenderer::new);
         EntityRendererRegistry.register(ModEntities.REAGENT_ZONE, EmptyEntityRenderer::new);
-        ColorProviderRegistry.BLOCK.register((state, world, pos, tintIndex) ->
-            state.get(AlchemyCauldronBlock.DIRTY) ? 0x74552B :
-                world != null && pos != null ? BiomeColors.getWaterColor(world, pos) : 0x3F76E4,
-            ModBlocks.ALCHEMY_CAULDRON);
+        ColorProviderRegistry.BLOCK.register((state, world, pos, tintIndex) -> {
+            if (state.get(AlchemyCauldronBlock.DIRTY)) return 0x74552B;
+            if (world != null && pos != null && world.getBlockEntity(pos) instanceof net.alkahest.block.entity.CauldronBlockEntity cauldron) {
+                int color = cauldron.essenceColor();
+                if (color >= 0) return color;
+            }
+            return world != null && pos != null ? BiomeColors.getWaterColor(world, pos) : 0x3F76E4;
+        }, ModBlocks.ALCHEMY_CAULDRON);
         ClientLifecycleEvents.CLIENT_STARTED.register(client -> LoggerFactory.getLogger("Alkahest").info("Alkahest client started"));
         ItemTooltipCallback.EVENT.register((stack, context, type, lines) -> {
             if (stack.getItem() instanceof CrystalWandItem) lines.add(Text.translatable("message.alkahest.wand_charge", stack.getOrDefault(ModDataComponents.ESSENCE_CHARGE, 0)));

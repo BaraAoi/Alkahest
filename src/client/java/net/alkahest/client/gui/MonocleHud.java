@@ -42,15 +42,17 @@ public final class MonocleHud {
         } else if (blockEntity instanceof CauldronBlockEntity cauldron) {
             var contents = cauldron.essences();
             lines.add(Text.translatable("screen.alkahest.monocle.cauldron"));
+            if (!cauldron.hasWater()) lines.add(Text.translatable("screen.alkahest.monocle.cauldron_dry"));
+            else if (!cauldron.isHeated()) lines.add(Text.translatable("screen.alkahest.monocle.cauldron_cold"));
             if (contents.isEmpty()) lines.add(Text.translatable("screen.alkahest.monocle.empty"));
             else {
                 int shown = 0;
                 for (EssenceType type : EssenceType.values()) {
                     int amount = contents.getOrDefault(type, 0);
-                    if (amount > 0 && shown++ < 4) lines.add(Text.literal("◆ " + type.displayName() + ": " + amount)
+                    if (amount > 0 && shown++ < 6) lines.add(Text.literal("◆ " + type.displayName() + ": " + amount)
                         .styled(style -> style.withColor(type.color())));
                 }
-                if (shown > 4) lines.add(Text.translatable("screen.alkahest.monocle.more", shown - 4));
+                if (shown > 6) lines.add(Text.translatable("screen.alkahest.monocle.more", shown - 6));
             }
         } else if (blockEntity instanceof AlchemyPipeBlockEntity pipe && client.world.getBlockState(hit.getBlockPos()).getBlock() instanceof AlchemyPipeBlock) {
             var state = client.world.getBlockState(hit.getBlockPos());

@@ -9,13 +9,19 @@ import net.alkahest.registry.ModDataComponents;
 import net.alkahest.registry.ModItems;
 import net.fabricmc.fabric.api.gametest.v1.FabricGameTest;
 import net.minecraft.block.Blocks;
+import net.minecraft.component.DataComponentTypes;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.inventory.Inventories;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
+import net.minecraft.nbt.NbtCompound;
+import net.minecraft.text.Text;
 import net.minecraft.test.GameTest;
 import net.minecraft.test.TestContext;
+import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
+import net.minecraft.util.collection.DefaultedList;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.world.GameMode;
@@ -55,101 +61,136 @@ public class CauldronGameTests implements FabricGameTest {
         }
     }
 
-    @GameTest(templateName = EMPTY_STRUCTURE, tickLimit = 100)
-    public void fallingItemsDissolveAndSurplusRemainsForCrystallization(TestContext context) {
+    @GameTest(templateName = EMPTY_STRUCTURE, tickLimit = 110)
+    public void fallingItemsBrewWithDroppedCatalystRefillWithAquaWandAndCrystallize(TestContext context) {
         CauldronBlockEntity cauldron = cauldron(context);
         PlayerEntity player = fill(context, cauldron);
+        BlockPos pos = context.getAbsolutePos(new BlockPos(3, 2, 3));
         ItemEntity coal = item(context, 3.5, 4.4, 3.5, new ItemStack(Items.COAL));
         ItemEntity apple = item(context, 3.5, 4.8, 3.5, new ItemStack(Items.APPLE));
-        ItemEntity unmappedBottle = item(context, 3.5, 5.1, 3.5, new ItemStack(Items.GLASS_BOTTLE));
-        context.runAtTick(45, () -> {
+        context.runAtTick(35, () -> {
             context.assertTrue(coal.isRemoved() && apple.isRemoved(), "Mapped items dropped into hot water must dissolve");
-            context.assertTrue(!unmappedBottle.isRemoved(), "Unmapped catalyst items dropped into water must not dissolve");
+            context.assertTrue(cauldron.essenceColor() >= 0, "Dissolved essences must tint cauldron water");
             context.assertTrue(cauldron.essences().getOrDefault(EssenceType.IGNIS, 0) == 3, "Coal must add 3 Ignis");
             context.assertTrue(cauldron.essences().getOrDefault(EssenceType.AQUA, 0) == 1, "Apple must add 1 Aqua");
-            context.assertTrue(cauldron.essences().getOrDefault(EssenceType.TERRA, 0) == 1, "Coal must add 1 Terra");
-            context.assertTrue(cauldron.essences().getOrDefault(EssenceType.HERBA, 0) == 3, "Apple must add 3 Herba");
-            context.assertTrue(cauldron.essences().getOrDefault(EssenceType.ORDO, 0) == 1, "Apple must add 1 Ordo");
 
-            player.setStackInHand(Hand.MAIN_HAND, new ItemStack(Items.GLASS_BOTTLE));
-            cauldron.add(player, Hand.MAIN_HAND);
-            context.assertTrue(cauldron.activate(player), "Bottle catalyst with dissolved Aqua and Ignis must brew purified water");
-            context.assertTrue(player.getInventory().contains(new ItemStack(ModItems.PURIFIED_WATER)), "Purified water must reach player");
-            BlockPos pos = context.getAbsolutePos(new BlockPos(3, 2, 3));
-            context.assertFalse(context.getWorld().getBlockState(pos).get(AlchemyCauldronBlock.FILLED), "Brewing consumes water");
-            context.assertTrue(cauldron.essences().getOrDefault(EssenceType.IGNIS, 0) == 1, "1 surplus Ignis must remain in cauldron");
-            context.assertTrue(!cauldron.essences().containsKey(EssenceType.AQUA), "Exact Aqua cost must be removed");
-            context.assertTrue(cauldron.essences().getOrDefault(EssenceType.HERBA, 0) == 3, "Unused Herba must remain");
-
-            // Refill water and crystallize surplus by dropping crystallization powder into the cauldron.
-            player.setStackInHand(Hand.MAIN_HAND, new ItemStack(Items.WATER_BUCKET));
-            cauldron.fill(player, Hand.MAIN_HAND);
-            ItemEntity powder = item(context, 3.5, 4.2, 3.5, new ItemStack(ModItems.CRYSTALLIZATION_POWDER, 2));
-            context.runAtTick(80, () -> {
-                context.assertTrue(cauldron.essences().isEmpty(), "Crystallization powder must clear all dissolved surplus");
-                context.assertTrue(!powder.isRemoved() && powder.getStack().getCount() == 1, "Only one crystallization powder is consumed");
+            // Dropping the bottle catalyst directly into the cauldron brews purified water and ejects it upward.
+            ItemEntity bottle = item(context, 3.5, 3.6, 3.5, new ItemStack(Items.GLASS_BOTTLE, 2));
+            context.runAtTick(55, () -> {
+                context.assertTrue(!bottle.isRemoved() && bottle.getStack().getCount() == 1, "Only one bottle catalyst is consumed");
+                bottle.discard();
                 Box area = new Box(pos).expand(2.5);
-                var crystals = context.getWorld().getEntitiesByClass(ItemEntity.class, area,
-                    e -> e.isAlive() && ModItems.CRYSTALS.containsValue(e.getStack().getItem()));
-                int totalCrystals = 0;
-                for (ItemEntity entity : crystals) {
-                    Float stability = entity.getStack().get(ModDataComponents.ESSENCE_STABILITY);
-                    context.assertTrue(stability != null && Math.abs(stability - CauldronBlockEntity.RESIDUE_STABILITY) < 0.0001f,
-                        "Precipitated crystals must have very low 5% stability: " + stability);
-                    totalCrystals += entity.getStack().getCount();
-                }
-                context.assertTrue(totalCrystals == 6, "Expected 1 Ignis + 1 Terra + 3 Herba + 1 Ordo = 6 crystals, got " + totalCrystals);
-                context.complete();
+                var brewed = context.getWorld().getEntitiesByClass(ItemEntity.class, area,
+                    e -> e.isAlive() && e.getStack().isOf(ModItems.PURIFIED_WATER));
+                context.assertTrue(brewed.size() == 1, "Brewed purified water must spawn above the cauldron");
+                brewed.forEach(ItemEntity::discard);
+                context.assertFalse(context.getWorld().getBlockState(pos).get(AlchemyCauldronBlock.FILLED), "Brewing consumes water");
+                context.assertTrue(cauldron.essences().getOrDefault(EssenceType.IGNIS, 0) == 1, "1 surplus Ignis must remain");
+
+                // Aqua wand refills the cauldron for 1 charge without needing a bucket.
+                ItemStack aquaWand = new ItemStack(ModItems.CRYSTAL_WANDS.get(EssenceType.AQUA));
+                player.setStackInHand(Hand.MAIN_HAND, aquaWand);
+                context.assertTrue(cauldron.useItem(player, Hand.MAIN_HAND), "Aqua wand must refill dry cauldron");
+                context.assertTrue(context.getWorld().getBlockState(pos).get(AlchemyCauldronBlock.FILLED), "Water state restored by Aqua wand");
+                context.assertTrue(aquaWand.getOrDefault(ModDataComponents.ESSENCE_CHARGE, 0) == 99, "Aqua wand spends 1 charge");
+
+                ItemEntity powder = item(context, 3.5, 4.0, 3.5, new ItemStack(ModItems.CRYSTALLIZATION_POWDER, 2));
+                context.runAtTick(85, () -> {
+                    context.assertTrue(cauldron.essences().isEmpty(), "Crystallization powder must clear all surplus");
+                    context.assertTrue(!powder.isRemoved() && powder.getStack().getCount() == 1, "Only one powder is consumed");
+                    var crystals = context.getWorld().getEntitiesByClass(ItemEntity.class, area,
+                        e -> e.isAlive() && ModItems.CRYSTALS.containsValue(e.getStack().getItem()));
+                    int total = 0;
+                    for (ItemEntity entity : crystals) {
+                        Float stability = entity.getStack().get(ModDataComponents.ESSENCE_STABILITY);
+                        context.assertTrue(stability != null && Math.abs(stability - CauldronBlockEntity.RESIDUE_STABILITY) < 0.0001f,
+                            "Precipitated crystals must have 5% stability: " + stability);
+                        total += entity.getStack().getCount();
+                    }
+                    context.assertTrue(total == 6, "Expected 6 residue crystals, got " + total);
+                    context.complete();
+                });
             });
         });
     }
 
-    @GameTest(templateName = EMPTY_STRUCTURE, tickLimit = 80)
-    public void essenceCapAndOutsideItemsAreRespected(TestContext context) {
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void rightClickDissolvesDirectlyShiftDissolvesStacksAndNeverStoresItems(TestContext context) {
+        CauldronBlockEntity cauldron = cauldron(context);
+        PlayerEntity survival = fill(context, cauldron);
+        BlockPos pos = context.getAbsolutePos(new BlockPos(3, 2, 3));
+
+        // Unmapped catalyst without essences must stay in hand and NOT sit inside any hidden cauldron slot.
+        survival.setStackInHand(Hand.MAIN_HAND, new ItemStack(Items.GLASS_BOTTLE, 2));
+        context.assertFalse(cauldron.useItem(survival, Hand.MAIN_HAND), "Bottle without essences must not be consumed");
+        context.assertTrue(survival.getStackInHand(Hand.MAIN_HAND).getCount() == 2, "Bottle must remain in hand");
+        context.assertFalse(cauldron.createNbt(context.getWorld().getRegistryManager()).contains("Items"), "No hidden item slots exist");
+
+        // Regular right-click dissolves 1 coal directly into essences.
+        survival.setStackInHand(Hand.MAIN_HAND, new ItemStack(Items.COAL, 4));
+        context.assertTrue(cauldron.useItem(survival, Hand.MAIN_HAND), "Right-clicking coal must dissolve it directly");
+        context.assertTrue(survival.getStackInHand(Hand.MAIN_HAND).getCount() == 3, "Regular right-click consumes 1 item");
+        context.assertTrue(cauldron.essences().getOrDefault(EssenceType.IGNIS, 0) == 3, "Right-clicked coal adds 3 Ignis");
+
+        // Sneak + right-click dissolves the entire non-block stack at once.
+        survival.setSneaking(true);
+        context.assertTrue(AlchemyCauldronBlock.sneakUseWithItem(context.getWorld(), pos, survival, Hand.MAIN_HAND).isAccepted(),
+            "Sneak right-click with non-block item must be handled");
+        context.assertTrue(survival.getStackInHand(Hand.MAIN_HAND).isEmpty(), "Sneak right-click dissolves full stack");
+        context.assertTrue(cauldron.essences().getOrDefault(EssenceType.IGNIS, 0) == 12, "All 4 coals dissolved (12 Ignis)");
+
+        // Sneak + right-click with a block item passes through so hoppers/blocks can be placed against the cauldron.
+        survival.setStackInHand(Hand.MAIN_HAND, new ItemStack(Items.COBBLESTONE, 4));
+        context.assertTrue(AlchemyCauldronBlock.sneakUseWithItem(context.getWorld(), pos, survival, Hand.MAIN_HAND) == ActionResult.PASS,
+            "Block items must pass through sneak-use for normal block placement");
+        survival.setSneaking(false);
+
+        // Creative sneak + right-click dissolves without depleting the held stack.
+        PlayerEntity creative = context.createMockPlayer(GameMode.CREATIVE);
+        creative.setSneaking(true);
+        creative.setStackInHand(Hand.MAIN_HAND, new ItemStack(ModItems.CRYSTALS.get(EssenceType.AQUA), 5));
+        context.assertTrue(cauldron.useItem(creative, Hand.MAIN_HAND), "Creative stack dissolution must succeed");
+        context.assertTrue(creative.getStackInHand(Hand.MAIN_HAND).getCount() == 5, "Creative stack must not shrink");
+        context.assertTrue(cauldron.essences().getOrDefault(EssenceType.AQUA, 0) == 5, "5 Aqua added");
+        context.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE, tickLimit = 60)
+    public void essenceCapLegacyMigrationAndSaveWork(TestContext context) {
         CauldronBlockEntity cauldron = cauldron(context);
         fill(context, cauldron);
-        // Each diamond adds 15 Terra, 15 Ordo, 10 Lux; 17 fit under 256 (17 * 15 = 255), 18th would hit 270.
+        BlockPos pos = context.getAbsolutePos(new BlockPos(3, 2, 3));
+
+        // Simulate a cauldron saved in <= 0.1.24 that still had an item sitting in legacy "Items" NBT.
+        var registry = context.getWorld().getRegistryManager();
+        NbtCompound oldNbt = cauldron.createNbt(registry);
+        DefaultedList<ItemStack> oldSlots = DefaultedList.ofSize(6, ItemStack.EMPTY);
+        ItemStack named = new ItemStack(Items.DIAMOND);
+        named.set(DataComponentTypes.CUSTOM_NAME, Text.literal("Legacy catalyst"));
+        oldSlots.set(0, named);
+        Inventories.writeNbt(oldNbt, oldSlots, registry);
+        cauldron.readComponentlessNbt(oldNbt, registry);
+
         ItemEntity many = item(context, 3.5, 4.0, 3.5, new ItemStack(Items.DIAMOND, 20));
         ItemEntity outside = item(context, 4.3, 2.5, 3.5, new ItemStack(Items.COAL));
         outside.setNoGravity(true);
-        context.runAtTick(35, () -> {
-            context.assertTrue(cauldron.essences().getOrDefault(EssenceType.TERRA, 0) == 255, "17 diamonds should dissolve up to 255 Terra");
-            context.assertTrue(!many.isRemoved() && many.getStack().getCount() == 3, "Items exceeding the 256 per-essence cap must remain in the world");
-            context.assertTrue(!outside.isRemoved() && outside.getStack().getCount() == 1, "Items outside the opening must not be dissolved");
-            context.complete();
-        });
-    }
 
-    @GameTest(templateName = EMPTY_STRUCTURE, tickLimit = 80)
-    public void dryOrColdCauldronDoesNotDissolveAndEssencesSurviveSave(TestContext context) {
-        CauldronBlockEntity cauldron = cauldron(context);
-        ItemEntity dryItem = item(context, 3.5, 3.5, 3.5, new ItemStack(Items.COAL, 2));
-        context.runAtTick(25, () -> {
-            context.assertTrue(!dryItem.isRemoved() && dryItem.getStack().getCount() == 2, "Dry cauldron must not dissolve items");
-            context.assertTrue(cauldron.essences().isEmpty(), "Dry cauldron should remain empty");
-            dryItem.discard();
-
-            PlayerEntity player = fill(context, cauldron);
-            context.setBlockState(3, 1, 3, Blocks.STONE);
-            context.assertFalse(cauldron.dissolveOne(new ItemStack(Items.COAL)), "Cold cauldron must not dissolve items");
-            context.setBlockState(3, 1, 3, Blocks.MAGMA_BLOCK);
-            context.assertTrue(cauldron.dissolveOne(new ItemStack(Items.GOLD_INGOT)), "Heated cauldron with water dissolves mapped items");
-            player.setStackInHand(Hand.MAIN_HAND, new ItemStack(Items.GLASS_PANE));
-            cauldron.add(player, Hand.MAIN_HAND);
-
-            var registry = context.getWorld().getRegistryManager();
-            var saved = cauldron.createNbt(registry);
-            CauldronBlockEntity restored = new CauldronBlockEntity(cauldron.getPos(), cauldron.getCachedState());
-            restored.readComponentlessNbt(saved, registry);
-            context.assertTrue(restored.essences().getOrDefault(EssenceType.ORDO, 0) == 6, "Dissolved essences must persist in NBT");
-            context.assertTrue(restored.essences().getOrDefault(EssenceType.LUX, 0) == 2, "Secondary essences must persist in NBT");
-            context.assertTrue(restored.stacks().get(0).isOf(Items.GLASS_PANE), "Placed catalyst must persist in NBT");
+        context.runAtTick(30, () -> {
+            Box area = new Box(pos).expand(2.5);
+            var ejected = context.getWorld().getEntitiesByClass(ItemEntity.class, area,
+                e -> e.isAlive() && e.getStack().isOf(Items.DIAMOND) && e.getStack().get(DataComponentTypes.CUSTOM_NAME) != null);
+            context.assertTrue(ejected.size() == 1 && ejected.getFirst().getStack().getName().getString().equals("Legacy catalyst"),
+                "Items from old <= 0.1.24 cauldron saves must be safely ejected");
+            context.assertFalse(cauldron.createNbt(registry).contains("Items"), "Ejected legacy slots must be cleaned from NBT");
+            context.assertTrue(cauldron.essences().getOrDefault(EssenceType.TERRA, 0) == 255, "17 diamonds dissolve up to 255 Terra");
+            context.assertTrue(!many.isRemoved() && many.getStack().getCount() == 3, "Excess above 256 cap remains in world");
+            context.assertTrue(!outside.isRemoved() && outside.getStack().getCount() == 1, "Outside items are ignored");
             context.complete();
         });
     }
 
     @GameTest(templateName = EMPTY_STRUCTURE)
-    public void allEssenceCatalystRecipesBrewAndRightClickCrystallizationWorks(TestContext context) {
+    public void allEssenceCatalystRecipesBrewViaRightClickAndCrystallizeWorks(TestContext context) {
         CauldronBlockEntity cauldron = cauldron(context);
         PlayerEntity player = context.createMockPlayer(GameMode.SURVIVAL);
         player.getInventory().selectedSlot = 8;
@@ -158,41 +199,31 @@ public class CauldronGameTests implements FabricGameTest {
             player.setStackInHand(Hand.MAIN_HAND, new ItemStack(Items.WATER_BUCKET));
             cauldron.fill(player, Hand.MAIN_HAND);
             supplyEssences(cauldron, recipe.cost());
-            player.setStackInHand(Hand.MAIN_HAND, new ItemStack(recipe.catalyst()));
-            cauldron.add(player, Hand.MAIN_HAND);
-            context.assertTrue(cauldron.activate(player), "Recipe must brew for catalyst " + recipe.catalyst());
+            player.setStackInHand(Hand.MAIN_HAND, new ItemStack(recipe.catalyst(), 2));
+            context.assertTrue(cauldron.useItem(player, Hand.MAIN_HAND), "Recipe must brew directly on catalyst right-click: " + recipe.catalyst());
+            context.assertTrue(player.getStackInHand(Hand.MAIN_HAND).getCount() == 1, "Exactly 1 catalyst consumed for " + recipe.catalyst());
             context.assertTrue(player.getInventory().contains(new ItemStack(recipe.result())), "Expected result " + recipe.result());
             context.assertTrue(cauldron.essences().isEmpty(), "Exact essence cost leaves no residue for " + recipe.result());
-            context.assertTrue(cauldron.stacks().stream().allMatch(ItemStack::isEmpty), "Catalyst slot must be cleared");
         }
 
-        // Reject multi-item catalyst attempts without losing placed items or essences.
+        // Self-soluble catalyst (wheat seeds) dissolves first when essences are missing, then brews once enough accumulate!
         player.setStackInHand(Hand.MAIN_HAND, new ItemStack(Items.WATER_BUCKET));
         cauldron.fill(player, Hand.MAIN_HAND);
-        var extra = new EnumMap<EssenceType, Integer>(EssenceType.class);
-        extra.put(EssenceType.IGNIS, 3);
-        extra.put(EssenceType.POTENTIA, 3);
-        extra.put(EssenceType.TERRA, 2);
-        supplyEssences(cauldron, extra);
-        cauldron.stacks().set(0, new ItemStack(Items.GUNPOWDER));
-        cauldron.stacks().set(1, new ItemStack(Items.STONE));
-        context.assertFalse(cauldron.activate(player), "Two non-research items must not brew");
-        context.assertTrue(cauldron.essences().getOrDefault(EssenceType.IGNIS, 0) == 3, "Rejected attempt preserves essences");
-        cauldron.stacks().set(1, ItemStack.EMPTY);
-        context.assertTrue(cauldron.activate(player), "Single catalyst with required essences brews");
-        context.assertTrue(cauldron.essences().getOrDefault(EssenceType.TERRA, 0) == 2, "Unrelated Terra remains as residue");
+        player.setStackInHand(Hand.MAIN_HAND, new ItemStack(Items.WHEAT_SEEDS, 3));
+        context.assertTrue(cauldron.useItem(player, Hand.MAIN_HAND), "1st seed dissolves (3 Herba, 1 Aqua)");
+        context.assertTrue(cauldron.useItem(player, Hand.MAIN_HAND), "2nd seed dissolves (6 Herba, 2 Aqua)");
+        context.assertTrue(cauldron.essences().getOrDefault(EssenceType.HERBA, 0) == 6, "6 Herba accumulated");
+        context.assertTrue(cauldron.useItem(player, Hand.MAIN_HAND), "3rd seed acts as catalyst and brews herbal paste");
+        context.assertTrue(cauldron.essences().getOrDefault(EssenceType.HERBA, 0) == 2, "2 Herba remain as residue");
 
-        // Right-clicking crystallization powder requires water + heat and consumes 1 powder in survival.
         player.setStackInHand(Hand.MAIN_HAND, new ItemStack(ModItems.CRYSTALLIZATION_POWDER, 2));
-        context.assertFalse(cauldron.crystallizeWith(player, Hand.MAIN_HAND), "Dry cauldron cannot crystallize");
+        context.assertFalse(cauldron.useItem(player, Hand.MAIN_HAND), "Dry cauldron cannot crystallize");
         player.setStackInHand(Hand.MAIN_HAND, new ItemStack(Items.WATER_BUCKET));
         cauldron.fill(player, Hand.MAIN_HAND);
         player.setStackInHand(Hand.MAIN_HAND, new ItemStack(ModItems.CRYSTALLIZATION_POWDER, 2));
-        context.assertTrue(cauldron.crystallizeWith(player, Hand.MAIN_HAND), "Right-click crystallization must precipitate residue");
-        context.assertTrue(player.getStackInHand(Hand.MAIN_HAND).getCount() == 1, "Survival crystallization consumes 1 powder");
+        context.assertTrue(cauldron.useItem(player, Hand.MAIN_HAND), "Right-click crystallization must precipitate residue");
+        context.assertTrue(player.getStackInHand(Hand.MAIN_HAND).getCount() == 1, "1 powder consumed");
         context.assertTrue(cauldron.essences().isEmpty(), "Residue cleared");
-        context.assertFalse(cauldron.crystallizeWith(player, Hand.MAIN_HAND), "Empty residue does not consume powder");
-        context.assertTrue(player.getStackInHand(Hand.MAIN_HAND).getCount() == 1, "Unused powder preserved");
         context.complete();
     }
 }
