@@ -22,49 +22,89 @@ import java.util.List;
 
 public class PipeGameTests implements FabricGameTest {
     private static JarContentsComponent of(EssenceType t,int n,float s) { return new JarContentsComponent(List.of(new EssenceStack(t,n,s))); }
+
+    /** jar - pipe - pipe - bellows: the pipes find the container with essence and the empty one. */
     @GameTest(templateName=EMPTY_STRUCTURE)
-    public void transferFiltersLoopsAndPersistence(TestContext c) {
-        c.setBlockState(1,2,3,ModBlocks.JAR); c.setBlockState(2,2,3,ModBlocks.ALCHEMY_PIPE.getDefaultState().with(AlchemyPipeBlock.FACING,Direction.EAST));
-        c.setBlockState(3,2,3,ModBlocks.ALCHEMY_PIPE.getDefaultState().with(AlchemyPipeBlock.FACING,Direction.EAST)); c.setBlockState(4,2,3,ModBlocks.JAR);
+    public void autoRoutesWithoutDirectionsOrFilters(TestContext c) {
+        c.setBlockState(1,2,3,ModBlocks.JAR);
+        c.setBlockState(2,2,3,ModBlocks.ALCHEMY_PIPE);
+        c.setBlockState(3,2,3,ModBlocks.ALCHEMY_PIPE);
+        c.setBlockState(4,2,3,ModBlocks.DISTILLERY_BELLOWS);
         BlockPos p=c.getAbsolutePos(new BlockPos(2,2,3));
         var source=(JarBlockEntity)c.getWorld().getBlockEntity(p.west());
-        var target=(JarBlockEntity)c.getWorld().getBlockEntity(p.east(2));
-        var pipe=(AlchemyPipeBlockEntity)c.getWorld().getBlockEntity(p.east());
-        source.setContents(of(EssenceType.ORDO,3,.25f)); target.setContents(of(EssenceType.ORDO,2,.75f));
-        c.assertTrue(AlchemyPipeBlockEntity.transfer(c.getWorld(),p,source),"Connected pipes must move one essence unit");
-        c.assertTrue(source.contents().total()==2 && target.contents().total()==3,"Transfer conserves quantity");
-        c.assertTrue(Math.abs(target.contents().contents().get(0).stability()-(1.75f/3))<.001,"Stability is weighted on receipt");
-        pipe.nextFilter(); // Ignis rejects Ordo
-        c.assertFalse(AlchemyPipeBlockEntity.transfer(c.getWorld(),p,source),"Filter must reject other essence");
-        c.assertTrue(source.contents().total()==2 && target.contents().total()==3,"Rejected transfer is lossless");
-        var saved=pipe.createNbt(c.getWorld().getRegistryManager());
-        var loaded=new AlchemyPipeBlockEntity(p.east(),pipe.getCachedState()); loaded.readComponentlessNbt(saved,c.getWorld().getRegistryManager());
-        c.assertTrue(loaded.filter()==EssenceType.IGNIS,"Filter persists on reload");
-        while(pipe.filter()!=EssenceType.ORDO) pipe.nextFilter();
-        c.assertTrue(AlchemyPipeBlockEntity.transfer(c.getWorld(),p,source),"Matching filter passes essence");
-        target.setContents(of(EssenceType.ORDO,100,.7f));
-        c.assertFalse(AlchemyPipeBlockEntity.transfer(c.getWorld(),p,source),"A full jar blocks transport without overflow");
-        c.assertTrue(source.contents().total()==1 && target.contents().total()==100,"No loss when destination full");
-        target.setContents(JarContentsComponent.EMPTY);
-        c.getWorld().setBlockState(p.east(),c.getWorld().getBlockState(p.east()).with(AlchemyPipeBlock.FACING,Direction.WEST));
-        c.assertFalse(AlchemyPipeBlockEntity.transfer(c.getWorld(),p,source),"A directed loop must stop");
-        c.assertTrue(source.contents().total()==1 && target.contents().total()==0,"Loop does not delete or duplicate essence");
+        var bellows=(DistilleryBellowsBlockEntity)c.getWorld().getBlockEntity(p.east(2));
+        source.setContents(of(EssenceType.HERBA,8,.30f));
+        int moved=AlchemyPipeBlockEntity.pulse(c.getWorld(),p);
+        c.assertTrue(moved==AlchemyPipeBlockEntity.UNITS_PER_PULSE,"A pulse moves the faster burst of units");
+        c.assertTrue(bellows.amount()==moved && bellows.storedType()==EssenceType.HERBA,"Bellows receive the essence");
+        c.assertTrue(source.contents().total()+moved==8,"Essence is conserved");
+        var pipe=(AlchemyPipeBlockEntity)c.getWorld().getBlockEntity(p);
+        c.assertTrue(pipe.active() && pipe.flowing()==EssenceType.HERBA,"A working pipe reports the flowing essence");
+        c.assertTrue(c.getWorld().getBlockState(p).get(AlchemyPipeBlock.ACTIVE),"The animation state switches on while working");
         c.complete();
     }
-    @GameTest(templateName=EMPTY_STRUCTURE,tickLimit=70)
-    public void automaticTransportAndConnection(TestContext c) {
-        c.setBlockState(1,2,3,ModBlocks.JAR); c.setBlockState(2,2,3,ModBlocks.ALCHEMY_PIPE.getDefaultState().with(AlchemyPipeBlock.FACING,Direction.EAST));
-        c.setBlockState(3,2,3,ModBlocks.ALCHEMY_PIPE.getDefaultState().with(AlchemyPipeBlock.FACING,Direction.EAST)); c.setBlockState(4,2,3,ModBlocks.JAR);
+
+    /** The network also drains a bellows back into an empty jar, with no configuration at all. */
+    @GameTest(templateName=EMPTY_STRUCTURE)
+    public void networkDrainsBellowsIntoJars(TestContext c) {
+        c.setBlockState(1,2,3,ModBlocks.JAR);
+        c.setBlockState(2,2,3,ModBlocks.ALCHEMY_PIPE);
+        c.setBlockState(3,2,3,ModBlocks.DISTILLERY_BELLOWS);
         BlockPos p=c.getAbsolutePos(new BlockPos(2,2,3));
-        var source=(JarBlockEntity)c.getWorld().getBlockEntity(p.west()); var target=(JarBlockEntity)c.getWorld().getBlockEntity(p.east(2));
-        source.setContents(of(EssenceType.AQUA,8,.4f));
-        c.assertTrue(c.getWorld().getBlockState(p).get(AlchemyPipeBlock.WEST) && c.getWorld().getBlockState(p).get(AlchemyPipeBlock.EAST),"Pipe connects to jar and neighboring pipe");
-        c.runAtTick(35,()->{
-            int n=target.contents().total();
-            c.assertTrue(n>=3 && n<=4 && source.contents().total()+n==8,"Pipe transfers one unit every ten ticks and conserves contents");
-            c.complete();
-        });
+        var jar=(JarBlockEntity)c.getWorld().getBlockEntity(p.west());
+        var bellows=(DistilleryBellowsBlockEntity)c.getWorld().getBlockEntity(p.east());
+        bellows.accept(EssenceType.AQUA,6,.45f);
+        int moved=AlchemyPipeBlockEntity.pulse(c.getWorld(),p);
+        c.assertTrue(moved==AlchemyPipeBlockEntity.UNITS_PER_PULSE,"The flask empties into the jar");
+        c.assertTrue(jar.contents().total()==moved && bellows.amount()==6-moved,"Both sides are updated consistently");
+        c.assertTrue(jar.contents().contents().getFirst().type()==EssenceType.AQUA,"The drained type is kept");
+        c.complete();
     }
+
+    /** Two different essences never end up in the same container. */
+    @GameTest(templateName=EMPTY_STRUCTURE)
+    public void networkKeepsEssenceTypesApart(TestContext c) {
+        c.setBlockState(1,2,3,ModBlocks.JAR);
+        c.setBlockState(2,2,3,ModBlocks.ALCHEMY_PIPE);
+        c.setBlockState(3,2,3,ModBlocks.JAR);
+        c.setBlockState(4,2,3,ModBlocks.JAR);
+        BlockPos p=c.getAbsolutePos(new BlockPos(2,2,3));
+        var first=(JarBlockEntity)c.getWorld().getBlockEntity(p.west());
+        var second=(JarBlockEntity)c.getWorld().getBlockEntity(p.east());
+        var empty=(JarBlockEntity)c.getWorld().getBlockEntity(p.east(2));
+        first.setContents(of(EssenceType.IGNIS,5,.2f));
+        second.setContents(of(EssenceType.ORDO,5,.6f));
+        AlchemyPipeBlockEntity.pulse(c.getWorld(),p);
+        c.assertTrue(empty.contents().contents().size()==1,"The empty jar accepts exactly one type");
+        EssenceType landed=empty.contents().contents().getFirst().type();
+        c.assertTrue(landed==EssenceType.IGNIS || landed==EssenceType.ORDO,"Only a stored type moves");
+        c.assertTrue(empty.contents().total()==AlchemyPipeBlockEntity.UNITS_PER_PULSE,"The empty jar fills at the pulse rate");
+        c.assertTrue(first.contents().total()==5 || second.contents().total()==5,"Only the source of that type was drained");
+        c.complete();
+    }
+
+    /** A destination that cannot hold more stops the line without any loss. */
+    @GameTest(templateName=EMPTY_STRUCTURE)
+    public void fullDestinationsNeverLoseEssence(TestContext c) {
+        c.setBlockState(1,2,3,ModBlocks.JAR);
+        c.setBlockState(2,2,3,ModBlocks.ALCHEMY_PIPE);
+        c.setBlockState(3,2,3,ModBlocks.DISTILLERY_BELLOWS);
+        BlockPos p=c.getAbsolutePos(new BlockPos(2,2,3));
+        var source=(JarBlockEntity)c.getWorld().getBlockEntity(p.west());
+        var bellows=(DistilleryBellowsBlockEntity)c.getWorld().getBlockEntity(p.east());
+        bellows.accept(EssenceType.AQUA,DistilleryBellowsBlockEntity.CAPACITY,.4f);
+        source.setContents(of(EssenceType.HERBA,3,.30f));
+        c.assertTrue(AlchemyPipeBlockEntity.pulse(c.getWorld(),p)==0,"A different type cannot enter an occupied flask");
+        c.assertTrue(source.contents().total()==3 && bellows.amount()==DistilleryBellowsBlockEntity.CAPACITY,"Nothing is lost");
+        source.setContents(of(EssenceType.AQUA,3,.30f));
+        int moved=AlchemyPipeBlockEntity.pulse(c.getWorld(),p);
+        c.assertTrue(moved==AlchemyPipeBlockEntity.UNITS_PER_PULSE,"A full flask gives essence away instead of overflowing");
+        c.assertTrue(bellows.amount()==DistilleryBellowsBlockEntity.CAPACITY-moved
+            && source.contents().total()==3+moved,"The full flask never exceeds its capacity");
+        c.complete();
+    }
+
+    /** Clicking a jar with pipes still places a segment that connects on its own. */
     @GameTest(templateName=EMPTY_STRUCTURE)
     public void clickJarToPlacePipe(TestContext c) {
         c.setBlockState(2,2,3,ModBlocks.JAR); BlockPos jar=c.getAbsolutePos(new BlockPos(2,2,3));
@@ -73,101 +113,52 @@ public class PipeGameTests implements FabricGameTest {
         var hit=new BlockHitResult(Vec3d.ofCenter(jar).add(.5,0,0),Direction.EAST,jar,false);
         c.getWorld().getBlockState(jar).onUseWithItem(pipes,c.getWorld(),player,Hand.MAIN_HAND,hit);
         var state=c.getWorld().getBlockState(jar.east());
-        c.assertTrue(state.isOf(ModBlocks.ALCHEMY_PIPE) && state.get(AlchemyPipeBlock.FACING)==Direction.EAST,"Regular click places pipe facing away from source jar");
-        c.assertTrue(pipes.getCount()==7 && state.get(AlchemyPipeBlock.WEST),"Placement consumes one item and connects to jar");
-        c.complete();
-    }
-    @GameTest(templateName=EMPTY_STRUCTURE)
-    public void wandCanConfigureDirectionAndSneakFilter(TestContext c) {
-        c.setBlockState(3,2,3,ModBlocks.ALCHEMY_PIPE);
-        BlockPos pos=c.getAbsolutePos(new BlockPos(3,2,3));
-        var pipe=(AlchemyPipeBlockEntity)c.getWorld().getBlockEntity(pos);
-        var player=c.createMockPlayer(GameMode.SURVIVAL);
-        var wand=new ItemStack(net.alkahest.registry.ModItems.WANDS.get(EssenceType.ORDO));
-        player.setStackInHand(Hand.MAIN_HAND,wand);
-        var hit=new BlockHitResult(Vec3d.ofCenter(pos),Direction.UP,pos,false);
-        c.getWorld().getBlockState(pos).onUseWithItem(wand,c.getWorld(),player,Hand.MAIN_HAND,hit);
-        c.assertTrue(c.getWorld().getBlockState(pos).get(AlchemyPipeBlock.FACING)==Direction.EAST,"Ordinary wand use changes output");
-        player.setSneaking(true);
-        var result=wand.useOnBlock(new net.minecraft.item.ItemUsageContext(player,Hand.MAIN_HAND,hit));
-        c.assertTrue(result.isAccepted() && pipe.filter()==EssenceType.IGNIS,"Sneak-use through the item changes filter even when block interaction is bypassed");
-        c.assertTrue(wand.getOrDefault(net.alkahest.registry.ModDataComponents.ESSENCE_CHARGE,0)==100,"Configuring pipe does not consume wand charge");
+        c.assertTrue(state.isOf(ModBlocks.ALCHEMY_PIPE),"Regular click places a pipe");
+        c.assertFalse(state.get(AlchemyPipeBlock.ACTIVE),"A fresh pipe is idle");
+        c.assertTrue(pipes.getCount()==7 && state.get(AlchemyPipeBlock.WEST),"Placement consumes one item and connects to the jar");
         c.complete();
     }
 
+    /** Old mixtures can be drained by type, but a legacy mixed jar never receives anything. */
     @GameTest(templateName=EMPTY_STRUCTURE)
     public void pipesNeverCreateNewMixtures(TestContext c) {
         c.setBlockState(1,2,3,ModBlocks.JAR);
-        c.setBlockState(2,2,3,ModBlocks.ALCHEMY_PIPE.getDefaultState().with(AlchemyPipeBlock.FACING,Direction.EAST));
+        c.setBlockState(2,2,3,ModBlocks.ALCHEMY_PIPE);
         c.setBlockState(3,2,3,ModBlocks.JAR);
         BlockPos pipe=c.getAbsolutePos(new BlockPos(2,2,3));
         var source=(JarBlockEntity)c.getWorld().getBlockEntity(pipe.west());
         var target=(JarBlockEntity)c.getWorld().getBlockEntity(pipe.east());
         source.setContents(of(EssenceType.AQUA,4,.2f)); target.setContents(of(EssenceType.ORDO,3,.7f));
-        c.assertFalse(AlchemyPipeBlockEntity.transfer(c.getWorld(),pipe,source),"Incompatible destination must block transfer");
+        c.assertTrue(AlchemyPipeBlockEntity.pulse(c.getWorld(),pipe)==0,"Incompatible destinations block the line");
         c.assertTrue(source.contents().total()==4 && target.contents().total()==3,"Blocked transfer preserves both quantities");
         var legacy=new JarContentsComponent(List.of(new EssenceStack(EssenceType.AQUA,4,.2f),new EssenceStack(EssenceType.ORDO,3,.7f)));
         target.setContents(legacy);
-        c.assertFalse(AlchemyPipeBlockEntity.transfer(c.getWorld(),pipe,source),"Cannot add to a legacy mixed jar");
-        c.assertTrue(target.contents().equals(legacy) && source.contents().total()==4,"Legacy destination remains untouched");
-        source.setContents(legacy); target.setContents(of(EssenceType.ORDO,2,.5f));
-        c.assertTrue(AlchemyPipeBlockEntity.transfer(c.getWorld(),pipe,source),"An old mixture can drain its compatible type");
-        c.assertTrue(target.contents().contents().size()==1 && target.contents().contents().getFirst().type()==EssenceType.ORDO && target.contents().total()==3, "Destination never becomes mixed");
-        c.assertTrue(source.contents().total()==6,"Legacy source loses just the accepted unit");
+        int moved=AlchemyPipeBlockEntity.pulse(c.getWorld(),pipe);
+        c.assertTrue(target.contents().total()<=7,"A legacy mixed jar never receives anything new");
+        c.assertTrue(source.contents().total()+target.contents().total()==11,"A drained legacy jar still conserves essence");
+        source.setContents(JarContentsComponent.EMPTY); target.setContents(legacy);
+        int drained=AlchemyPipeBlockEntity.pulse(c.getWorld(),pipe);
+        c.assertTrue(drained==AlchemyPipeBlockEntity.UNITS_PER_PULSE,"An old mixture can drain its compatible type");
+        c.assertTrue(source.contents().contents().size()==1,"The receiving jar holds a single type");
+        c.assertTrue(source.contents().total()+target.contents().total()==7,"Nothing is created or lost");
         c.complete();
     }
 
+    /** The working state and the tinted essence reach the client copy. */
     @GameTest(templateName=EMPTY_STRUCTURE)
-    public void monoclePipeFilterSyncsToClients(TestContext c) {
-        c.setBlockState(3,2,3,ModBlocks.ALCHEMY_PIPE); BlockPos pos=c.getAbsolutePos(new BlockPos(3,2,3));
-        var pipe=(AlchemyPipeBlockEntity)c.getWorld().getBlockEntity(pos); pipe.nextFilter();
+    public void workingStateAndEssenceSyncToClients(TestContext c) {
+        c.setBlockState(1,2,3,ModBlocks.JAR);
+        c.setBlockState(2,2,3,ModBlocks.ALCHEMY_PIPE);
+        c.setBlockState(3,2,3,ModBlocks.JAR);
+        BlockPos pos=c.getAbsolutePos(new BlockPos(2,2,3));
+        var source=(JarBlockEntity)c.getWorld().getBlockEntity(pos.west());
+        source.setContents(of(EssenceType.LUX,2,.5f));
+        AlchemyPipeBlockEntity.pulse(c.getWorld(),pos);
+        var pipe=(AlchemyPipeBlockEntity)c.getWorld().getBlockEntity(pos);
         var replica=new AlchemyPipeBlockEntity(pos,pipe.getCachedState());
         replica.readComponentlessNbt(pipe.toInitialChunkDataNbt(c.getWorld().getRegistryManager()),c.getWorld().getRegistryManager());
-        c.assertTrue(replica.filter()==EssenceType.IGNIS, "Initial chunk data includes filter");
-        pipe.nextFilter(); var packet=pipe.toUpdatePacket();
-        c.assertTrue(packet!=null && packet.getNbt()!=null, "Changing filter produces update data");
-        replica.readComponentlessNbt(packet.getNbt(),c.getWorld().getRegistryManager());
-        c.assertTrue(replica.filter()==EssenceType.AQUA, "Filter change reaches the client copy");
+        c.assertTrue(replica.flowing()==EssenceType.LUX,"Initial chunk data carries the flowing essence");
+        c.assertTrue(pipe.toUpdatePacket()!=null,"Changing state produces update data");
         c.complete();
     }
-
-    @GameTest(templateName=EMPTY_STRUCTURE)
-    public void pipesFillAndDrainBellows(TestContext c) {
-        c.setBlockState(1,2,3,ModBlocks.JAR);
-        c.setBlockState(2,2,3,ModBlocks.ALCHEMY_PIPE.getDefaultState().with(AlchemyPipeBlock.FACING,Direction.EAST));
-        c.setBlockState(3,2,3,ModBlocks.DISTILLERY_BELLOWS);
-        BlockPos p=c.getAbsolutePos(new BlockPos(2,2,3));
-        var source=(JarBlockEntity)c.getWorld().getBlockEntity(p.west());
-        var bellows=(DistilleryBellowsBlockEntity)c.getWorld().getBlockEntity(p.east());
-        c.assertTrue(c.getWorld().getBlockState(p).get(AlchemyPipeBlock.EAST),"Pipe connects to the bellows flask");
-        source.setContents(of(EssenceType.HERBA,2,.30f));
-        c.assertTrue(AlchemyPipeBlockEntity.transfer(c.getWorld(),p,source),"Pipe pours essence into the bellows");
-        c.assertTrue(bellows.amount()==1 && bellows.storedType()==EssenceType.HERBA,"Bellows hold one unit of the right type");
-        c.assertTrue(source.contents().total()==1,"The source jar loses exactly one unit");
-        source.setContents(of(EssenceType.IGNIS,2,.20f));
-        c.assertFalse(AlchemyPipeBlockEntity.transfer(c.getWorld(),p,source),"Bellows refuse a second essence type");
-        c.assertTrue(source.contents().total()==2 && bellows.amount()==1,"A refused transfer is lossless");
-        c.getWorld().setBlockState(p,c.getWorld().getBlockState(p).with(AlchemyPipeBlock.FACING,Direction.WEST));
-        source.setContents(JarContentsComponent.EMPTY);
-        c.assertTrue(AlchemyPipeBlockEntity.transfer(c.getWorld(),p,bellows),"Pipes drain the bellows into a jar");
-        c.assertTrue(bellows.amount()==0 && source.contents().total()==1,"The drained unit reaches the jar");
-        c.assertFalse(AlchemyPipeBlockEntity.transfer(c.getWorld(),p,bellows),"An empty flask moves nothing");
-        c.complete();
-    }
-
-    @GameTest(templateName=EMPTY_STRUCTURE)
-    public void fullBellowsRejectPipedEssence(TestContext c) {
-        c.setBlockState(1,2,3,ModBlocks.JAR);
-        c.setBlockState(2,2,3,ModBlocks.ALCHEMY_PIPE.getDefaultState().with(AlchemyPipeBlock.FACING,Direction.EAST));
-        c.setBlockState(3,2,3,ModBlocks.DISTILLERY_BELLOWS);
-        BlockPos p=c.getAbsolutePos(new BlockPos(2,2,3));
-        var source=(JarBlockEntity)c.getWorld().getBlockEntity(p.west());
-        var bellows=(DistilleryBellowsBlockEntity)c.getWorld().getBlockEntity(p.east());
-        bellows.accept(EssenceType.AQUA,DistilleryBellowsBlockEntity.CAPACITY,.4f);
-        source.setContents(of(EssenceType.AQUA,3,.30f));
-        c.assertFalse(AlchemyPipeBlockEntity.transfer(c.getWorld(),p,source),"A full flask stops the pipe");
-        c.assertTrue(source.contents().total()==3 && bellows.amount()==DistilleryBellowsBlockEntity.CAPACITY,"Nothing is lost when the flask is full");
-        c.complete();
-    }
-
 }

@@ -104,11 +104,13 @@ public final class MonocleHud {
             lines.add(Text.translatable("screen.alkahest.monocle.progress",
                 receiver.progress() * 100 / StabilizerReceiverBlockEntity.TICKS_PER_TYPE));
         } else if (blockEntity instanceof AlchemyPipeBlockEntity pipe && client.world.getBlockState(hit.getBlockPos()).getBlock() instanceof AlchemyPipeBlock) {
-            var state = client.world.getBlockState(hit.getBlockPos());
             lines.add(Text.translatable("screen.alkahest.monocle.pipe"));
-            lines.add(Text.translatable("screen.alkahest.monocle.direction", Text.translatable("direction.alkahest." + state.get(AlchemyPipeBlock.FACING).asString())));
-            lines.add(Text.translatable("screen.alkahest.monocle.filter", pipe.filter() == null
-                ? Text.translatable("message.alkahest.pipe_all") : Text.literal(pipe.filter().displayName()).styled(style -> style.withColor(pipe.filter().color()))));
+            lines.add(Text.translatable("screen.alkahest.monocle.pipe_auto", pipe.active()
+                ? Text.translatable("screen.alkahest.monocle.working") : Text.translatable("screen.alkahest.monocle.idle")));
+            if (pipe.flowing() != null) {
+                lines.add(Text.translatable("screen.alkahest.monocle.pipe_flowing",
+                    Text.literal(pipe.flowing().displayName()).styled(style -> style.withColor(pipe.flowing().color()))));
+            }
             lines.add(Text.translatable("screen.alkahest.monocle.no_buffer"));
         } else return;
         int maxWidth = 0;

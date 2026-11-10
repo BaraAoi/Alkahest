@@ -1,0 +1,47 @@
+{
+  "parent": "minecraft:block/block",
+  "textures": {
+    "flow": "alkahest:block/pipe_flow",
+    "particle": "minecraft:block/copper_block"
+  },
+  "elements": [
+    {
+      "from": [
+        9.5,
+        6.5,
+        6.5
+      ],
+      "to": [
+        16,
+        9.5,
+        9.5
+      ],
+      "faces": {
+        "north": {
+          "texture": "#flow",
+          "tintindex": 0
+        },
+        "south": {
+          "texture": "#flow",
+          "tintindex": 0
+        },
+        "east": {
+          "texture": "#flow",
+          "tintindex": 0
+        },
+        "west": {
+          "texture": "#flow",
+          "tintindex": 0
+        },
+        "up": {
+          "texture": "#flow",
+          "tintindex": 0
+        },
+        "down": {
+          "texture": "#flow",
+          "tintindex": 0
+        }
+      }
+    }
+  ]
+}

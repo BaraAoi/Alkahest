@@ -131,8 +131,7 @@
   "message.alkahest.charger_no_space_on_jar": "Could not place the charger: clear the space above the jar.",
   "block.alkahest.alchemy_pipe": "Alchemy Pipe",
   "message.alkahest.pipe_no_space": "Cannot place the pipe: the space is occupied.",
-  "message.alkahest.pipe_status": "Output: %s · filter: %s",
-  "message.alkahest.pipe_all": "all",
+  "message.alkahest.pipe_status": "Pipe: a network of %s segments with %s containers. No directions or filters — the pipe finds essence and room by itself.",
   "direction.alkahest.north": "north",
   "direction.alkahest.south": "south",
   "direction.alkahest.east": "east",
@@ -166,8 +165,6 @@
   "screen.alkahest.monocle.empty": "Empty",
   "screen.alkahest.monocle.more": "More types: %s",
   "screen.alkahest.monocle.pipe": "Alchemy pipe",
-  "screen.alkahest.monocle.direction": "Output: %s",
-  "screen.alkahest.monocle.filter": "Filter: %s",
   "screen.alkahest.monocle.no_buffer": "No internal buffer",
   "item.alkahest.crystallization_powder": "Crystallization Dust",
   "message.alkahest.cauldron_no_residue": "There are no dissolved essences in the cauldron.",
@@ -311,5 +308,8 @@
   "screen.alkahest.monocle.working": "Distilling",
   "screen.alkahest.monocle.idle": "Waiting for input",
   "screen.alkahest.monocle.blocked": "Output blocked",
-  "screen.alkahest.monocle.progress": "Progress: %s%%"
+  "screen.alkahest.monocle.progress": "Progress: %s%%",
+  "screen.alkahest.monocle.pipe_auto": "Automatic pipe: %s",
+  "screen.alkahest.monocle.pipe_flowing": "Moving now: %s",
+  "message.alkahest.pipe_flowing": "Carrying right now: %s"
 }

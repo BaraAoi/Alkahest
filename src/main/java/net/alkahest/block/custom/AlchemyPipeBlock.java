@@ -1,7 +1,6 @@
 package net.alkahest.block.custom;
 
 import net.alkahest.block.entity.AlchemyPipeBlockEntity;
-import net.alkahest.item.custom.CrystalWandItem;
 import net.alkahest.registry.ModBlockEntities;
 import net.alkahest.registry.ModBlocks;
 import net.minecraft.block.Block;
@@ -17,7 +16,6 @@ import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.item.ItemStack;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.BooleanProperty;
-import net.minecraft.state.property.DirectionProperty;
 import net.minecraft.state.property.Properties;
 import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
@@ -33,25 +31,28 @@ import net.minecraft.world.World;
 import net.minecraft.world.WorldAccess;
 
 public class AlchemyPipeBlock extends Block implements BlockEntityProvider {
-    public static final DirectionProperty FACING = Properties.FACING;
+    /** Pipes decide everything themselves; ACTIVE only drives the working animation. */
+    public static final BooleanProperty ACTIVE = BooleanProperty.of("active");
     public static final BooleanProperty NORTH=Properties.NORTH, SOUTH=Properties.SOUTH, EAST=Properties.EAST,
         WEST=Properties.WEST, UP=Properties.UP, DOWN=Properties.DOWN;
-    private static final Direction[] DIRECTIONS = {Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST, Direction.UP, Direction.DOWN};
-    private static final VoxelShape CORE = Block.createCuboidShape(5,5,5,11,11,11);
+    private static final VoxelShape CORE = Block.createCuboidShape(6,6,6,10,10,10);
     public AlchemyPipeBlock(Settings settings) {
         super(settings);
-        setDefaultState(getStateManager().getDefaultState().with(FACING, Direction.NORTH)
+        setDefaultState(getStateManager().getDefaultState().with(ACTIVE, false)
             .with(NORTH,false).with(SOUTH,false).with(EAST,false).with(WEST,false).with(UP,false).with(DOWN,false));
     }
-    @Override protected void appendProperties(StateManager.Builder<Block, BlockState> b) { b.add(FACING,NORTH,SOUTH,EAST,WEST,UP,DOWN); }
+    @Override protected void appendProperties(StateManager.Builder<Block, BlockState> b) { b.add(ACTIVE,NORTH,SOUTH,EAST,WEST,UP,DOWN); }
     public static BooleanProperty side(Direction d) { return switch (d) {
         case NORTH -> NORTH; case SOUTH -> SOUTH; case EAST -> EAST; case WEST -> WEST; case UP -> UP; case DOWN -> DOWN;
     }; }
     private static boolean connects(BlockState state) { return state.isOf(ModBlocks.ALCHEMY_PIPE) || state.isOf(ModBlocks.JAR)
         || state.isOf(ModBlocks.DISTILLERY_BELLOWS); }
     @Override public BlockState getPlacementState(ItemPlacementContext context) {
-        var state = getDefaultState().with(FACING, context.getSide());
-        for (Direction d : Direction.values()) state = state.with(side(d), connects(context.getWorld().getBlockState(context.getBlockPos().offset(d))));
+        BlockPos placed = context.getBlockPos().offset(context.getSide());
+        var state = getDefaultState();
+        for (Direction d : Direction.values()) {
+            state = state.with(side(d), connects(context.getWorld().getBlockState(placed.offset(d))));
+        }
         return state;
     }
     @Override protected BlockState getStateForNeighborUpdate(BlockState state, Direction d, BlockState neighbor, WorldAccess world, BlockPos pos, BlockPos other) {
@@ -59,12 +60,12 @@ public class AlchemyPipeBlock extends Block implements BlockEntityProvider {
     }
     @Override protected VoxelShape getOutlineShape(BlockState s, BlockView world, BlockPos pos, ShapeContext ctx) {
         VoxelShape shape = CORE;
-        if (s.get(NORTH)) shape = VoxelShapes.union(shape,Block.createCuboidShape(5,5,0,11,11,5));
-        if (s.get(SOUTH)) shape = VoxelShapes.union(shape,Block.createCuboidShape(5,5,11,11,11,16));
-        if (s.get(WEST)) shape = VoxelShapes.union(shape,Block.createCuboidShape(0,5,5,5,11,11));
-        if (s.get(EAST)) shape = VoxelShapes.union(shape,Block.createCuboidShape(11,5,5,16,11,11));
-        if (s.get(DOWN)) shape = VoxelShapes.union(shape,Block.createCuboidShape(5,0,5,11,5,11));
-        if (s.get(UP)) shape = VoxelShapes.union(shape,Block.createCuboidShape(5,11,5,11,16,11));
+        if (s.get(NORTH)) shape = VoxelShapes.union(shape,Block.createCuboidShape(6,6,0,10,10,6));
+        if (s.get(SOUTH)) shape = VoxelShapes.union(shape,Block.createCuboidShape(6,6,10,10,10,16));
+        if (s.get(WEST)) shape = VoxelShapes.union(shape,Block.createCuboidShape(0,6,6,6,10,10));
+        if (s.get(EAST)) shape = VoxelShapes.union(shape,Block.createCuboidShape(10,6,6,16,10,10));
+        if (s.get(DOWN)) shape = VoxelShapes.union(shape,Block.createCuboidShape(6,0,6,10,6,10));
+        if (s.get(UP)) shape = VoxelShapes.union(shape,Block.createCuboidShape(6,10,6,10,16,10));
         return shape;
     }
     @Override protected VoxelShape getCollisionShape(BlockState s, BlockView world, BlockPos pos, ShapeContext ctx) { return getOutlineShape(s,world,pos,ctx); }
@@ -73,18 +74,6 @@ public class AlchemyPipeBlock extends Block implements BlockEntityProvider {
         return !world.isClient && type == ModBlockEntities.ALCHEMY_PIPE ? (w,p,s,be) -> AlchemyPipeBlockEntity.tick(w,p,s) : null;
     }
     @Override protected ItemActionResult onUseWithItem(ItemStack stack, BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
-        if (stack.getItem() instanceof CrystalWandItem || stack.getItem() instanceof net.alkahest.item.custom.AlkahestAmuletItem) {
-            if (!world.isClient && world.getBlockEntity(pos) instanceof AlchemyPipeBlockEntity pipe) {
-                if (player.isSneaking()) pipe.nextFilter();
-                else {
-                    int current = 0;
-                    for (int i=0;i<DIRECTIONS.length;i++) if (DIRECTIONS[i] == state.get(FACING)) current=i;
-                    world.setBlockState(pos,state.with(FACING,DIRECTIONS[(current+1)%DIRECTIONS.length]),Block.NOTIFY_ALL);
-                }
-                pipe.describe(player);
-            }
-            return ItemActionResult.success(world.isClient);
-        }
         // Allow a second pipe to be attached by an ordinary click, not only while sneaking.
         if (stack.isOf(ModBlocks.ALCHEMY_PIPE.asItem())) {
             if (!world.isClient && !((BlockItem)stack.getItem()).place(new ItemPlacementContext(player,hand,stack,hit)).isAccepted())

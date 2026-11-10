@@ -131,8 +131,7 @@
   "message.alkahest.charger_no_space_on_jar": "Не удалось поставить зарядник: освободите место над банкой.",
   "block.alkahest.alchemy_pipe": "Алхимическая труба",
   "message.alkahest.pipe_no_space": "Не удалось поставить трубу: место занято.",
-  "message.alkahest.pipe_status": "Выход: %s · фильтр: %s",
-  "message.alkahest.pipe_all": "все",
+  "message.alkahest.pipe_status": "Труба: сеть из %s сегм., найдено ёмкостей: %s. Направления и фильтры не нужны — труба сама ищет, где есть эссенция и куда её налить.",
   "direction.alkahest.north": "север",
   "direction.alkahest.south": "юг",
   "direction.alkahest.east": "восток",
@@ -166,8 +165,6 @@
   "screen.alkahest.monocle.empty": "Пусто",
   "screen.alkahest.monocle.more": "И ещё типов: %s",
   "screen.alkahest.monocle.pipe": "Алхимическая труба",
-  "screen.alkahest.monocle.direction": "Выход: %s",
-  "screen.alkahest.monocle.filter": "Фильтр: %s",
   "screen.alkahest.monocle.no_buffer": "Без внутреннего запаса",
   "item.alkahest.crystallization_powder": "Кристаллизующая пыль",
   "message.alkahest.cauldron_no_residue": "В котле нет растворённых эссенций.",
@@ -311,5 +308,8 @@
   "screen.alkahest.monocle.working": "Идёт перегонка",
   "screen.alkahest.monocle.idle": "Ожидает сырьё",
   "screen.alkahest.monocle.blocked": "Выход заблокирован",
-  "screen.alkahest.monocle.progress": "Прогресс: %s%%"
+  "screen.alkahest.monocle.progress": "Прогресс: %s%%",
+  "screen.alkahest.monocle.pipe_auto": "Автоматическая труба: %s",
+  "screen.alkahest.monocle.pipe_flowing": "Сейчас движется: %s",
+  "message.alkahest.pipe_flowing": "Сейчас перекачивается: %s"
 }

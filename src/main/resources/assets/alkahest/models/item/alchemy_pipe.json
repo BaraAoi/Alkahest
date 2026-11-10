@@ -1,4 +1,5 @@
 {
+  "parent": "minecraft:block/block",
   "textures": {
     "glass": "minecraft:block/glass",
     "copper": "minecraft:block/copper_block",
@@ -7,13 +8,77 @@
   "elements": [
     {
       "from": [
-        5,
-        5,
+        6,
+        6,
+        6
+      ],
+      "to": [
+        10,
+        10,
+        10
+      ],
+      "faces": {
+        "north": {
+          "texture": "#copper"
+        },
+        "south": {
+          "texture": "#copper"
+        },
+        "east": {
+          "texture": "#copper"
+        },
+        "west": {
+          "texture": "#copper"
+        },
+        "up": {
+          "texture": "#copper"
+        },
+        "down": {
+          "texture": "#copper"
+        }
+      }
+    },
+    {
+      "from": [
+        6,
+        6,
         0
       ],
       "to": [
-        11,
-        11,
+        10,
+        10,
+        6
+      ],
+      "faces": {
+        "north": {
+          "texture": "#glass"
+        },
+        "south": {
+          "texture": "#glass"
+        },
+        "east": {
+          "texture": "#glass"
+        },
+        "west": {
+          "texture": "#glass"
+        },
+        "up": {
+          "texture": "#glass"
+        },
+        "down": {
+          "texture": "#glass"
+        }
+      }
+    },
+    {
+      "from": [
+        6,
+        6,
+        10
+      ],
+      "to": [
+        10,
+        10,
         16
       ],
       "faces": {
@@ -39,33 +104,65 @@
     },
     {
       "from": [
-        4,
-        4,
+        6,
+        10,
         6
       ],
       "to": [
-        12,
-        12,
+        10,
+        16,
         10
       ],
       "faces": {
         "north": {
-          "texture": "#copper"
+          "texture": "#glass"
         },
         "south": {
-          "texture": "#copper"
+          "texture": "#glass"
         },
         "east": {
-          "texture": "#copper"
+          "texture": "#glass"
         },
         "west": {
-          "texture": "#copper"
+          "texture": "#glass"
         },
         "up": {
-          "texture": "#copper"
+          "texture": "#glass"
         },
         "down": {
-          "texture": "#copper"
+          "texture": "#glass"
+        }
+      }
+    },
+    {
+      "from": [
+        6,
+        0,
+        6
+      ],
+      "to": [
+        10,
+        6,
+        10
+      ],
+      "faces": {
+        "north": {
+          "texture": "#glass"
+        },
+        "south": {
+          "texture": "#glass"
+        },
+        "east": {
+          "texture": "#glass"
+        },
+        "west": {
+          "texture": "#glass"
+        },
+        "up": {
+          "texture": "#glass"
+        },
+        "down": {
+          "texture": "#glass"
         }
       }
     }

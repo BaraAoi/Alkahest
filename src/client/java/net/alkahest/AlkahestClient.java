@@ -58,6 +58,10 @@ public final class AlkahestClient implements ClientModInitializer {
         ColorProviderRegistry.BLOCK.register((state, world, pos, tint) -> tint == 0 && world != null && pos != null
             && world.getBlockEntity(pos) instanceof net.alkahest.block.entity.StabilizerReceiverBlockEntity receiver
                 ? net.alkahest.essence.JarVisuals.color(receiver.contents()) : 0xffffff, ModBlocks.STABILIZER_RECEIVER);
+        // Pipes glow in the colour of the essence they are moving right now.
+        ColorProviderRegistry.BLOCK.register((state, world, pos, tint) -> tint == 0 && world != null && pos != null
+            && world.getBlockEntity(pos) instanceof net.alkahest.block.entity.AlchemyPipeBlockEntity pipe
+                && pipe.flowing() != null ? pipe.flowing().color() : 0xffffff, ModBlocks.ALCHEMY_PIPE);
         // The bellows are glass flasks: the stored essence colours the liquid inside.
         ColorProviderRegistry.BLOCK.register((state, world, pos, tint) -> tint == 0 && world != null && pos != null
             && world.getBlockEntity(pos) instanceof net.alkahest.block.entity.DistilleryBellowsBlockEntity bellows

@@ -23,6 +23,14 @@
     },
     {
       "when": {
+        "west": "true"
+      },
+      "apply": {
+        "model": "alkahest:block/pipe_west"
+      }
+    },
+    {
+      "when": {
         "east": "true"
       },
       "apply": {
@@ -31,10 +39,10 @@
     },
     {
       "when": {
-        "west": "true"
+        "down": "true"
       },
       "apply": {
-        "model": "alkahest:block/pipe_west"
+        "model": "alkahest:block/pipe_down"
       }
     },
     {
@@ -47,10 +55,64 @@
     },
     {
       "when": {
+        "active": "true"
+      },
+      "apply": {
+        "model": "alkahest:block/alchemy_pipe_flow_core"
+      }
+    },
+    {
+      "when": {
+        "active": "true",
+        "north": "true"
+      },
+      "apply": {
+        "model": "alkahest:block/pipe_north_flow"
+      }
+    },
+    {
+      "when": {
+        "active": "true",
+        "south": "true"
+      },
+      "apply": {
+        "model": "alkahest:block/pipe_south_flow"
+      }
+    },
+    {
+      "when": {
+        "active": "true",
+        "west": "true"
+      },
+      "apply": {
+        "model": "alkahest:block/pipe_west_flow"
+      }
+    },
+    {
+      "when": {
+        "active": "true",
+        "east": "true"
+      },
+      "apply": {
+        "model": "alkahest:block/pipe_east_flow"
+      }
+    },
+    {
+      "when": {
+        "active": "true",
         "down": "true"
       },
       "apply": {
-        "model": "alkahest:block/pipe_down"
+        "model": "alkahest:block/pipe_down_flow"
+      }
+    },
+    {
+      "when": {
+        "active": "true",
+        "up": "true"
+      },
+      "apply": {
+        "model": "alkahest:block/pipe_up_flow"
       }
     }
   ]

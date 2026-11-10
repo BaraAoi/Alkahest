@@ -54,7 +54,7 @@ for adv_name in (
 
 for locale in ('ru_ru', 'en_us'):
     data = json.loads((base / f'lang/{locale}.json').read_text())
-    for name in ('jar', 'empty', 'more', 'pipe', 'direction', 'filter', 'no_buffer',
+    for name in ('jar', 'empty', 'more', 'pipe', 'pipe_auto', 'pipe_flowing', 'no_buffer',
                  'cauldron', 'cauldron_dry', 'cauldron_cold', 'cauldron_stabilized'):
         assert data.get('screen.alkahest.monocle.' + name), (locale, name)
     for name in ('lightning_in_a_bottle', 'miasma', 'crystallization_powder',

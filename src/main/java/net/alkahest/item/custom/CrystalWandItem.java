@@ -19,10 +19,10 @@ public class CrystalWandItem extends Item {
         this.type = type;
     }
     @Override public ActionResult useOnBlock(ItemUsageContext context) {
-        // Sneaking may bypass the block interaction, so handle the pipe filter from the item too.
+        // Sneaking may bypass the block interaction, so the pipe report is handled here too.
         var player = context.getPlayer();
         if (player != null && player.isSneaking() && context.getWorld().getBlockEntity(context.getBlockPos()) instanceof AlchemyPipeBlockEntity pipe) {
-            if (!context.getWorld().isClient) { pipe.nextFilter(); pipe.describe(player); }
+            if (!context.getWorld().isClient) pipe.describe(player);
             return ActionResult.success(context.getWorld().isClient);
         }
         return super.useOnBlock(context);
