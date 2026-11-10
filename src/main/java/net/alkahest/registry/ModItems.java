@@ -56,6 +56,9 @@ public final class ModItems {
                 entries.add(ModBlocks.JAR);
                 entries.add(ModBlocks.ESSENCE_CHARGER);
                 entries.add(ModBlocks.ESSENCE_SEPARATOR);
+                entries.add(ModBlocks.STABILIZER_RECEIVER);
+                entries.add(ModBlocks.STABILIZER_CORE);
+                entries.add(ModBlocks.STABILIZER_CREST);
                 entries.add(ModBlocks.ALCHEMY_PIPE);
                 entries.add(ModBlocks.SALT_ORE);
                 entries.add(ModBlocks.ALCHEMICAL_MOSS);

@@ -6,6 +6,9 @@
     "alkahest:distillery",
     "alkahest:essence_charger",
     "alkahest:alchemy_pipe",
-    "alkahest:essence_separator"
+    "alkahest:essence_separator",
+    "alkahest:stabilizer_receiver",
+    "alkahest:stabilizer_core",
+    "alkahest:stabilizer_crest"
   ]
 }

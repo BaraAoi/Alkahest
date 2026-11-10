@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "CVC",
+    "COC",
+    "CCC"
+  ],
+  "key": {
+    "C": {
+      "item": "minecraft:copper_ingot"
+    },
+    "V": {
+      "item": "alkahest:alkahest_vial"
+    },
+    "O": {
+      "item": "alkahest:crystal_ordo"
+    }
+  },
+  "result": {
+    "id": "alkahest:stabilizer_core",
+    "count": 1
+  }
+}

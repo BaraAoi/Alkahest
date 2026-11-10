@@ -7,6 +7,9 @@ import net.alkahest.block.custom.DistilleryBlock;
 import net.alkahest.block.custom.EssenceChargerBlock;
 import net.alkahest.block.custom.EssenceSeparatorBlock;
 import net.alkahest.block.custom.JarBlock;
+import net.alkahest.block.custom.StabilizerCoreBlock;
+import net.alkahest.block.custom.StabilizerCrestBlock;
+import net.alkahest.block.custom.StabilizerReceiverBlock;
 import net.alkahest.block.custom.AlchemyPipeBlock;
 import net.alkahest.item.custom.JarItem;
 import net.minecraft.block.AbstractBlock;
@@ -25,6 +28,11 @@ public final class ModBlocks {
     public static final Block ESSENCE_SEPARATOR = register("essence_separator", new EssenceSeparatorBlock(AbstractBlock.Settings.copy(Blocks.COPPER_BLOCK).nonOpaque()));
     public static final Block ESSENCE_CHARGER = register("essence_charger", new EssenceChargerBlock(AbstractBlock.Settings.copy(Blocks.COPPER_BLOCK).nonOpaque()));
     public static final Block DISTILLERY = register("distillery", new DistilleryBlock(AbstractBlock.Settings.copy(Blocks.COPPER_BLOCK).nonOpaque().luminance(state -> state.get(DistilleryBlock.WORKING) ? 5 : 0)));
+    public static final Block STABILIZER_RECEIVER = register("stabilizer_receiver", new StabilizerReceiverBlock(AbstractBlock.Settings.copy(Blocks.COPPER_BLOCK).nonOpaque()));
+    public static final Block STABILIZER_CORE = register("stabilizer_core", new StabilizerCoreBlock(
+        AbstractBlock.Settings.copy(Blocks.COPPER_BLOCK).nonOpaque().luminance(state -> state.get(StabilizerCoreBlock.ACTIVE) ? 7 : 0)));
+    public static final Block STABILIZER_CREST = register("stabilizer_crest", new StabilizerCrestBlock(
+        AbstractBlock.Settings.copy(Blocks.AMETHYST_BLOCK).nonOpaque().luminance(state -> 3)));
     public static final Block SALT_ORE = register("salt_ore", new Block(AbstractBlock.Settings.copy(Blocks.STONE).strength(3.0f, 3.0f).requiresTool()));
     public static final Block ALCHEMICAL_MOSS = register("alchemical_moss", new AlchemicalMossBlock(
         AbstractBlock.Settings.create().noCollision().nonOpaque().breakInstantly()

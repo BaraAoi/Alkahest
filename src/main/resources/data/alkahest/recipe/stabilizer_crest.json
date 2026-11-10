@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " O ",
+    "OGO",
+    " O "
+  ],
+  "key": {
+    "O": {
+      "item": "alkahest:crystal_ordo"
+    },
+    "G": {
+      "item": "minecraft:gold_ingot"
+    }
+  },
+  "result": {
+    "id": "alkahest:stabilizer_crest",
+    "count": 1
+  }
+}

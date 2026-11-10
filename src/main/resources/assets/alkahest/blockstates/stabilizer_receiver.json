@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "occupied=false": {
+      "model": "alkahest:block/stabilizer_receiver"
+    },
+    "occupied=true": {
+      "model": "alkahest:block/stabilizer_receiver_occupied"
+    }
+  }
+}

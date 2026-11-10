@@ -1,0 +1,16 @@
+{
+  "variants": {
+    "formed=false,active=false": {
+      "model": "alkahest:block/stabilizer_core"
+    },
+    "formed=false,active=true": {
+      "model": "alkahest:block/stabilizer_core"
+    },
+    "formed=true,active=false": {
+      "model": "alkahest:block/stabilizer_core_formed"
+    },
+    "formed=true,active=true": {
+      "model": "alkahest:block/stabilizer_core_active"
+    }
+  }
+}

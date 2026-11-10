@@ -154,16 +154,19 @@ public class ElementalGameTests implements FabricGameTest {
         ElementalBoltEntity perditioBolt = perditio.shootElementalBolt(armorTarget);
         context.assertTrue(perditioBolt != null, "Server Elemental must spawn ElementalBoltEntity");
 
+        // Wither lasts 80 ticks, so it must be checked while the bolt's effect is still running.
+        context.runAtTick(30, () -> {
+            context.assertTrue(armorTarget.hasStatusEffect(StatusEffects.WITHER),
+                "Perditio bolt must inflict Wither");
+            context.assertTrue(helmet.getDamage() == 4,
+                "Perditio bolt must corrode equipped armor by 4 durability, got " + helmet.getDamage());
+        });
+
         context.runAtTick(85, () -> {
             context.assertTrue(fireTarget.getHealth() < fireTarget.getMaxHealth(),
                 "Hostile Ignis Elemental ranged attack must damage target, health=" + fireTarget.getHealth());
             context.assertTrue(fireTarget.getFireTicks() > 0,
                 "Ignis bolt must ignite target, fireTicks=" + fireTarget.getFireTicks());
-
-            context.assertTrue(armorTarget.hasStatusEffect(StatusEffects.WITHER),
-                "Perditio bolt must inflict Wither");
-            context.assertTrue(helmet.getDamage() == 4,
-                "Perditio bolt must corrode equipped armor by 4 durability, got " + helmet.getDamage());
             context.complete();
         });
     }
