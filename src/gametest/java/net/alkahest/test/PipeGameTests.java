@@ -66,12 +66,13 @@ public class PipeGameTests implements FabricGameTest {
     public void networkKeepsEssenceTypesApart(TestContext c) {
         c.setBlockState(1,2,3,ModBlocks.JAR);
         c.setBlockState(2,2,3,ModBlocks.ALCHEMY_PIPE);
-        c.setBlockState(3,2,3,ModBlocks.JAR);
+        c.setBlockState(3,2,3,ModBlocks.ALCHEMY_PIPE);
         c.setBlockState(4,2,3,ModBlocks.JAR);
+        c.setBlockState(2,2,2,ModBlocks.JAR);
         BlockPos p=c.getAbsolutePos(new BlockPos(2,2,3));
         var first=(JarBlockEntity)c.getWorld().getBlockEntity(p.west());
-        var second=(JarBlockEntity)c.getWorld().getBlockEntity(p.east());
-        var empty=(JarBlockEntity)c.getWorld().getBlockEntity(p.east(2));
+        var second=(JarBlockEntity)c.getWorld().getBlockEntity(p.east(2));
+        var empty=(JarBlockEntity)c.getWorld().getBlockEntity(p.north());
         first.setContents(of(EssenceType.IGNIS,5,.2f));
         second.setContents(of(EssenceType.ORDO,5,.6f));
         AlchemyPipeBlockEntity.pulse(c.getWorld(),p);

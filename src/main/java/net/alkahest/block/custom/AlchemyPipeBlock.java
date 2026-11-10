@@ -48,7 +48,7 @@ public class AlchemyPipeBlock extends Block implements BlockEntityProvider {
     private static boolean connects(BlockState state) { return state.isOf(ModBlocks.ALCHEMY_PIPE) || state.isOf(ModBlocks.JAR)
         || state.isOf(ModBlocks.DISTILLERY_BELLOWS); }
     @Override public BlockState getPlacementState(ItemPlacementContext context) {
-        BlockPos placed = context.getBlockPos().offset(context.getSide());
+        BlockPos placed = context.getBlockPos();
         var state = getDefaultState();
         for (Direction d : Direction.values()) {
             state = state.with(side(d), connects(context.getWorld().getBlockState(placed.offset(d))));
