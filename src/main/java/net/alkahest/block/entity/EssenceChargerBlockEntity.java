@@ -28,10 +28,18 @@ public class EssenceChargerBlockEntity extends BlockEntity {
         if (!(world instanceof ServerWorld server) || world.getTime() % 20 != 0 ||
             !(world.getBlockEntity(pos.up()) instanceof JarBlockEntity jar)) return;
         var bounds = Box.of(Vec3d.ofCenter(pos), 64, 64, 64);
-        for (PlayerEntity player : world.getEntitiesByClass(PlayerEntity.class, bounds, p -> p.isAlive() && !p.isSpectator())) {
+        var result = chargeNearby(jar, pos, world.getEntitiesByClass(PlayerEntity.class, bounds, p -> true));
+        if (result != null) beam(server, pos, result.player(), result.essence());
+    }
+    public record ChargeTarget(PlayerEntity player, EssenceType essence) { }
+    public static ChargeTarget chargeNearby(JarBlockEntity jar, BlockPos charger, Iterable<? extends PlayerEntity> players) {
+        Box bounds = Box.of(Vec3d.ofCenter(charger), 64, 64, 64);
+        for (PlayerEntity player : players) {
+            if (!player.isAlive() || player.isSpectator() || !bounds.intersects(player.getBoundingBox())) continue;
             EssenceType consumed = chargeFirst(jar, player);
-            if (consumed != null) { beam(server, pos, player, consumed); return; }
+            if (consumed != null) return new ChargeTarget(player, consumed);
         }
+        return null;
     }
     /** One successful charge consumes exactly one matching unit, or nothing on rejection. */
     public static EssenceType chargeFirst(JarBlockEntity jar, PlayerEntity player) {

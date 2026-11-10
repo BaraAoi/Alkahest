@@ -39,15 +39,14 @@ public class ChargerGameTests implements FabricGameTest {
         context.assertTrue(aqua.type() == EssenceType.AQUA && Math.abs(aqua.stability() - .4f) < .001, "Other essence and stability are preserved");
         context.complete();
     }
-    @GameTest(templateName = EMPTY_STRUCTURE, tickLimit = 100)
-    public void actualPlacementAndWorldCharging(TestContext context) {
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void placementAndNearbySelection(TestContext context) {
         BlockPos pos = context.getAbsolutePos(new BlockPos(3, 2, 3));
         context.setBlockState(3, 2, 3, ModBlocks.ESSENCE_CHARGER);
         var player = context.createMockCreativeServerPlayerInWorld();
+        // Vanilla's test player is deliberately removed from world tracking; inject it into the scan.
+        player.unsetRemoved();
         player.setPosition(pos.getX() + 2.5, pos.getY(), pos.getZ() + .5);
-        context.assertTrue(player.isAlive(), "Mock player alive immediately after creation: health=" + player.getHealth() + ", removed=" + player.isRemoved());
-        var near = net.minecraft.util.math.Box.of(net.minecraft.util.math.Vec3d.ofCenter(pos), 64, 64, 64);
-        context.assertTrue(context.getWorld().getEntitiesByClass(net.minecraft.entity.player.PlayerEntity.class, near, p -> p == player).contains(player), "Mock player should be in server entity lookup on creation");
         ItemStack jarItem = new ItemStack(ModBlocks.JAR);
         JarItem.set(jarItem, new JarContentsComponent(List.of(new EssenceStack(EssenceType.ORDO, 3, .5f))));
         player.setStackInHand(Hand.MAIN_HAND, jarItem);
@@ -55,26 +54,20 @@ public class ChargerGameTests implements FabricGameTest {
         context.getWorld().getBlockState(pos).onUseWithItem(jarItem, context.getWorld(), player, Hand.MAIN_HAND, hit);
         var placed = context.getWorld().getBlockEntity(pos.up());
         context.assertTrue(placed instanceof JarBlockEntity, "Right click with jar places it above charger");
-        context.assertTrue(((JarBlockEntity)placed).contents().total() == 3, "Placed jar retains its contents");
+        var jar = (JarBlockEntity) placed;
+        context.assertTrue(jar.contents().total() == 3, "Placed jar retains contents");
         player.setStackInHand(Hand.MAIN_HAND, ItemStack.EMPTY);
         ItemStack wand = new ItemStack(ModItems.WANDS.get(EssenceType.ORDO));
         wand.set(ModDataComponents.ESSENCE_CHARGE, 60); player.getInventory().setStack(0, wand);
-        context.runAtTick(25, () -> {
-            var bounds = net.minecraft.util.math.Box.of(net.minecraft.util.math.Vec3d.ofCenter(pos), 64, 64, 64);
-            var players = context.getWorld().getEntitiesByClass(net.minecraft.entity.player.PlayerEntity.class, bounds, p -> p.isAlive() && !p.isSpectator());
-            context.assertTrue(players.contains(player), "Mock player must be findable in world: count=" + players.size() + ", alive=" + player.isAlive() + ", pos=" + player.getPos());
-            context.assertTrue(context.getWorld().getBlockEntity(pos) instanceof EssenceChargerBlockEntity, "Charger block entity must remain present");
-            context.assertTrue(wand.get(ModDataComponents.ESSENCE_CHARGE) >= 70, "World ticker finds nearby player and charges wand");
-            context.assertTrue(((JarBlockEntity)placed).contents().total() < 3, "Charging consumes matching essence");
-            int charge = wand.get(ModDataComponents.ESSENCE_CHARGE);
-            int remaining = ((JarBlockEntity)placed).contents().total();
-            player.setPosition(pos.getX() + 48.5, pos.getY(), pos.getZ());
-            context.runAtTick(55, () -> {
-                context.assertTrue(wand.get(ModDataComponents.ESSENCE_CHARGE) == charge && ((JarBlockEntity)placed).contents().total() == remaining, "Player beyond the cube must not charge or consume essence");
-                context.getWorld().breakBlock(pos, true);
-                context.assertTrue(context.getWorld().getBlockEntity(pos.up()) == placed, "Breaking charger must not destroy or duplicate its jar");
-                context.complete();
-            });
-        });
+        var result = EssenceChargerBlockEntity.chargeNearby(jar, pos, List.of(player));
+        context.assertTrue(result != null && result.player() == player && result.essence() == EssenceType.ORDO, "Nearby scan selects a matching player and type");
+        context.assertTrue(wand.get(ModDataComponents.ESSENCE_CHARGE) == 70 && jar.contents().total() == 2, "Scan charges a wand and consumes one unit");
+        player.setPosition(pos.getX() + 48.5, pos.getY(), pos.getZ());
+        context.assertTrue(EssenceChargerBlockEntity.chargeNearby(jar, pos, List.of(player)) == null, "Player beyond the cube is ignored");
+        context.assertTrue(wand.get(ModDataComponents.ESSENCE_CHARGE) == 70 && jar.contents().total() == 2, "Out of range must not consume essence");
+        context.getWorld().breakBlock(pos, true);
+        context.assertTrue(context.getWorld().getBlockEntity(pos.up()) == placed, "Breaking charger must not destroy or duplicate its jar");
+        context.complete();
     }
+
 }
