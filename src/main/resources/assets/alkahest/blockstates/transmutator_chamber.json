@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "awake=false": {
+      "model": "alkahest:block/transmutator_chamber"
+    },
+    "awake=true": {
+      "model": "alkahest:block/transmutator_chamber_awake"
+    }
+  }
+}

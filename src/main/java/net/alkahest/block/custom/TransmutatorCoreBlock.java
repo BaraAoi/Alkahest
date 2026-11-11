@@ -2,6 +2,10 @@ package net.alkahest.block.custom;
 
 import net.alkahest.block.entity.TransmutatorCoreBlockEntity;
 import net.alkahest.registry.ModBlockEntities;
+import net.alkahest.registry.ModBlocks;
+import net.minecraft.item.BlockItem;
+import net.minecraft.item.ItemPlacementContext;
+import net.alkahest.item.custom.CrystalWandItem;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockEntityProvider;
 import net.minecraft.block.BlockState;
@@ -46,11 +50,16 @@ public class TransmutatorCoreBlock extends Block implements BlockEntityProvider 
             ? (w, p, s, be) -> TransmutatorCoreBlockEntity.tick(w, p, (TransmutatorCoreBlockEntity) be) : null;
     }
 
-    private void open(World world, BlockPos pos, PlayerEntity player) {
+    private void open(World world, BlockPos pos, PlayerEntity player, ItemStack held) {
         if (world.isClient || player.isSneaking()) return;
         if (world.getBlockEntity(pos) instanceof TransmutatorCoreBlockEntity core) {
             if (!core.formed()) {
                 player.sendMessage(Text.translatable("message.alkahest.transmutator_unformed"), true);
+                return;
+            }
+            if (core.verticalFormed() && held.getItem() instanceof CrystalWandItem) { core.wake(); return; }
+            if (core.verticalFormed() && !core.awake()) {
+                player.sendMessage(Text.translatable("message.alkahest.transmutator_dormant"), true);
                 return;
             }
             player.openHandledScreen(core);
@@ -59,18 +68,24 @@ public class TransmutatorCoreBlock extends Block implements BlockEntityProvider 
 
     @Override protected ItemActionResult onUseWithItem(ItemStack stack, BlockState state, World world, BlockPos pos,
                                                        PlayerEntity player, Hand hand, BlockHitResult hit) {
-        open(world, pos, player);
+        if (!player.isSneaking() && stack.isOf(ModBlocks.ALCHEMY_PIPE.asItem())) {
+            if (!world.isClient && !((BlockItem) stack.getItem()).place(new ItemPlacementContext(player, hand, stack, hit)).isAccepted())
+                player.sendMessage(Text.translatable("message.alkahest.pipe_no_space"), true);
+            return ItemActionResult.success(world.isClient);
+        }
+        open(world, pos, player, stack);
         return player.isSneaking() ? ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION : ItemActionResult.success(world.isClient);
     }
 
     @Override protected ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, BlockHitResult hit) {
         if (player.isSneaking()) return ActionResult.PASS;
-        open(world, pos, player);
+        open(world, pos, player, ItemStack.EMPTY);
         return ActionResult.success(world.isClient);
     }
 
     @Override public void onStateReplaced(BlockState state, World world, BlockPos pos, BlockState newState, boolean moved) {
         if (!state.isOf(newState.getBlock()) && world.getBlockEntity(pos) instanceof TransmutatorCoreBlockEntity core) {
+            core.sleep();
             core.dropContents(world, pos);
         }
         super.onStateReplaced(state, world, pos, newState, moved);

@@ -157,6 +157,18 @@ public class TransmutatorPillarBlockEntity extends BlockEntity {
         }
     }
 
+    /** Old platform buffers remain recoverable when upgrading or breaking the pillars. */
+    public void dropBufferedEssence(World world, BlockPos pos) {
+        if (world.isClient || buffer.total() == 0) return;
+        for (EssenceStack entry : buffer.contents()) {
+            var jar = new net.minecraft.item.ItemStack(net.alkahest.registry.ModBlocks.JAR);
+            net.alkahest.item.custom.JarItem.set(jar, new JarContentsComponent(List.of(entry)));
+            net.minecraft.util.ItemScatterer.spawn(world, pos.getX(), pos.getY(), pos.getZ(), jar);
+        }
+        buffer = JarContentsComponent.EMPTY;
+        markDirty();
+    }
+
     @Override protected void writeNbt(NbtCompound nbt, RegistryWrapper.WrapperLookup registries) {
         super.writeNbt(nbt, registries);
         nbt.put("Buffer", JarContentsComponent.CODEC.encodeStart(NbtOps.INSTANCE, buffer)

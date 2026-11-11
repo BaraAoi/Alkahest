@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "alkahest:transmutator_pillar"
+    },
+    {
+      "item": "minecraft:glass"
+    },
+    {
+      "item": "minecraft:gold_ingot"
+    },
+    {
+      "item": "alkahest:crystal_aqua"
+    }
+  ],
+  "result": {
+    "id": "alkahest:transmutator_chamber",
+    "count": 1
+  }
+}

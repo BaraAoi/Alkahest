@@ -44,6 +44,12 @@ public class TransmutatorPillarBlock extends Block implements BlockEntityProvide
         return ItemActionResult.success(world.isClient);
     }
 
+    @Override public void onStateReplaced(BlockState state, World world, BlockPos pos, BlockState next, boolean moved) {
+        if (!state.isOf(next.getBlock()) && world.getBlockEntity(pos) instanceof TransmutatorPillarBlockEntity pillar)
+            pillar.dropBufferedEssence(world, pos);
+        super.onStateReplaced(state, world, pos, next, moved);
+    }
+
     @Override protected ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, BlockHitResult hit) {
         report(world, pos, player);
         return ActionResult.success(world.isClient);

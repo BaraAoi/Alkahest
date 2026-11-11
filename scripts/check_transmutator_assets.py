@@ -91,6 +91,21 @@ for lang in ('ru_ru', 'en_us'):
                 'message.alkahest.pillar_status', 'message.alkahest.pillar_empty'):
         check(key in strings, f'{lang} misses {key}')
 
+# The compact tower has generated glass/metal models, distinct dormant/awake states and
+# multi-ingredient recipes. The old platform assets are intentionally retained for old worlds.
+for name in ('transmutator_chamber', 'transmutator_crown'):
+    state = load(A / f'blockstates/{name}.json')
+    check(set(state['variants']) == {'awake=false', 'awake=true'}, f'{name} needs dormant and awake states')
+    for suffix in ('', '_awake'):
+        model = load(A / f'models/block/{name}{suffix}.json')
+        check(len(model.get('elements', [])) >= 5, f'{name}{suffix} needs a detailed model')
+        for ref, texture in model['textures'].items():
+            file = A / 'textures' / (texture.split(':')[-1] + '.png')
+            check(file.exists() and png_size(file)[:2] == (16, 16), f'{name} texture {ref} is missing or malformed')
+    recipe = load(DATA / f'recipe/{name}.json')
+    check(len(recipe['ingredients']) >= 3 and recipe['result']['id'] == 'alkahest:' + name, f'{name} requires a multi-ingredient recipe')
+    check((DATA / f'loot_table/blocks/{name}.json').exists(), f'{name} needs a block drop')
+
 # --- java rules ------------------------------------------------------------------------------
 core_be = (JAVA / 'block/entity/TransmutatorCoreBlockEntity.java').read_text()
 check('for (int dx = -1; dx <= 1; dx++)' in core_be, 'the platform is a 3x3 ring')
@@ -131,6 +146,16 @@ check(collect.count('for (Map.Entry<EssenceType, Integer> entry : cost.entrySet(
       'collect must preflight every type, reserve every type, then commit payment in separate passes')
 check('missingLaterEssenceNeverConsumesEarlierType' in tests and 'disappearingEssenceKeepsReservationsUntilPayment' in tests,
       'game tests must check repeated waiting and interrupted reservations')
+
+pipe_be = (JAVA / 'block/entity/AlchemyPipeBlockEntity.java').read_text()
+pipe_block = (JAVA / 'block/custom/AlchemyPipeBlock.java').read_text()
+check('verticalFormed' in core_be and 'VerticalAwake' in core_be and 'pipeCost()' in core_be,
+      'the new tower must be awakened, persistent, and request pipe payment')
+check('payTransmutator' in pipe_be and 'finishPipedOperation' in pipe_be and 'TRANSMUTATOR_CORE' in pipe_block,
+      'pipes must connect and pay the ready tower')
+check('connectedTowerWaitsForWholePriceAndSpendsExactlyOnce' in tests and 'sharedNetworkTransfersBellowsToJarsAndFeedsTower' in tests,
+      'the mixed network and missing essence need conservation tests')
+check('dropBufferedEssence' in pillar_be, 'legacy pillar buffers must be recoverable when dismantling')
 
 check('MidasTouchEffect.progressStep' in core_be and 'before / 10 != self.progress / 10' in core_be, 'Midas speed must not skip essence prefill boundaries')
 

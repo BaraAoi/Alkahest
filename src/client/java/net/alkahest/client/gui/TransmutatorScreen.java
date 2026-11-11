@@ -31,6 +31,7 @@ public final class TransmutatorScreen extends HandledScreen<TransmutatorScreenHa
             case 3 -> "screen.alkahest.transmutator.blocked";
             case 4 -> "screen.alkahest.transmutator.unformed";
             case 5 -> "screen.alkahest.transmutator.no_amulet";
+            case 6 -> "screen.alkahest.transmutator.dormant";
             default -> "screen.alkahest.transmutator.ready";
         });
     }

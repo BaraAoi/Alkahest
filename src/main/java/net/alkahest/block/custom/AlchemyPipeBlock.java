@@ -46,7 +46,7 @@ public class AlchemyPipeBlock extends Block implements BlockEntityProvider {
         case NORTH -> NORTH; case SOUTH -> SOUTH; case EAST -> EAST; case WEST -> WEST; case UP -> UP; case DOWN -> DOWN;
     }; }
     private static boolean connects(BlockState state) { return state.isOf(ModBlocks.ALCHEMY_PIPE) || state.isOf(ModBlocks.JAR)
-        || state.isOf(ModBlocks.DISTILLERY_BELLOWS); }
+        || state.isOf(ModBlocks.DISTILLERY_BELLOWS) || state.isOf(ModBlocks.TRANSMUTATOR_CORE); }
     @Override public BlockState getPlacementState(ItemPlacementContext context) {
         BlockPos placed = context.getBlockPos();
         var state = getDefaultState();

@@ -68,6 +68,8 @@ public final class ModItems {
                 entries.add(ModBlocks.ALCHEMY_PIPE);
                 entries.add(ModBlocks.TRANSMUTATOR_CORE);
                 entries.add(ModBlocks.TRANSMUTATOR_PILLAR);
+                entries.add(ModBlocks.TRANSMUTATOR_CHAMBER);
+                entries.add(ModBlocks.TRANSMUTATOR_CROWN);
                 entries.add(ModBlocks.MATRIX_CORE);
                 entries.add(ModBlocks.MATRIX_PILLAR);
                 entries.add(ModBlocks.MATRIX_PEDESTAL);

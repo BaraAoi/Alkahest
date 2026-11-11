@@ -2,6 +2,8 @@ package net.alkahest.block.entity;
 
 import net.alkahest.effect.MidasTouchEffect;
 import net.alkahest.block.custom.TransmutatorCoreBlock;
+import net.alkahest.block.custom.TransmutatorAssemblyBlock;
+import net.alkahest.registry.ModBlocks;
 import net.alkahest.block.custom.TransmutatorPillarBlock;
 import net.alkahest.essence.EssenceStack;
 import net.alkahest.essence.EssenceType;
@@ -46,10 +48,11 @@ public class TransmutatorCoreBlockEntity extends BlockEntity implements Inventor
     public static final int INPUT = 0, AMULET = 1, OUTPUT = 2;
 
     public static final int STATUS_IDLE = 0, STATUS_WORKING = 1, STATUS_NO_ESSENCE = 2,
-        STATUS_BLOCKED = 3, STATUS_UNFORMED = 4, STATUS_NO_AMULET = 5;
+        STATUS_BLOCKED = 3, STATUS_UNFORMED = 4, STATUS_NO_AMULET = 5, STATUS_DORMANT = 6;
 
     private final DefaultedList<ItemStack> stacks = DefaultedList.ofSize(3, ItemStack.EMPTY);
     private int progress;
+    private boolean awake;
 
     private final PropertyDelegate properties = new PropertyDelegate() {
         @Override public int get(int index) {
@@ -73,6 +76,7 @@ public class TransmutatorCoreBlockEntity extends BlockEntity implements Inventor
 
     public int status() {
         if (!formed()) return STATUS_UNFORMED;
+        if (verticalFormed() && !awake) return STATUS_DORMANT;
         TransmutationRecipe recipe = recipe();
         if (recipe == null) return STATUS_IDLE;
         if (!hasAmulet()) return STATUS_NO_AMULET;
@@ -81,8 +85,46 @@ public class TransmutatorCoreBlockEntity extends BlockEntity implements Inventor
         return STATUS_WORKING;
     }
 
-    /** All eight pillars must be present in the same horizontal plane around the core. */
-    public boolean formed() {
+    /** The new compact construction has a chamber and crown above the core. */
+    public boolean verticalFormed() {
+        return world != null && world.getBlockState(pos.up()).isOf(ModBlocks.TRANSMUTATOR_CHAMBER)
+            && world.getBlockState(pos.up(2)).isOf(ModBlocks.TRANSMUTATOR_CROWN);
+    }
+
+    public boolean awake() { return awake; }
+
+    /** One-time wand activation; the original 3x3 layout remains compatible with old saves. */
+    public boolean wake() {
+        if (world == null || world.isClient || !verticalFormed() || awake) return false;
+        awake = true;
+        setAssemblyAwake(true);
+        markDirty();
+        world.playSound(null, pos, net.minecraft.sound.SoundEvents.BLOCK_AMETHYST_BLOCK_CHIME,
+            net.minecraft.sound.SoundCategory.BLOCKS, 0.7f, 1.2f);
+        return true;
+    }
+
+    /** The assembled pieces go dormant whenever the core or the structure is broken. */
+    public void sleep() {
+        if (world == null || world.isClient) return;
+        awake = false;
+        setAssemblyAwake(false);
+        markDirty();
+    }
+
+    private void setAssemblyAwake(boolean value) {
+        if (world == null || world.isClient) return;
+        for (int i = 1; i <= 2; i++) {
+            BlockPos part = pos.up(i);
+            BlockState state = world.getBlockState(part);
+            if (state.getBlock() instanceof TransmutatorAssemblyBlock && state.get(TransmutatorAssemblyBlock.AWAKE) != value)
+                world.setBlockState(part, state.with(TransmutatorAssemblyBlock.AWAKE, value), Block.NOTIFY_ALL);
+        }
+    }
+
+    /** The old horizontal layout is retained solely so existing worlds keep working. */
+    public boolean formed() { return verticalFormed() || legacyFormed(); }
+    public boolean legacyFormed() {
         if (world == null) return false;
         for (int dx = -1; dx <= 1; dx++) {
             for (int dz = -1; dz <= 1; dz++) {
@@ -121,8 +163,13 @@ public class TransmutatorCoreBlockEntity extends BlockEntity implements Inventor
 
     public static void tick(World world, BlockPos pos, TransmutatorCoreBlockEntity self) {
         if (world.isClient) return;
+        if (self.awake && !self.verticalFormed()) {
+            self.awake = false;
+            self.setAssemblyAwake(false);
+            self.markDirty();
+        }
         TransmutationRecipe recipe = self.recipe();
-        if (!self.formed() || recipe == null || !self.hasAmulet() || !self.canStoreOutput(recipe.output())) {
+        if (!self.formed() || (self.verticalFormed() && !self.awake) || recipe == null || !self.hasAmulet() || !self.canStoreOutput(recipe.output())) {
             if (self.progress != 0) { self.progress = 0; self.markDirty(); }
             setWorking(world, pos, false);
             return;
@@ -132,28 +179,50 @@ public class TransmutatorCoreBlockEntity extends BlockEntity implements Inventor
             self.progress = Math.min(DURATION, before + MidasTouchEffect.progressStep(
                 MidasTouchEffect.nearby(world, pos), world.getTime()));
             // A boosted step can cross a multiple of ten without landing on it.
-            if (before / 10 != self.progress / 10) self.prefill(world, recipe.cost());
+            if (!self.verticalFormed() && before / 10 != self.progress / 10) self.prefill(world, recipe.cost());
             setWorking(world, pos, true);
             self.markDirty();
             return;
         }
-        // The operation only completes when the pillars can pay the whole price; nothing is lost.
+        // The compact machine is paid only by a connected pipe network, atomically at a pulse.
+        if (self.verticalFormed()) {
+            setWorking(world, pos, false);
+            return;
+        }
+        // Legacy platform: the pillars pay the whole price.
         if (!self.collect(world, recipe.cost())) {
             setWorking(world, pos, false);
             return;
         }
+        self.finishOperation(recipe);
+    }
+
+    /** Network may pay only a fully ready, awakened compact machine. */
+    public Map<EssenceType, Integer> pipeCost() {
+        TransmutationRecipe recipe = recipe();
+        if (!verticalFormed() || !awake || progress < DURATION || recipe == null || !hasAmulet() || !canStoreOutput(recipe.output()))
+            return Map.of();
+        return recipe.cost();
+    }
+
+    /** Called synchronously by the pipe network only after it commits the complete cost. */
+    void finishPipedOperation() {
+        if (!pipeCost().isEmpty()) finishOperation(recipe());
+    }
+
+    private void finishOperation(TransmutationRecipe recipe) {
         ItemStack output = recipe.output().copy();
-        ItemStack stored = self.stacks.get(OUTPUT);
-        if (stored.isEmpty()) self.stacks.set(OUTPUT, output);
-        else stored.increment(output.getCount());
-        ItemStack input = self.stacks.get(INPUT);
+        ItemStack existing = stacks.get(OUTPUT);
+        if (existing.isEmpty()) stacks.set(OUTPUT, output);
+        else existing.increment(output.getCount());
+        ItemStack input = stacks.get(INPUT);
         input.decrement(1);
-        if (input.isEmpty()) self.stacks.set(INPUT, ItemStack.EMPTY);
-        ItemStack amulet = self.stacks.get(AMULET);
+        if (input.isEmpty()) stacks.set(INPUT, ItemStack.EMPTY);
+        ItemStack amulet = stacks.get(AMULET);
         amulet.set(ModDataComponents.ESSENCE_CHARGE,
             Math.max(0, amulet.getOrDefault(ModDataComponents.ESSENCE_CHARGE, 0) - 1));
-        self.progress = 0;
-        self.markDirty();
+        progress = 0;
+        markDirty();
         playFinish(world, pos);
     }
 
@@ -312,12 +381,15 @@ public class TransmutatorCoreBlockEntity extends BlockEntity implements Inventor
         super.writeNbt(nbt, registries);
         Inventories.writeNbt(nbt, stacks, registries);
         nbt.putInt("Progress", progress);
+        nbt.putBoolean("VerticalAwake", awake);
     }
 
     @Override protected void readNbt(NbtCompound nbt, RegistryWrapper.WrapperLookup registries) {
         super.readNbt(nbt, registries);
+        stacks.clear();
         Inventories.readNbt(nbt, stacks, registries);
         progress = nbt.getInt("Progress");
+        awake = nbt.getBoolean("VerticalAwake");
     }
 
     @Override public BlockEntityUpdateS2CPacket toUpdatePacket() { return BlockEntityUpdateS2CPacket.create(this); }

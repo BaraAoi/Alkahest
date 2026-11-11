@@ -94,6 +94,142 @@ public class TransmutatorGameTests implements FabricGameTest {
         c.complete();
     }
 
+    private static BlockPos tower(TestContext c, int y) {
+        c.setBlockState(CX, y, CZ, ModBlocks.TRANSMUTATOR_CORE);
+        c.setBlockState(CX, y + 1, CZ, ModBlocks.TRANSMUTATOR_CHAMBER);
+        c.setBlockState(CX, y + 2, CZ, ModBlocks.TRANSMUTATOR_CROWN);
+        return c.getAbsolutePos(new BlockPos(CX, y, CZ));
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void towerNeedsAwakeningAndSurvivesReload(TestContext c) {
+        int y = CY + 32;
+        BlockPos pos = tower(c, y);
+        var core = (TransmutatorCoreBlockEntity) c.getWorld().getBlockEntity(pos);
+        installInput(c, core);
+        run(c.getWorld(), pos, 200);
+        c.assertTrue(core.verticalFormed() && !core.awake() && core.progress() == 0, "A new tower is dormant");
+        c.assertTrue(core.status() == TransmutatorCoreBlockEntity.STATUS_DORMANT, "The tower asks for a wand");
+        var player = c.createMockPlayer(net.minecraft.world.GameMode.CREATIVE);
+        ItemStack wand = new ItemStack(ModItems.WANDS.get(EssenceType.ORDO));
+        BlockPos crown = pos.up(2);
+        var hit = new net.minecraft.util.hit.BlockHitResult(net.minecraft.util.math.Vec3d.ofCenter(crown), net.minecraft.util.math.Direction.UP, crown, false);
+        c.getWorld().getBlockState(crown).onUseWithItem(wand, c.getWorld(), player, net.minecraft.util.Hand.MAIN_HAND, hit);
+        c.assertTrue(core.awake() && !core.wake(), "A wand click on the crown awakens the tower once");
+        c.assertTrue(c.getWorld().getBlockState(pos.up()).get(net.alkahest.block.custom.TransmutatorAssemblyBlock.AWAKE), "The chamber lights after awakening");
+        var replica = new TransmutatorCoreBlockEntity(pos, core.getCachedState());
+        replica.readComponentlessNbt(core.createNbt(c.getWorld().getRegistryManager()), c.getWorld().getRegistryManager());
+        c.assertTrue(replica.awake() && replica.getStack(TransmutatorCoreBlockEntity.INPUT).getCount() == 2, "Awake state and inventory survive NBT reload");
+        c.setBlockState(CX, y + 2, CZ, net.minecraft.block.Blocks.AIR);
+        run(c.getWorld(), pos, 1);
+        c.assertFalse(core.awake(), "Breaking the crown deactivates the tower");
+        c.assertTrue(core.getStack(TransmutatorCoreBlockEntity.INPUT).getCount() == 2, "Breaking a component preserves the core inventory");
+        c.setBlockState(CX, y + 2, CZ, ModBlocks.TRANSMUTATOR_CROWN);
+        c.assertTrue(core.verticalFormed() && !core.awake(), "Reassembly needs another awakening");
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void connectedTowerWaitsForWholePriceAndSpendsExactlyOnce(TestContext c) {
+        int y = CY + 48;
+        BlockPos pos = tower(c, y);
+        var core = (TransmutatorCoreBlockEntity) c.getWorld().getBlockEntity(pos);
+        installInput(c, core);
+        core.wake();
+        c.setBlockState(CX + 1, y, CZ, ModBlocks.ALCHEMY_PIPE);
+        BlockPos pipe = c.getAbsolutePos(new BlockPos(CX + 1, y, CZ));
+        var metal = jar(c, CX + 1, y, CZ - 1, EssenceType.METALLUM, 60);
+        var remoteOrdo = jar(c, CX - 3, y, CZ, EssenceType.ORDO, 20);
+        run(c.getWorld(), pos, 150);
+        for (int i = 0; i < 200; i++) net.alkahest.block.entity.AlchemyPipeBlockEntity.pulse(c.getWorld(), pipe);
+        c.assertTrue(metal.contents().total() == 60 && remoteOrdo.contents().total() == 20, "An absent connected type never drains the other type or a nearby disconnected jar");
+        c.assertTrue(core.getStack(TransmutatorCoreBlockEntity.OUTPUT).isEmpty() && core.getStack(TransmutatorCoreBlockEntity.AMULET).get(ModDataComponents.ESSENCE_CHARGE) == 4,
+            "Waiting never spends an item or amulet charge");
+        var ordo = jar(c, CX + 1, y, CZ + 1, EssenceType.ORDO, 10);
+        net.alkahest.block.entity.AlchemyPipeBlockEntity.pulse(c.getWorld(), pipe);
+        c.assertTrue(core.getStack(TransmutatorCoreBlockEntity.OUTPUT).isOf(Items.GOLD_INGOT), "Connecting the missing jar resumes the operation");
+        c.assertTrue(metal.contents().total() == 57 && ordo.contents().total() == 8 && remoteOrdo.contents().total() == 20,
+            "A successful pipe operation spends exactly 3 Metallum and 2 Ordo");
+        c.assertTrue(core.getStack(TransmutatorCoreBlockEntity.INPUT).getCount() == 1 && core.getStack(TransmutatorCoreBlockEntity.AMULET).get(ModDataComponents.ESSENCE_CHARGE) == 3,
+            "Only one item and one charge are consumed");
+        for (int i = 0; i < 20; i++) net.alkahest.block.entity.AlchemyPipeBlockEntity.pulse(c.getWorld(), pipe);
+        c.assertTrue(metal.contents().total() == 57 && ordo.contents().total() == 8, "An idle progress cycle does not drain or transfer jars");
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void sharedNetworkTransfersBellowsToJarsAndFeedsTower(TestContext c) {
+        int y = CY + 64;
+        BlockPos pos = tower(c, y);
+        var core = (TransmutatorCoreBlockEntity) c.getWorld().getBlockEntity(pos);
+        installInput(c, core);
+        core.wake();
+        c.setBlockState(CX + 1, y, CZ, ModBlocks.ALCHEMY_PIPE);
+        BlockPos pipe = c.getAbsolutePos(new BlockPos(CX + 1, y, CZ));
+        var metal = jar(c, CX + 1, y, CZ - 1, EssenceType.METALLUM, 1);
+        var ordo = jar(c, CX + 1, y, CZ + 1, EssenceType.ORDO, 10);
+        c.setBlockState(CX + 2, y, CZ, ModBlocks.DISTILLERY_BELLOWS);
+        var bellow = (net.alkahest.block.entity.DistilleryBellowsBlockEntity) c.getWorld().getBlockEntity(c.getAbsolutePos(new BlockPos(CX + 2, y, CZ)));
+        bellow.accept(EssenceType.METALLUM, 10, .7f);
+        run(c.getWorld(), pos, 110);
+        net.alkahest.block.entity.AlchemyPipeBlockEntity.pulse(c.getWorld(), pipe);
+        c.assertTrue(bellow.amount() == 6 && metal.contents().total() == 2 && ordo.contents().total() == 8,
+            "Bellows feed their jar while the tower pays the exact cost in the same network");
+        c.assertTrue(core.getStack(TransmutatorCoreBlockEntity.OUTPUT).isOf(Items.GOLD_INGOT), "Shared distillery and storage network feeds the tower");
+        c.assertTrue(metal.contents().contents().size() == 1 && ordo.contents().contents().size() == 1, "Jars remain single-type");
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void towerDoesNotDrainWhileBlockedOrDisconnected(TestContext c) {
+        int y = CY + 80;
+        BlockPos pos = tower(c, y);
+        var core = (TransmutatorCoreBlockEntity) c.getWorld().getBlockEntity(pos);
+        installInput(c, core);
+        core.wake();
+        var metal = jar(c, CX + 1, y, CZ - 1, EssenceType.METALLUM, 10);
+        var ordo = jar(c, CX + 1, y, CZ + 1, EssenceType.ORDO, 10);
+        c.setBlockState(CX + 1, y, CZ, ModBlocks.ALCHEMY_PIPE);
+        BlockPos pipe = c.getAbsolutePos(new BlockPos(CX + 1, y, CZ));
+        core.setStack(TransmutatorCoreBlockEntity.OUTPUT, new ItemStack(Items.STONE, 64));
+        run(c.getWorld(), pos, 200);
+        net.alkahest.block.entity.AlchemyPipeBlockEntity.pulse(c.getWorld(), pipe);
+        c.assertTrue(metal.contents().total() == 10 && ordo.contents().total() == 10, "A full output never draws essence");
+        core.setStack(TransmutatorCoreBlockEntity.OUTPUT, ItemStack.EMPTY);
+        run(c.getWorld(), pos, 110);
+        c.setBlockState(CX + 1, y, CZ, net.minecraft.block.Blocks.AIR);
+        net.alkahest.block.entity.AlchemyPipeBlockEntity.pulse(c.getWorld(), pipe);
+        c.assertTrue(metal.contents().total() == 10 && ordo.contents().total() == 10 && core.getStack(TransmutatorCoreBlockEntity.OUTPUT).isEmpty(),
+            "A disconnected pipe cannot pay the machine");
+        c.setBlockState(CX + 1, y, CZ, ModBlocks.ALCHEMY_PIPE);
+        net.alkahest.block.entity.AlchemyPipeBlockEntity.pulse(c.getWorld(), pipe);
+        c.assertTrue(core.getStack(TransmutatorCoreBlockEntity.OUTPUT).isOf(Items.GOLD_INGOT), "Reconnecting resumes one operation");
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void legacyPillarReturnsReservedEssenceWhenBroken(TestContext c) {
+        int y = CY + 96;
+        BlockPos pos = isolatedPlatform(c, y);
+        var core = (TransmutatorCoreBlockEntity) c.getWorld().getBlockEntity(pos);
+        installInput(c, core);
+        var metal = jar(c, CX + 3, y, CZ, EssenceType.METALLUM, 10);
+        jar(c, CX - 3, y, CZ, EssenceType.ORDO, 10);
+        run(c.getWorld(), pos, 10);
+        var pillar = core.pillars().stream().filter(p -> p.stored(EssenceType.METALLUM) > 0).findFirst().orElseThrow();
+        BlockPos pillarPos = pillar.getPos();
+        int reserved = pillar.stored(EssenceType.METALLUM);
+        pillar.dropBufferedEssence(c.getWorld(), pillarPos);
+        var items = c.getWorld().getEntitiesByClass(net.minecraft.entity.ItemEntity.class,
+            new net.minecraft.util.math.Box(pillarPos).expand(2), e -> e.getStack().isOf(ModBlocks.JAR.asItem()));
+        int recovered = 0;
+        for (var item : items) for (EssenceStack entry : net.alkahest.item.custom.JarItem.contents(item.getStack()).contents())
+            if (entry.type() == EssenceType.METALLUM) recovered += entry.amount();
+        c.assertTrue(reserved == recovered && metal.contents().total() + recovered == 10, "Upgrading a legacy pillar returns every buffered unit in jars");
+        c.assertTrue(pillar.buffer().total() == 0, "Recovered buffer is cleared and cannot duplicate");
+        c.complete();
+    }
+
     /** One core alone is not a platform; the eight pillars make it one. */
     @GameTest(templateName = EMPTY_STRUCTURE)
     public void platformNeedsAllEightPillars(TestContext c) {

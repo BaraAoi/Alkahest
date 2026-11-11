@@ -13,6 +13,7 @@ import net.alkahest.block.custom.MatrixCoreBlock;
 import net.alkahest.block.custom.MatrixPedestalBlock;
 import net.alkahest.block.custom.MatrixPillarBlock;
 import net.alkahest.block.custom.TransmutatorCoreBlock;
+import net.alkahest.block.custom.TransmutatorAssemblyBlock;
 import net.alkahest.block.custom.TransmutatorPillarBlock;
 import net.alkahest.block.custom.DistilleryBellowsBlock;
 import net.alkahest.block.custom.StabilizerCoreBlock;
@@ -51,6 +52,12 @@ public final class ModBlocks {
     public static final Block TRANSMUTATOR_PILLAR = register("transmutator_pillar", new TransmutatorPillarBlock(
         AbstractBlock.Settings.copy(Blocks.QUARTZ_BLOCK).nonOpaque().requiresTool().strength(2.5f, 5f)
             .luminance(state -> state.get(TransmutatorPillarBlock.CHARGED) ? 5 : 0)));
+    public static final Block TRANSMUTATOR_CHAMBER = register("transmutator_chamber", new TransmutatorAssemblyBlock(
+        AbstractBlock.Settings.copy(Blocks.GLASS).nonOpaque().requiresTool().strength(2.5f, 5f)
+            .luminance(state -> state.get(TransmutatorAssemblyBlock.AWAKE) ? 5 : 0), 1));
+    public static final Block TRANSMUTATOR_CROWN = register("transmutator_crown", new TransmutatorAssemblyBlock(
+        AbstractBlock.Settings.copy(Blocks.COPPER_BLOCK).nonOpaque().requiresTool().strength(2.5f, 5f)
+            .luminance(state -> state.get(TransmutatorAssemblyBlock.AWAKE) ? 4 : 0), 2));
     public static final Block MATRIX_CORE = register("matrix_core", new MatrixCoreBlock(
         AbstractBlock.Settings.copy(Blocks.GOLD_BLOCK).nonOpaque().requiresTool().strength(4f, 8f)
             .luminance(state -> state.get(MatrixCoreBlock.ACTIVE) ? 9 : 0)));

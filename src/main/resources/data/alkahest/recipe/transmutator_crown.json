@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "alkahest:transmutator_pillar"
+    },
+    {
+      "item": "minecraft:amethyst_shard"
+    },
+    {
+      "item": "minecraft:gold_ingot"
+    },
+    {
+      "item": "alkahest:crystal_ordo"
+    }
+  ],
+  "result": {
+    "id": "alkahest:transmutator_crown",
+    "count": 1
+  }
+}

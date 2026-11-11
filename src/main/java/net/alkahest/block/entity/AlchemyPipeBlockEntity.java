@@ -123,7 +123,8 @@ public class AlchemyPipeBlockEntity extends BlockEntity {
 
     /** Jars and distillation bellows both act as pipe endpoints, but with fixed roles. */
     private static boolean isPort(BlockEntity be) {
-        return be instanceof JarBlockEntity || be instanceof DistilleryBellowsBlockEntity;
+        return be instanceof JarBlockEntity || be instanceof DistilleryBellowsBlockEntity
+            || be instanceof TransmutatorCoreBlockEntity;
     }
 
     /** Bellows are the source of a line: they give what the cube distilled into them. */
@@ -271,6 +272,42 @@ public class AlchemyPipeBlockEntity extends BlockEntity {
         }
 
         /**
+         * Pay an awakened compact transmutator directly from connected jars. Jars may supply
+         * this consumer only: never another jar or a bellow. First check the ENTIRE cost, then
+         * transfer the exact amounts and complete in the same server tick. No intermediate
+         * pipe or machine buffer exists, so a missing type leaves all jars untouched.
+         */
+        private int payTransmutator(TransmutatorCoreBlockEntity core) {
+            Map<EssenceType, Integer> cost = core.pipeCost();
+            if (cost.isEmpty()) return 0;
+            for (var entry : cost.entrySet()) {
+                int available = 0;
+                for (BlockEntity port : ports) {
+                    if (!(port instanceof JarBlockEntity jar)) continue;
+                    JarContentsComponent contents = jar.contents();
+                    if (!JarItem.allowed(contents) || !JarItem.singleType(contents) || contents.total() == 0) continue;
+                    if (contents.contents().getFirst().type() == entry.getKey()) available += contents.total();
+                }
+                if (available < entry.getValue()) return 0;
+            }
+            int paid = 0;
+            for (var entry : cost.entrySet()) {
+                int remaining = entry.getValue();
+                for (BlockEntity port : ports) {
+                    if (!(port instanceof JarBlockEntity jar) || remaining <= 0) continue;
+                    JarContentsComponent contents = jar.contents();
+                    if (!JarItem.allowed(contents) || !JarItem.singleType(contents) || contents.total() == 0
+                        || contents.contents().getFirst().type() != entry.getKey()) continue;
+                    int removed = portRemove(jar, entry.getKey(), Math.min(remaining, contents.total()));
+                    remaining -= removed;
+                    paid += removed;
+                }
+            }
+            core.finishPipedOperation();
+            return paid;
+        }
+
+        /**
          * Moves up to {@link #UNITS_PER_PULSE} units from every source into jars.
          * Bellows only give, jars only receive, and each jar takes a single essence type, so
          * several flasks feed several jars with different essences instead of shuffling one
@@ -296,6 +333,17 @@ public class AlchemyPipeBlockEntity extends BlockEntity {
                     budget -= sent;
                     moved += sent;
                     last = entry.type();
+                }
+            }
+            // Distillation still fills jars first. Only a ready Transmutator may draw from
+            // jars; idle machines and jars never trigger transfers between storage containers.
+            for (BlockEntity port : ports) {
+                if (!(port instanceof TransmutatorCoreBlockEntity core)) continue;
+                Map<EssenceType, Integer> cost = core.pipeCost();
+                int paid = payTransmutator(core);
+                if (paid > 0) {
+                    moved += paid;
+                    last = cost.keySet().iterator().next();
                 }
             }
             if (moved == 0) return 0;
