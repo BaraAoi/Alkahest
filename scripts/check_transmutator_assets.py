@@ -194,7 +194,7 @@ for suffix in ('', '_awake'):
     chamber = load(A / f'models/block/transmutator_chamber{suffix}.json')
     check(not any(any(face['texture'] == '#gem' for face in el['faces'].values()) for el in chamber['elements']),
           'the central decorative crystal must be absent in both chamber states')
-check('matrices.translate(.5f, 1.5f, .5f)' in renderer and 'if (tower && amulet.getItem()' in renderer,
+check('matrices.translate(.5f, 1.5f, .5f)' in renderer and 'if (!tower) return;' in renderer and 'if (amulet.getItem()' in renderer,
       'the installed real focus must be rendered at the rings centre inside a complete tower')
 check('matrices.translate(.5f, .52f, -.025f)' not in renderer, 'the old external amulet must be gone')
 check('TrinketRendererRegistry.registerRenderer' in client_registration and 'AmuletTrinketRenderer' in client_registration,
@@ -206,6 +206,19 @@ check('showWorkingEssences(world, pos, recipe)' in core_be and 'particleAspects(
       and 'world.getTime() % 4 == 0' in core_be and 'world instanceof ServerWorld' in core_be,
       'work particles must use actual recipe aspects and be rate-limited')
 check('workingAspectColoursFollowRecipeWithoutChangingCosts' in tests, 'test aspect selection and work preservation')
+check(amulet['display']['firstperson_righthand']['rotation'][1] == -45
+      and amulet['display']['firstperson_lefthand']['rotation'][1] == 45,
+      'first-person poses must face the player instead of being edge-on')
+check('animation.amuletAngle()' in renderer and 'animation.ringAngle()' in renderer
+      and 'animation.outerRingAngle()' in renderer and 'new WeakHashMap<>' in renderer,
+      'focus and both rings need independent, continuous per-core animation phases')
+check('TransmutatorAnimation.shouldSync(before, self.progress)' in core_be and 'syncAnimationProgress()' in core_be,
+      'world viewers need bounded actual progress checkpoints during vertical work')
+animation = (JAVA / 'animation/TransmutatorAnimation.java').read_text()
+check('Math.sin(Math.PI * fraction)' in animation and 'MAX_EXTRAPOLATION_TICKS' in animation,
+      'ring speed must rise and fall with bounded visual progress')
+check('animationProgressCheckpointsRoundTrip' in tests, 'test progress update and reconstruction')
+
 
 # --- report ----------------------------------------------------------------------------------
 if failures:

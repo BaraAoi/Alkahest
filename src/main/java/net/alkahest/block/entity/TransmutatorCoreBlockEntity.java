@@ -1,6 +1,7 @@
 package net.alkahest.block.entity;
 
 import net.alkahest.effect.MidasTouchEffect;
+import net.alkahest.animation.TransmutatorAnimation;
 import net.alkahest.block.custom.TransmutatorCoreBlock;
 import net.alkahest.block.custom.TransmutatorAssemblyBlock;
 import net.alkahest.registry.ModBlocks;
@@ -53,6 +54,8 @@ public class TransmutatorCoreBlockEntity extends BlockEntity implements Inventor
     private final DefaultedList<ItemStack> stacks = DefaultedList.ofSize(3, ItemStack.EMPTY);
     private int progress;
     private boolean awake;
+    // Client-only visual interpolation timestamp. It is not saved and never changes real progress.
+    private long clientProgressSyncTick = Long.MIN_VALUE;
 
     private final PropertyDelegate properties = new PropertyDelegate() {
         @Override public int get(int index) {
@@ -72,6 +75,11 @@ public class TransmutatorCoreBlockEntity extends BlockEntity implements Inventor
     }
 
     public int progress() { return progress; }
+    public float visualProgress(float tickDelta, boolean working) {
+        float elapsed = world == null || !world.isClient || clientProgressSyncTick == Long.MIN_VALUE
+            ? 0 : Math.max(0, world.getTime() - clientProgressSyncTick + tickDelta);
+        return TransmutatorAnimation.estimateProgress(progress, elapsed, working, DURATION);
+    }
     public TransmutationRecipe recipe() { return TransmutationRecipe.find(stacks.get(INPUT)); }
 
     public int status() {
@@ -181,7 +189,10 @@ public class TransmutatorCoreBlockEntity extends BlockEntity implements Inventor
             // A boosted step can cross a multiple of ten without landing on it.
             if (!self.verticalFormed() && before / 10 != self.progress / 10) self.prefill(world, recipe.cost());
             setWorking(world, pos, true);
-            if (self.verticalFormed() && world.getTime() % 4 == 0) showWorkingEssences(world, pos, recipe);
+            if (self.verticalFormed()) {
+                if (world.getTime() % 4 == 0) showWorkingEssences(world, pos, recipe);
+                if (TransmutatorAnimation.shouldSync(before, self.progress)) self.syncAnimationProgress();
+            }
             self.markDirty();
             return;
         }
@@ -390,6 +401,14 @@ public class TransmutatorCoreBlockEntity extends BlockEntity implements Inventor
     }
     @Override public void clear() { stacks.clear(); progress = 0; markDirty(); syncAmulet(); }
 
+    /** A few progress checkpoints per operation; initial chunk NBT covers newly tracking clients. */
+    private void syncAnimationProgress() {
+        if (!(world instanceof ServerWorld server)) return;
+        var packet = toUpdatePacket();
+        if (packet != null) server.getServer().getPlayerManager().sendToAround(null,
+            pos.getX() + .5, pos.getY() + .5, pos.getZ() + .5, 96.0, server.getRegistryKey(), packet);
+    }
+
     /** Tell nearby clients when the visible amulet is inserted, removed or charged. */
     private void syncAmulet() {
         if (!(world instanceof ServerWorld server)) return;
@@ -426,6 +445,7 @@ public class TransmutatorCoreBlockEntity extends BlockEntity implements Inventor
         Inventories.readNbt(nbt, stacks, registries);
         progress = nbt.getInt("Progress");
         awake = nbt.getBoolean("VerticalAwake");
+        if (world != null && world.isClient) clientProgressSyncTick = world.getTime();
     }
 
     @Override public BlockEntityUpdateS2CPacket toUpdatePacket() { return BlockEntityUpdateS2CPacket.create(this); }

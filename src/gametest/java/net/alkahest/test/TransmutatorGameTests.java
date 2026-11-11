@@ -263,6 +263,28 @@ public class TransmutatorGameTests implements FabricGameTest {
     }
 
     @GameTest(templateName = EMPTY_STRUCTURE)
+    public void animationProgressCheckpointsRoundTrip(TestContext c) {
+        BlockPos pos = tower(c, CY + 32);
+        var source = (TransmutatorCoreBlockEntity)c.getWorld().getBlockEntity(pos);
+        source.wake();
+        installInput(c, source);
+        var replica = new TransmutatorCoreBlockEntity(pos, source.getCachedState());
+        var registry = c.getWorld().getRegistryManager();
+        for (int i = 0; i < 45; i++) TransmutatorCoreBlockEntity.tick(c.getWorld(), pos, source);
+        replica.readComponentlessNbt(source.toUpdatePacket().getNbt(), registry);
+        c.assertTrue(replica.progress() == source.progress() && replica.progress() == 45,
+            "Animation receives the actual saved operation progress");
+        c.assertTrue(replica.getStack(TransmutatorCoreBlockEntity.AMULET).get(ModDataComponents.ESSENCE_CHARGE) == 4,
+            "Visual progress sync preserves the actual installed amulet");
+        source.setStack(TransmutatorCoreBlockEntity.INPUT, ItemStack.EMPTY);
+        TransmutatorCoreBlockEntity.tick(c.getWorld(), pos, source);
+        replica.readComponentlessNbt(source.toUpdatePacket().getNbt(), registry);
+        c.assertTrue(replica.progress() == 0 && source.status() == TransmutatorCoreBlockEntity.STATUS_IDLE,
+            "Cancellation resets progress rather than leaving the machine at high speed");
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
     public void workingAspectColoursFollowRecipeWithoutChangingCosts(TestContext c) {
         for (var recipe : net.alkahest.transmutation.TransmutationRecipe.all()) {
             var aspects = TransmutatorCoreBlockEntity.particleAspects(recipe);

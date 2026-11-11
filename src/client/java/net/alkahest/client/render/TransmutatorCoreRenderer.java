@@ -1,6 +1,10 @@
 package net.alkahest.client.render;
 
 import net.alkahest.Alkahest;
+import net.alkahest.animation.TransmutatorAnimation;
+
+import java.util.Map;
+import java.util.WeakHashMap;
 import net.alkahest.block.custom.TransmutatorAssemblyBlock;
 import net.alkahest.block.custom.TransmutatorCoreBlock;
 import net.alkahest.block.entity.TransmutatorCoreBlockEntity;
@@ -26,6 +30,8 @@ import net.minecraft.world.World;
 public final class TransmutatorCoreRenderer implements BlockEntityRenderer<TransmutatorCoreBlockEntity> {
     private static final Identifier METAL = Alkahest.id("textures/block/matrix_ring_metal.png");
     private static final int SEGMENTS = 32;
+    // Renderer instances are shared across blocks; retain independent, collectible phases per core.
+    private final Map<TransmutatorCoreBlockEntity, TransmutatorAnimation.Motion> motion = new WeakHashMap<>();
 
     public TransmutatorCoreRenderer(BlockEntityRendererFactory.Context context) { }
 
@@ -36,17 +42,20 @@ public final class TransmutatorCoreRenderer implements BlockEntityRenderer<Trans
         BlockState chamber = world.getBlockState(core.getPos().up());
         boolean tower = chamber.isOf(ModBlocks.TRANSMUTATOR_CHAMBER)
             && world.getBlockState(core.getPos().up(2)).isOf(ModBlocks.TRANSMUTATOR_CROWN);
-        if (tower && chamber.get(TransmutatorAssemblyBlock.AWAKE)) {
-            boolean working = core.getCachedState().get(TransmutatorCoreBlock.WORKING);
-            float time = (world.getTime() % 240000L) + tickDelta;
-            float speed = working ? 1.1f : .32f;
+        if (!tower) return;
+        boolean awakened = chamber.get(TransmutatorAssemblyBlock.AWAKE);
+        boolean working = awakened && core.getCachedState().get(TransmutatorCoreBlock.WORKING);
+        var animation = motion.computeIfAbsent(core, ignored -> new TransmutatorAnimation.Motion());
+        animation.update(world.getTime() + (double)tickDelta, core.visualProgress(tickDelta, working),
+            TransmutatorCoreBlockEntity.DURATION, working);
+        if (awakened) {
             // Request the consumer once and do not switch render layers while writing its quads.
             VertexConsumer buffer = vertices.getBuffer(RenderLayer.getEntitySolid(METAL));
             matrices.push();
             matrices.translate(.5f, 1.5f, .5f);
             for (int i = 0; i < 2; i++) {
                 matrices.push();
-                matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(time * speed * (i == 0 ? 1f : -.8f)));
+                matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(i == 0 ? animation.ringAngle() : animation.outerRingAngle()));
                 matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(i == 0 ? 23f : -30f));
                 ring(buffer, matrices.peek(), i == 0 ? .29f : .34f, i == 0 ? .325f : .375f, .014f, light);
                 matrices.pop();
@@ -56,10 +65,10 @@ public final class TransmutatorCoreRenderer implements BlockEntityRenderer<Trans
         // The real amulet replaces the former static crystal in the chamber, without a cord.
         // Render after the rings: switching render layers can invalidate an earlier consumer.
         ItemStack amulet = core.getStack(TransmutatorCoreBlockEntity.AMULET);
-        if (tower && amulet.getItem() instanceof AlkahestAmuletItem) {
+        if (amulet.getItem() instanceof AlkahestAmuletItem) {
             matrices.push();
             matrices.translate(.5f, 1.5f, .5f);
-            matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(180f));
+            matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(180f + animation.amuletAngle()));
             matrices.scale(.65f, .65f, .65f);
             ItemRenderer renderer = MinecraftClient.getInstance().getItemRenderer();
             var model = renderer.getModel(amulet, world, null, 0);
