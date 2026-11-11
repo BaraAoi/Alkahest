@@ -1,4 +1,5 @@
 {
+  "screen.alkahest.monocle.cauldron_evaporation": "Испарение примерно через %s с",
   "message.alkahest.air_header": "Атмосфера области от %s, %s, %s (16×16×16):",
   "message.alkahest.air_value": "%s: %s (естественный фон: %s)",
   "message.alkahest.air_chance": "Вероятность попытки проявления: %s%% в минуту при игроке поблизости.",

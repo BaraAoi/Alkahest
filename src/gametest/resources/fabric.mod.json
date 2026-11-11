@@ -7,7 +7,7 @@
   "entrypoints": {
     "main": ["net.alkahest.test.TestItems"],
     "fabric-gametest": [
-      "net.alkahest.test.AtmosphereGameTests",
+      "net.alkahest.atmosphere.AtmosphereGameTests",
       "net.alkahest.test.RecipeEssenceGameTests",
       "net.alkahest.test.ReagentGameTests",
       "net.alkahest.test.CauldronGameTests",

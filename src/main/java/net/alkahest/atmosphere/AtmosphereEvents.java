@@ -63,12 +63,16 @@ public final class AtmosphereEvents {
     }
     /** Returns true only on a successful spawn; public for deterministic server tests. */
     public static boolean spawnAt(ServerWorld world, BlockPos origin, BlockPos target, EssenceType type) {
+        return spawnAt(world, origin, target, type, world.getServer().getPlayerManager().getPlayerList());
+    }
+    // Injectable only within the package: the vanilla GameTest mock is not a connected player.
+    static boolean spawnAt(ServerWorld world, BlockPos origin, BlockPos target, EssenceType type,
+                           java.util.List<ServerPlayerEntity> players) {
         if (world.getDifficulty() == Difficulty.PEACEFUL || !world.getGameRules().getBoolean(GameRules.DO_MOB_SPAWNING)
                 || !world.isChunkLoaded(target) || !AtmosphereState.cellOrigin(target).equals(AtmosphereState.cellOrigin(origin))) return false;
         var entityType = ModEntities.ELEMENTALS.get(type);
         if (entityType == null || target.getY() < world.getBottomY() || target.getY() >= world.getTopY() - 2) return false;
         if (!world.getEntitiesByClass(ElementalEntity.class, new Box(target).expand(24), e -> e.isAlive()).isEmpty()) return false;
-        var players = world.getServer().getPlayerManager().getPlayerList();
         if (players.stream().noneMatch(p -> p.getServerWorld() == world && !p.isSpectator()
                 && p.squaredDistanceTo(target.getX()+.5, target.getY(), target.getZ()+.5) <= 24*24)) return false;
         if (players.stream().anyMatch(p -> p.getServerWorld() == world && !p.isSpectator()

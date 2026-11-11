@@ -86,6 +86,9 @@ public class CauldronBlockEntity extends BlockEntity {
     private int essenceIdleTicks;
     private int evaporationCursor;
 
+    /** Approximate seconds before the next lost unit; synced periodically to the monocle. */
+    public int essenceEvaporationSeconds() { return Math.max(0, (1400 - essenceIdleTicks + 19) / 20); }
+
     public CauldronBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.CAULDRON, pos, state);
     }
@@ -665,7 +668,8 @@ public class CauldronBlockEntity extends BlockEntity {
                     break;
                 }
             }
-            if (self.essenceIdleTicks % 20 == 0) self.markDirty();
+            if (self.essenceIdleTicks % 100 == 0) self.syncEssences();
+            else if (self.essenceIdleTicks % 20 == 0) self.markDirty();
         } else if (self.essenceIdleTicks != 0) {
             self.essenceIdleTicks = 0; self.markDirty();
         }

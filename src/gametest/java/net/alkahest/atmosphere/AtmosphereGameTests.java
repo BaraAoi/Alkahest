@@ -1,4 +1,4 @@
-package net.alkahest.test;
+package net.alkahest.atmosphere;
 
 import net.alkahest.atmosphere.AtmosphereEvents;
 import net.alkahest.atmosphere.AtmosphereMath;
@@ -150,11 +150,10 @@ public class AtmosphereGameTests implements FabricGameTest {
         var rule = w.getGameRules().get(net.minecraft.world.GameRules.DO_MOB_SPAWNING);
         boolean oldRule = rule.get();
         rule.set(false, w.getServer());
-        c.assertFalse(AtmosphereEvents.spawnAt(w, origin, target, EssenceType.IGNIS), "Disabled mob spawning prevents manifestation");
+        c.assertFalse(AtmosphereEvents.spawnAt(w, origin, target, EssenceType.IGNIS, List.of(player)), "Disabled mob spawning prevents manifestation");
         rule.set(true, w.getServer());
         try {
         c.assertTrue(w.isChunkLoaded(target), "Target chunk must be loaded");
-        c.assertTrue(w.getServer().getPlayerManager().getPlayerList().contains(player), "Mock player is registered with the server");
         c.assertTrue(player.getServerWorld() == w, "Mock player belongs to the test dimension");
         c.assertTrue(player.squaredDistanceTo(target.getX()+.5, target.getY(), target.getZ()+.5) >= 64
             && player.squaredDistanceTo(target.getX()+.5, target.getY(), target.getZ()+.5) <= 576, "Player must be in the 8–24 block range");
@@ -164,19 +163,19 @@ public class AtmosphereGameTests implements FabricGameTest {
             w, net.minecraft.entity.SpawnReason.EVENT, target, w.random), "Target must have space for an elemental");
         var air = AtmosphereState.of(w); air.add(w, target, EssenceType.IGNIS, 40);
         double before = air.levels(w, target).get(EssenceType.IGNIS);
-        c.assertTrue(AtmosphereEvents.spawnAt(w, origin, target, EssenceType.IGNIS), "Valid player distance and clear loaded space allow manifestation");
+        c.assertTrue(AtmosphereEvents.spawnAt(w, origin, target, EssenceType.IGNIS, List.of(player)), "Valid player distance and clear loaded space allow manifestation");
         c.assertTrue(Math.abs(air.levels(w, target).get(EssenceType.IGNIS) - before + 25) < 1e-8,
             "Successful manifestation spends only 25 excess Ignis");
         var mobs = w.getEntitiesByClass(net.alkahest.entity.ElementalEntity.class,
             new net.minecraft.util.math.Box(target).expand(24), e -> e.isAlive());
         c.assertTrue(mobs.size() == 1 && mobs.getFirst().essenceType() == EssenceType.IGNIS, "The selected elemental actually appears");
-        c.assertFalse(AtmosphereEvents.spawnAt(w, origin, target, EssenceType.IGNIS), "A nearby elemental enforces the local cap");
+        c.assertFalse(AtmosphereEvents.spawnAt(w, origin, target, EssenceType.IGNIS, List.of(player)), "A nearby elemental enforces the local cap");
         mobs.forEach(net.minecraft.entity.Entity::discard);
         player.setPosition(target.getX() + .5, target.getY(), target.getZ() + .5);
-        c.assertFalse(AtmosphereEvents.spawnAt(w, origin, target, EssenceType.IGNIS), "Never spawn on top of a player");
+        c.assertFalse(AtmosphereEvents.spawnAt(w, origin, target, EssenceType.IGNIS, List.of(player)), "Never spawn on top of a player");
         } finally {
             rule.set(oldRule, w.getServer());
-            w.getServer().getPlayerManager().remove(player);
+            player.discard();
         }
         c.complete();
     }

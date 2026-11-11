@@ -1,4 +1,5 @@
 {
+  "screen.alkahest.monocle.cauldron_evaporation": "Evaporation in about %s s",
   "message.alkahest.air_header": "Atmosphere in cell from %s, %s, %s (16×16×16):",
   "message.alkahest.air_value": "%s: %s (natural baseline: %s)",
   "message.alkahest.air_chance": "Manifestation roll chance: %s%% per minute while a player is nearby.",
