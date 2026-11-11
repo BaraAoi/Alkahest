@@ -246,7 +246,14 @@ public final class ItemEssenceMap {
         if (stack.isIn(LOGS) || stack.isIn(PLANKS)) return List.of(s(HERBA, 4), s(TERRA, 2));
         return List.of();
     }
-    /** Do not destroy stored items, loot tables, bees, saved entities or filled essence jars. */
+    /** Vanilla aquatic buckets deliberately consume their creature with the vessel. */
+    private static boolean vanillaCreatureBucket(ItemStack stack) {
+        return stack.isOf(Items.AXOLOTL_BUCKET) || stack.isOf(Items.COD_BUCKET)
+            || stack.isOf(Items.PUFFERFISH_BUCKET) || stack.isOf(Items.SALMON_BUCKET)
+            || stack.isOf(Items.TADPOLE_BUCKET) || stack.isOf(Items.TROPICAL_FISH_BUCKET);
+    }
+
+    /** Protect stored items, loot, bees, other saved entities and filled essence jars. */
     public static boolean safeToConsume(ItemStack stack) {
         if (stack.isEmpty()) return false;
         var container = stack.get(net.minecraft.component.DataComponentTypes.CONTAINER);
@@ -258,7 +265,8 @@ public final class ItemEssenceMap {
         if (stack.contains(net.minecraft.component.DataComponentTypes.CONTAINER_LOOT)
             || stack.contains(net.minecraft.component.DataComponentTypes.BLOCK_ENTITY_DATA)
             || stack.contains(net.minecraft.component.DataComponentTypes.ENTITY_DATA)
-            || stack.contains(net.minecraft.component.DataComponentTypes.BUCKET_ENTITY_DATA)) return false;
+            || (stack.contains(net.minecraft.component.DataComponentTypes.BUCKET_ENTITY_DATA)
+                && !vanillaCreatureBucket(stack))) return false;
         return !(stack.getItem() instanceof net.alkahest.item.custom.JarItem)
             || net.alkahest.item.custom.JarItem.contents(stack).total() == 0;
     }
