@@ -10,7 +10,11 @@ import java.util.Map;
 /** Pure, deterministic calculation for single-output crafting recipes. */
 public final class RecipeEssenceCalculator {
     /** Each ingredient slot contains alternative item IDs; empty grid positions are omitted. */
-    public record Recipe(String id, String output, int count, List<List<String>> slots) { }
+    public record Recipe(String id, String output, int count, List<List<String>> slots, Map<String, String> remainders) {
+        public Recipe(String id, String output, int count, List<List<String>> slots) {
+            this(id, output, count, slots, Map.of());
+        }
+    }
     public static Map<String, Map<EssenceType, Double>> calculate(
             Map<String, Map<EssenceType, Double>> seeds, List<Recipe> recipes) {
         Map<String, Map<EssenceType, Double>> known = new HashMap<>();
@@ -25,9 +29,16 @@ public final class RecipeEssenceCalculator {
                 EnumMap<EssenceType, Double> sum = new EnumMap<>(EssenceType.class);
                 boolean ready = true;
                 for (List<String> slot : recipe.slots()) {
-                    String selected = slot.stream().filter(known::containsKey).sorted().findFirst().orElse(null);
+                    String selected = slot.stream().filter(known::containsKey)
+                        .filter(id -> !recipe.remainders().containsKey(id) || known.containsKey(recipe.remainders().get(id)))
+                        .sorted().findFirst().orElse(null);
                     if (selected == null) { ready = false; break; }
-                    known.get(selected).forEach((type, amount) -> sum.merge(type, amount, Double::sum));
+                    Map<EssenceType, Double> returned = recipe.remainders().containsKey(selected)
+                        ? known.get(recipe.remainders().get(selected)) : Map.of();
+                    known.get(selected).forEach((type, amount) -> {
+                        double consumed = Math.max(0.0, amount - returned.getOrDefault(type, 0.0));
+                        if (consumed > 0) sum.merge(type, consumed, Double::sum);
+                    });
                 }
                 if (!ready || sum.isEmpty()) continue;
                 // Keep fractions and large intermediate values: a later recipe may divide them.

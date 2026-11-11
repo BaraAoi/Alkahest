@@ -25,7 +25,10 @@ required = ['minecraft:blast_furnace', 'alkahest:distillery_tier2', 'minecraft:c
     'minecraft:cracked_deepslate_bricks', 'minecraft:cracked_deepslate_tiles',
     'minecraft:chiseled_deepslate', 'minecraft:deepslate_diamond_ore', 'minecraft:tuff',
     'minecraft:polished_tuff', 'minecraft:tuff_bricks', 'minecraft:mud_bricks',
-    'minecraft:chiseled_sandstone', 'minecraft:smooth_sandstone']
+    'minecraft:chiseled_sandstone', 'minecraft:smooth_sandstone', 'minecraft:cake', 'minecraft:honey_block',
+    'minecraft:brown_dye', 'minecraft:brown_wool', 'minecraft:black_concrete', 'minecraft:shulker_box',
+    'minecraft:exposed_copper', 'minecraft:weathered_copper', 'minecraft:oxidized_copper',
+    'minecraft:waxed_oxidized_copper', 'minecraft:netherite_ingot', 'alkahest:purifying_flask']
 for name in required:
     assert name in by_id and by_id[name]['status'] != 'missing', f'Missing composition for {name}'
 missing = [row for row in rows if row['status'] == 'missing']

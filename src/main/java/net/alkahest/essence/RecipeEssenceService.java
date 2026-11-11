@@ -57,23 +57,28 @@ public final class RecipeEssenceService {
                 ItemStack output = recipe.getResult(server.getRegistryManager());
                 if (output.isEmpty()) continue;
                 List<List<String>> slots = new ArrayList<>();
+                Map<String, String> remainders = new HashMap<>();
                 for (var ingredient : recipe.getIngredients()) {
                     if (ingredient.isEmpty()) continue; // blank shaped-grid position
                     List<String> alternatives = new ArrayList<>();
                     for (ItemStack candidate : ingredient.getMatchingStacks()) {
-                        // Containers/tools returned by crafting are not fully consumed.
-                        if (!candidate.isEmpty() && !candidate.getItem().hasRecipeRemainder())
-                            alternatives.add(Registries.ITEM.getId(candidate.getItem()).toString());
+                        if (candidate.isEmpty()) continue;
+                        Item item = candidate.getItem();
+                        String id = Registries.ITEM.getId(item).toString();
+                        alternatives.add(id);
+                        if (item.hasRecipeRemainder())
+                            remainders.put(id, Registries.ITEM.getId(item.getRecipeRemainder()).toString());
                     }
                     slots.add(alternatives);
                 }
                 recipes.add(new RecipeEssenceCalculator.Recipe(entry.id().toString(),
-                    Registries.ITEM.getId(output.getItem()).toString(), output.getCount(), slots));
+                    Registries.ITEM.getId(output.getItem()).toString(), output.getCount(), slots, remainders));
             } catch (RuntimeException ex) {
                 LoggerFactory.getLogger("Alkahest").warn("Could not read crafting recipe {} for essence calculation", entry.id(), ex);
             }
         }
         addAlchemyRecipes(recipes);
+        addVanillaWorldTransformations(recipes);
         var computed = RecipeEssenceCalculator.calculate(seeds, recipes);
         Map<Item, List<EssenceStack>> snapshot = new HashMap<>();
         for (var entry : computed.entrySet()) {
@@ -125,6 +130,27 @@ public final class RecipeEssenceService {
         }
         recipes.add(new RecipeEssenceCalculator.Recipe("~alkahest/" + machine + "/" + String.format(java.util.Locale.ROOT, "%03d", index),
             Registries.ITEM.getId(output).toString(), count, slots));
+    }
+
+    /** Known vanilla world interactions with a conserved source (not guesses about modded items). */
+    private static void addVanillaWorldTransformations(List<RecipeEssenceCalculator.Recipe> recipes) {
+        String[] colors = {"white", "orange", "magenta", "light_blue", "yellow", "lime", "pink", "gray",
+            "light_gray", "cyan", "purple", "blue", "brown", "green", "red", "black"};
+        for (String color : colors)
+            worldTransform(recipes, color + "_concrete_powder", color + "_concrete");
+        // Oxidation changes state but does not consume the underlying copper block or device.
+        String[] variants = {"copper", "cut_copper", "cut_copper_slab", "cut_copper_stairs",
+            "chiseled_copper", "copper_grate", "copper_bulb", "copper_door", "copper_trapdoor"};
+        for (String variant : variants) {
+            String original = variant.equals("copper") ? "copper_block" : variant;
+            worldTransform(recipes, original, "exposed_" + variant);
+            worldTransform(recipes, "exposed_" + variant, "weathered_" + variant);
+            worldTransform(recipes, "weathered_" + variant, "oxidized_" + variant);
+        }
+    }
+    private static void worldTransform(List<RecipeEssenceCalculator.Recipe> recipes, String from, String to) {
+        recipes.add(new RecipeEssenceCalculator.Recipe("~world/" + to, "minecraft:" + to, 1,
+            List.of(List.of("minecraft:" + from))));
     }
 
     /** The report describes this world's actual loaded registry and current datapack snapshot. */

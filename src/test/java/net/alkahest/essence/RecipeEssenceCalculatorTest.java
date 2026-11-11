@@ -46,6 +46,12 @@ class RecipeEssenceCalculatorTest {
         assertFalse(values.containsKey("missing"));
         assertFalse(values.containsKey("zero"));
     }
+    @Test void subtractsReturnedContainersAndRequiresTheirKnownComposition() {
+        var seeds = Map.of("milk", Map.of(METALLUM, 6.0, AQUA, 3.0), "bucket", Map.of(METALLUM, 6.0));
+        var recipe = new Recipe("cake", "food", 1, List.of(List.of("milk")), Map.of("milk", "bucket"));
+        assertEquals(Map.of(AQUA, 3.0), calculate(seeds, List.of(recipe)).get("food"));
+        assertFalse(calculate(Map.of("milk", seeds.get("milk")), List.of(recipe)).containsKey("food"));
+    }
     @Test void integerBoundsAndRounding() {
         assertEquals(List.of(new EssenceStack(AQUA, 1, 1f)), rounded(Map.of(AQUA, .1)));
         assertEquals(List.of(new EssenceStack(ORDO, 256, 1f)), rounded(Map.of(ORDO, 9999.0)));

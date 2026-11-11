@@ -66,7 +66,10 @@ public class RecipeEssenceGameTests implements FabricGameTest {
             Items.CRACKED_DEEPSLATE_BRICKS, Items.CRACKED_DEEPSLATE_TILES,
             Items.CHISELED_DEEPSLATE, Items.DEEPSLATE_DIAMOND_ORE, Items.TUFF,
             Items.POLISHED_TUFF, Items.TUFF_BRICKS, Items.MUD_BRICKS,
-            Items.CHISELED_SANDSTONE, Items.SMOOTH_SANDSTONE)) {
+            Items.CHISELED_SANDSTONE, Items.SMOOTH_SANDSTONE, Items.CAKE, Items.HONEY_BLOCK,
+            Items.BROWN_DYE, Items.BROWN_WOOL, Items.BLACK_CONCRETE, Items.SHULKER_BOX,
+            Items.EXPOSED_COPPER, Items.WEATHERED_COPPER, Items.OXIDIZED_COPPER,
+            Items.WAXED_OXIDIZED_COPPER, Items.NETHERITE_INGOT, ModItems.PURIFYING_FLASK)) {
             c.assertFalse(ItemEssenceMap.get(new ItemStack(item), world).isEmpty(),
                 "Missing essence for " + net.minecraft.registry.Registries.ITEM.getId(item));
         }
