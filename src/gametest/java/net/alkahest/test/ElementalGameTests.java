@@ -195,8 +195,8 @@ public class ElementalGameTests implements FabricGameTest {
 
     @GameTest(templateName = EMPTY_STRUCTURE)
     public void antipodeBoundElementalsDropHighStabilityCrystals(TestContext context) {
-        BlockPos posA = context.getAbsolutePos(new BlockPos(2, 2, 2));
-        ElementalEntity ignis = context.spawnEntity(ModEntities.ELEMENTALS.get(EssenceType.IGNIS), 2, 2, 2);
+        BlockPos posA = context.getAbsolutePos(new BlockPos(2, 50, 2));
+        ElementalEntity ignis = context.spawnEntity(ModEntities.ELEMENTALS.get(EssenceType.IGNIS), 2, 50, 2);
         context.assertTrue(ignis.applyBindingSalt(EssenceType.AQUA, 300, null),
             "Aqua binding salt must anchor Ignis Elemental");
         ignis.damage(context.getWorld().getDamageSources().generic(), 100.0f);
@@ -211,8 +211,8 @@ public class ElementalGameTests implements FabricGameTest {
         context.assertTrue(ignisStability != null && ignisStability >= 0.649f && ignisStability <= 0.751f,
             "Dropped Ignis crystal stability must be in [0.65, 0.75], got " + ignisStability);
 
-        BlockPos posB = context.getAbsolutePos(new BlockPos(8, 2, 8));
-        ElementalEntity ordo = context.spawnEntity(ModEntities.ELEMENTALS.get(EssenceType.ORDO), 8, 2, 8);
+        BlockPos posB = context.getAbsolutePos(new BlockPos(8, 50, 8));
+        ElementalEntity ordo = context.spawnEntity(ModEntities.ELEMENTALS.get(EssenceType.ORDO), 8, 50, 8);
         context.assertTrue(ordo.applyBindingSalt(EssenceType.PERDITIO, 300, null),
             "Perditio binding salt must anchor Ordo Elemental");
         ordo.damage(context.getWorld().getDamageSources().generic(), 100.0f);

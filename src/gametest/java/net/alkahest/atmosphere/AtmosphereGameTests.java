@@ -225,6 +225,7 @@ public class AtmosphereGameTests implements FabricGameTest {
         c.assertFalse(AtmosphereEvents.spawnAt(w, origin, target, EssenceType.IGNIS, List.of(player)), "Never spawn on top of a player");
         } finally {
             rule.set(oldRule, w.getServer());
+            AtmosphereState.of(w).spend(w, target, EssenceType.IGNIS, 80);
             player.discard();
         }
         c.complete();

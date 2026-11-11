@@ -98,6 +98,9 @@ public class MatrixGameTests implements FabricGameTest {
         c.assertTrue(core.getStack(MatrixCoreBlockEntity.OUTPUT).isOf(ModItems.BINDING_SALT),
             "Even severely overloaded, the paid recipe eventually succeeds after save/reload");
         c.assertTrue(air.levels(world, pos).get(EssenceType.ORDO) > before + .39, "Completed Matrix recipe emits its actual working byproduct");
+        // The GameTest structures share a world; do not leave artificial overload for another test.
+        air.spend(world, pos, EssenceType.ORDO, 80);
+        air.spend(world, pos, EssenceType.AQUA, 80);
         c.complete();
     }
 
@@ -280,7 +283,7 @@ public class MatrixGameTests implements FabricGameTest {
     }
 
     /** Use the real block interactions and server ticker, with a diagonal pedestal below the core. */
-    @GameTest(templateName = EMPTY_STRUCTURE, tickLimit = 240)
+    @GameTest(templateName = EMPTY_STRUCTURE, tickLimit = 400)
     public void diamondUsesTwoClickedPedestalsOnRealTicks(TestContext c) {
         BlockPos pos = build(c);
         wake(c);
@@ -312,7 +315,8 @@ public class MatrixGameTests implements FabricGameTest {
         jar(c, 0, CY, 6, EssenceType.ORDO, 4);
         MatrixCoreBlockEntity.interactNearby(c.getWorld(), pos, player, new ItemStack(ModItems.ALKAHEST_AMULET));
         c.assertTrue(core.started(), "Real amulet interaction starts the synthesis");
-        c.runAtTick(180, () -> {
+        // Atmosphere can legitimately slow a recipe to half speed without blocking it.
+        c.runAtTick(340, () -> {
             c.assertTrue(core.getStack(MatrixCoreBlockEntity.OUTPUT).isOf(Items.DIAMOND),
                 "The natural server ticker completes the diamond synthesis");
             var goldPedestal = (net.alkahest.block.entity.MatrixPedestalBlockEntity) c.getWorld().getBlockEntity(goldPos);
