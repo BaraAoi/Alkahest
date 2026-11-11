@@ -20,6 +20,83 @@ import net.minecraft.test.TestContext;
 
 public class RecipeEssenceGameTests implements FabricGameTest {
     @GameTest(templateName = EMPTY_STRUCTURE)
+    public void bucketCompositionAndVaporSources(TestContext c) {
+        var world = c.getWorld();
+        var bucket = CauldronBlockEntity.essencesOf(new ItemStack(Items.BUCKET), world);
+        c.assertTrue(bucket.getOrDefault(EssenceType.METALLUM, 0) == 18 && bucket.getOrDefault(EssenceType.TERRA, 0) == 6,
+            "Empty bucket derives from three iron ingots");
+        for (var item : java.util.List.of(Items.WATER_BUCKET, Items.LAVA_BUCKET, Items.MILK_BUCKET,
+                Items.POWDER_SNOW_BUCKET, Items.COD_BUCKET, Items.SALMON_BUCKET, Items.TROPICAL_FISH_BUCKET,
+                Items.PUFFERFISH_BUCKET, Items.AXOLOTL_BUCKET, Items.TADPOLE_BUCKET)) {
+            var values = CauldronBlockEntity.essencesOf(new ItemStack(item), world);
+            c.assertTrue(values.getOrDefault(EssenceType.METALLUM, 0) == 18 && values.getOrDefault(EssenceType.TERRA, 0) == 6,
+                "Every default filled bucket includes the whole iron vessel: " + item);
+        }
+        var water = CauldronBlockEntity.essencesOf(new ItemStack(Items.WATER_BUCKET), world);
+        c.assertTrue(water.getOrDefault(EssenceType.AQUA, 0) == 10, "The existing water content remains Aqua 10");
+        var snow = CauldronBlockEntity.essencesOf(new ItemStack(Items.SNOWBALL), world);
+        c.assertTrue(snow.getOrDefault(EssenceType.AQUA, 0) == 1 && snow.getOrDefault(EssenceType.GELUM, 0) == 1,
+            "Snowball composition and Gelum are unchanged");
+        var ice = CauldronBlockEntity.essencesOf(new ItemStack(Items.ICE), world);
+        c.assertTrue(ice.getOrDefault(EssenceType.GELUM, 0) == 2, "Ice Gelum remains unchanged");
+        for (var check : java.util.Map.of(Items.SNOW_BLOCK, 4, Items.PACKED_ICE, 18, Items.BLUE_ICE, 162).entrySet()) {
+            var values = ItemEssenceMap.get(new ItemStack(check.getKey()), world);
+            c.assertTrue(values.stream().anyMatch(e -> e.type() == EssenceType.GELUM && e.amount() == check.getValue()),
+                "Other existing Gelum sources remain unchanged: " + check.getKey());
+        }
+        for (var item : java.util.List.of(Items.WET_SPONGE, Items.CAMPFIRE, Items.SOUL_CAMPFIRE)) {
+            var values = CauldronBlockEntity.essencesOf(new ItemStack(item), world);
+            c.assertTrue(values.getOrDefault(EssenceType.VAPOR, 0) == 1, "Natural Vapor source: " + item);
+            c.assertTrue(Tier2DistilleryBlockEntity.outputs(new ItemStack(item), world.random, false, world)
+                .stream().anyMatch(e -> e.type() == EssenceType.VAPOR), "Tier two can output Vapor: " + item);
+        }
+        // Cake consumes milk but the vanilla recipe returns three buckets, so no vessel metal is inherited.
+        var cake = ItemEssenceMap.get(new ItemStack(Items.CAKE), world);
+        c.assertFalse(cake.stream().anyMatch(e -> e.type() == EssenceType.METALLUM), "Cake does not inherit returned bucket metal");
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void filledBucketIsConsumedWhole(TestContext c) {
+        var world = c.getWorld();
+        c.setBlockState(3, 1, 3, Blocks.MAGMA_BLOCK);
+        c.setBlockState(3, 2, 3, ModBlocks.ALCHEMY_CAULDRON);
+        var pos = c.getAbsolutePos(new BlockPos(3, 2, 3));
+        var cauldron = (CauldronBlockEntity) world.getBlockEntity(pos);
+        var player = c.createMockPlayer(GameMode.SURVIVAL);
+        player.setStackInHand(Hand.MAIN_HAND, new ItemStack(Items.WATER_BUCKET));
+        cauldron.fill(player, Hand.MAIN_HAND); // Filling remains a separate vanilla-style interaction.
+        var dropped = new net.minecraft.entity.ItemEntity(world, pos.getX() + .5, pos.getY() + .5, pos.getZ() + .5,
+            new ItemStack(Items.WATER_BUCKET));
+        world.spawnEntity(dropped);
+        CauldronBlockEntity.tick(world, pos, cauldron);
+        c.assertTrue(dropped.isRemoved(), "Dropped bucket is consumed whole");
+        c.assertTrue(cauldron.essences().getOrDefault(EssenceType.METALLUM, 0) == 18
+            && cauldron.essences().getOrDefault(EssenceType.TERRA, 0) == 6
+            && cauldron.essences().getOrDefault(EssenceType.AQUA, 0) == 10, "Cauldron receives vessel and water");
+        c.setBlockState(5, 2, 3, ModBlocks.DISTILLERY_TIER2);
+        c.setBlockState(5, 3, 3, ModBlocks.DISTILLERY_BELLOWS);
+        c.setBlockState(5, 4, 3, ModBlocks.DISTILLERY_BELLOWS);
+        c.setBlockState(5, 5, 3, ModBlocks.DISTILLERY_BELLOWS);
+        var cubePos = c.getAbsolutePos(new BlockPos(5, 2, 3));
+        var cube = (Tier2DistilleryBlockEntity) world.getBlockEntity(cubePos);
+        cube.setStack(0, new ItemStack(Items.WATER_BUCKET));
+        for (int i = 0; i < Tier2DistilleryBlockEntity.DURATION; i++) Tier2DistilleryBlockEntity.tick(world, cubePos, cube);
+        c.assertTrue(cube.getStack(0).isEmpty(), "Tier two consumes the entire bucket without returning it");
+        c.assertTrue(cube.bellows().stream().anyMatch(b -> b.storedType() == EssenceType.METALLUM && b.amount() == 8),
+            "Tier two applies its standard cap to the vessel metal");
+        c.setBlockState(1, 2, 3, ModBlocks.DISTILLERY);
+        var crudePos = c.getAbsolutePos(new BlockPos(1, 2, 3));
+        var crude = (DistilleryBlockEntity) world.getBlockEntity(crudePos);
+        crude.setStack(0, new ItemStack(Items.WATER_BUCKET));
+        for (int i = 0; i < DistilleryBlockEntity.RAW_DURATION; i++) DistilleryBlockEntity.tick(world, crudePos, crude);
+        c.assertTrue(crude.getStack(0).isEmpty(), "Crude distillery consumes the entire bucket without returning it");
+        for (int i = 1; i <= DistilleryBlockEntity.PENDING; i++)
+            c.assertFalse(crude.getStack(i).isOf(Items.BUCKET), "No empty bucket is returned in outputs");
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
     public void actualRecipesSupplyCauldronAndDistilleries(TestContext c) {
         ItemStack crafted = new ItemStack(TestItems.CRAFTED);
         var composition = CauldronBlockEntity.essencesOf(crafted, c.getWorld());

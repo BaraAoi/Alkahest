@@ -109,7 +109,7 @@ final class VanillaEssenceSources {
             Items.CREEPER_BANNER_PATTERN, Items.FLOW_BANNER_PATTERN, Items.GLOBE_BANNER_PATTERN, Items.GUSTER_BANNER_PATTERN,
             Items.MOJANG_BANNER_PATTERN, Items.PIGLIN_BANNER_PATTERN, Items.SKULL_BANNER_PATTERN, Items.NAME_TAG
         );
-        // Milk and aquatic containers preserve the metal bucket.
+        // Aquatic and powder-snow buckets include the metal vessel in the consumed item.
         put(values, List.of(new EssenceStack(METALLUM, 18, 1f), new EssenceStack(TERRA, 6, 1f), new EssenceStack(AQUA, 3, 1f)),
             Items.AXOLOTL_BUCKET, Items.COD_BUCKET, Items.PUFFERFISH_BUCKET, Items.SALMON_BUCKET,
             Items.TADPOLE_BUCKET, Items.TROPICAL_FISH_BUCKET, Items.POWDER_SNOW_BUCKET

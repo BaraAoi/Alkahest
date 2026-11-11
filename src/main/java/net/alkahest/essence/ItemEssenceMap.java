@@ -127,6 +127,11 @@ public final class ItemEssenceMap {
         e(Items.ROOTED_DIRT, s(TERRA, 3), s(HERBA, 2)),
         e(Items.SEA_PICKLE, s(AQUA, 2), s(LUX, 1)),
         e(Items.SPONGE, s(AQUA, 3), s(HERBA, 1)),
+        // Explicit environmental sources of Vapor. Ordinary and soul campfires retain the
+        // composition of their baseline crafting ingredients as well as a trace of smoke.
+        e(Items.WET_SPONGE, s(AQUA, 3), s(HERBA, 1), s(VAPOR, 1)),
+        e(Items.CAMPFIRE, s(IGNIS, 3), s(TERRA, 10), s(HERBA, 18), s(VAPOR, 1)),
+        e(Items.SOUL_CAMPFIRE, s(TERRA, 11), s(HERBA, 18), s(MORTUUS, 2), s(VAPOR, 1)),
         e(Items.AMETHYST_CLUSTER, s(ORDO, 5), s(LUX, 3)),
         e(Items.CRYING_OBSIDIAN, s(TERRA, 4), s(PERDITIO, 2), s(SPIRITUS, 2)),
         e(Items.COAL_ORE, s(TERRA, 2), s(IGNIS, 3)),
@@ -163,7 +168,8 @@ public final class ItemEssenceMap {
         e(Items.SLIME_BALL, s(AQUA, 2), s(HERBA, 1)),
         e(Items.STRING, s(HERBA, 1), s(ORDO, 1)),
         e(Items.FERMENTED_SPIDER_EYE, s(VITIUM, 4), s(MORTUUS, 2)),
-        e(Items.WATER_BUCKET, s(AQUA, 10)),
+        // Filled buckets are consumed whole, including the three iron ingots of the vessel.
+        e(Items.WATER_BUCKET, s(AQUA, 10), s(METALLUM, 18), s(TERRA, 6)),
         e(Items.PRISMARINE_SHARD, s(AQUA, 5), s(TERRA, 2)),
         e(Items.FEATHER, s(AER, 4), s(MOTUS, 2)),
         e(Items.SUGAR, s(AER, 2), s(MOTUS, 1)),
