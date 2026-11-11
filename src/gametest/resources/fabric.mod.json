@@ -22,6 +22,7 @@
       "net.alkahest.test.ElementalGameTests",
       "net.alkahest.test.AlkahestGameTests",
       "net.alkahest.test.TransmutatorGameTests",
+      "net.alkahest.test.MidasLootGameTests",
       "net.alkahest.test.MatrixGameTests"
     ]
   },

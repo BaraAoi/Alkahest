@@ -4,7 +4,9 @@
   "package": "net.alkahest.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
-    "OverworldBiomeMixin"
+    "OverworldBiomeMixin",
+    "LivingEntityMidasLootMixin",
+    "EntityMidasDropMixin"
   ],
   "injectors": {
     "defaultRequire": 1

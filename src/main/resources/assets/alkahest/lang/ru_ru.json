@@ -371,6 +371,7 @@
   "screen.alkahest.matrix.ambiguous": "Несколько рецептов: уберите лишние компоненты с пьедесталов",
   "screen.alkahest.monocle.matrix_choose_recipe": "Разложите компоненты одного рецепта из журнала",
   "screen.alkahest.matrix.needs_start": "ПКМ амулетом или философским камнем для запуска",
+  "tooltip.alkahest.midas_elixir.mob_loot": "При убийстве моба: 50% шанс удвоить добычу",
   "tooltip.alkahest.midas_elixir.effect": "Касание Мидаса на 3 минуты",
   "tooltip.alkahest.midas_elixir.stabilizer": "Стабилизатор: скорость +20%, выход 100% (8 блоков)",
   "tooltip.alkahest.midas_elixir.distillery": "Кубы: скорость +20%, стабильность +20 п.п. (8 блоков)",
