@@ -271,4 +271,94 @@ public class ResearchGameTests implements FabricGameTest {
             "Era II research flags must survive save and reload");
         context.complete();
     }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void stabilizationRequiresParentAndARealActivePour(TestContext context) {
+        var player = context.createMockCreativeServerPlayerInWorld();
+        context.setBlockState(2, 2, 2, ModBlocks.STABILIZER_RECEIVER);
+        context.setBlockState(2, 3, 2, ModBlocks.STABILIZER_CORE);
+        context.setBlockState(2, 4, 2, ModBlocks.STABILIZER_CREST);
+        var pos = context.getAbsolutePos(new BlockPos(2, 2, 2));
+        var receiver = (net.alkahest.block.entity.StabilizerReceiverBlockEntity)context.getWorld().getBlockEntity(pos);
+        var core = (net.alkahest.block.entity.StabilizerCoreBlockEntity)context.getWorld().getBlockEntity(pos.up());
+        var parent = player.getServer().getAdvancementLoader().get(net.alkahest.Alkahest.id("research/alkahest_complete"));
+        var unlocked = player.getServer().getAdvancementLoader().get(net.alkahest.Alkahest.id("research/stabilization_discovered"));
+        player.getAdvancementTracker().revokeCriterion(parent, "done");
+        player.getAdvancementTracker().revokeCriterion(unlocked, "done");
+        var contents = new net.alkahest.essence.JarContentsComponent(java.util.List.of(new net.alkahest.essence.EssenceStack(EssenceType.AQUA, 3, .5f)));
+        ItemStack jar = new ItemStack(ModBlocks.JAR);
+        net.alkahest.item.custom.JarItem.set(jar, contents);
+        core.setActivated(true);
+        player.setStackInHand(Hand.MAIN_HAND, jar);
+        receiver.pourJar(player, Hand.MAIN_HAND);
+        context.assertTrue((EarlyResearch.flags(player) & EarlyResearch.STABILIZATION_DISCOVERED) == 0,
+            "An active pour before completing Alkahest does not discover the node");
+        player.getAdvancementTracker().grantCriterion(parent, "done");
+        receiver.setContents(net.alkahest.essence.JarContentsComponent.EMPTY);
+        core.setActivated(false);
+        net.alkahest.item.custom.JarItem.set(jar, contents);
+        receiver.pourJar(player, Hand.MAIN_HAND);
+        context.assertTrue((EarlyResearch.flags(player) & EarlyResearch.STABILIZATION_DISCOVERED) == 0,
+            "Pouring into an inactive tower does not grant the insight");
+        receiver.setContents(net.alkahest.essence.JarContentsComponent.EMPTY);
+        core.setActivated(true);
+        // An empty jar and a full receiver are not successful pours.
+        receiver.pourJar(player, Hand.MAIN_HAND);
+        context.assertTrue((EarlyResearch.flags(player) & EarlyResearch.STABILIZATION_DISCOVERED) == 0, "Empty jars do not discover research");
+        receiver.setContents(new net.alkahest.essence.JarContentsComponent(java.util.List.of(
+            new net.alkahest.essence.EssenceStack(EssenceType.AQUA, net.alkahest.item.custom.JarItem.CAPACITY, .5f))));
+        net.alkahest.item.custom.JarItem.set(jar, contents);
+        receiver.pourJar(player, Hand.MAIN_HAND);
+        context.assertTrue((EarlyResearch.flags(player) & EarlyResearch.STABILIZATION_DISCOVERED) == 0, "A full receiver does not discover research");
+        receiver.setContents(net.alkahest.essence.JarContentsComponent.EMPTY);
+        receiver.pourJar(player, Hand.MAIN_HAND);
+        context.assertTrue((EarlyResearch.flags(player) & EarlyResearch.STABILIZATION_DISCOVERED) != 0,
+            "A real single-type jar poured into an active tower unlocks the research");
+        context.assertTrue(receiver.contents().total() == 3 && net.alkahest.item.custom.JarItem.contents(jar).total() == 0,
+            "Discovery does not change or duplicate the actual poured liquid");
+        context.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void stabilizationHypothesesPersistAndDoNotRequireMixedJars(TestContext context) {
+        var costs = Map.of(EssenceType.ORDO, 3, EssenceType.POTENTIA, 2);
+        ItemStack ordo = new ItemStack(ModItems.CRYSTALS.get(EssenceType.ORDO));
+        ItemStack perditio = new ItemStack(ModItems.CRYSTALS.get(EssenceType.PERDITIO));
+        context.assertTrue(EarlyResearch.identify(0, costs, ordo) == EarlyResearch.Attempt.NONE, "Undiscovered research cannot trigger");
+        context.assertTrue(EarlyResearch.identify(EarlyResearch.STABILIZATION_DISCOVERED, Map.of(EssenceType.ORDO, 3), ordo) == EarlyResearch.Attempt.NONE,
+            "Both subject essences are needed");
+        context.assertTrue(EarlyResearch.identify(EarlyResearch.STABILIZATION_DISCOVERED, costs, ordo) == EarlyResearch.Attempt.STABILITY_ORDO,
+            "Ordo is the correct hypothesis");
+        context.assertTrue(EarlyResearch.identify(EarlyResearch.STABILIZATION_DISCOVERED, costs, perditio) == EarlyResearch.Attempt.STABILITY_PERDITIO,
+            "Perditio is a distinct failed hypothesis");
+        context.setBlockState(5, 1, 5, Blocks.MAGMA_BLOCK);
+        context.setBlockState(5, 2, 5, ModBlocks.ALCHEMY_CAULDRON);
+        var pos = context.getAbsolutePos(new BlockPos(5, 2, 5));
+        var cauldron = (CauldronBlockEntity)context.getWorld().getBlockEntity(pos);
+        var player = context.createMockCreativeServerPlayerInWorld();
+        for (String id : new String[]{"stabilization_discovered", "stabilization_complete", "stabilization_perditio", "stabilization_quartz"}) {
+            var entry = player.getServer().getAdvancementLoader().get(net.alkahest.Alkahest.id("research/" + id));
+            player.getAdvancementTracker().revokeCriterion(entry, "done");
+        }
+        var entry = player.getServer().getAdvancementLoader().get(net.alkahest.Alkahest.id("research/stabilization_discovered"));
+        player.getAdvancementTracker().grantCriterion(entry, "done");
+        useOnCauldron(cauldron, player, new ItemStack(Items.WATER_BUCKET));
+        context.assertTrue(useOnCauldron(cauldron, player, new ItemStack(Items.QUARTZ)), "Quartz dissolves as the subject");
+        context.assertTrue(useOnCauldron(cauldron, player, perditio.copy()), "The Perditio experiment is recorded");
+        context.assertTrue((EarlyResearch.flags(player) & EarlyResearch.FAILED_STABILITY_PERDITIO) != 0, "The failed Perditio bit is stored above bit 32");
+        context.assertTrue(useOnCauldron(cauldron, player, new ItemStack(Items.QUARTZ)), "Another subject can be prepared");
+        var before = Map.copyOf(cauldron.essences());
+        context.assertFalse(useOnCauldron(cauldron, player, perditio.copy()), "Repeating a failed attempt is rejected");
+        context.assertTrue(cauldron.essences().equals(before), "A rejected retry does not consume the subject");
+        context.assertTrue(useOnCauldron(cauldron, player, new ItemStack(Items.QUARTZ)), "Quartz itself is the second failed catalyst");
+        context.assertTrue((EarlyResearch.flags(player) & EarlyResearch.FAILED_STABILITY_QUARTZ) != 0, "The quartz failure is recorded");
+        context.assertTrue(useOnCauldron(cauldron, player, new ItemStack(Items.QUARTZ)), "Subject can be prepared again");
+        context.assertTrue(useOnCauldron(cauldron, player, ordo.copy()), "Ordo completes the hypothesis");
+        long expected = EarlyResearch.STABILIZATION_COMPLETED | EarlyResearch.FAILED_STABILITY_PERDITIO | EarlyResearch.FAILED_STABILITY_QUARTZ;
+        context.assertTrue((EarlyResearch.flags(player) & expected) == expected, "Completion and both failures are recorded");
+        player.getAdvancementTracker().save();
+        player.getAdvancementTracker().reload(context.getWorld().getServer().getAdvancementLoader());
+        context.assertTrue((EarlyResearch.flags(player) & expected) == expected, "High-bit research flags survive save and reload");
+        context.complete();
+    }
 }

@@ -54,7 +54,8 @@ for adv_name in (
     'chain_ignis_discovered', 'chain_ignis_cane', 'chain_ignis_feather', 'chain_ignis_complete',
     'chain_aqua_discovered', 'chain_aqua_sand', 'chain_aqua_ice', 'chain_aqua_complete',
     'binding_discovered', 'binding_slime', 'binding_bone_meal', 'binding_complete',
-    'alkahest_discovered', 'alkahest_gold', 'alkahest_obsidian', 'alkahest_complete'
+    'alkahest_discovered', 'alkahest_gold', 'alkahest_obsidian', 'alkahest_complete',
+    'stabilization_discovered', 'stabilization_perditio', 'stabilization_quartz', 'stabilization_complete'
 ):
     data = json.loads((adv / f'{adv_name}.json').read_text())
     assert data['criteria']['done']['trigger'] == 'minecraft:impossible', adv_name
@@ -78,9 +79,13 @@ for locale in ('ru_ru', 'en_us'):
     assert data.get('effect.alkahest.crystallized'), locale
     assert data.get('screen.alkahest.journal.page.7'), locale
     assert data.get('screen.alkahest.journal.page.8'), locale
-    for node in ('chain_ignis', 'chain_aqua', 'binding', 'the_alkahest'):
+    for node in ('chain_ignis', 'chain_aqua', 'binding', 'the_alkahest', 'stabilization'):
         for suffix in ('title', 'hidden', 'locked', 'hypothesis', 'instructions', 'completed'):
             assert data.get(f'screen.alkahest.{node}.{suffix}'), (locale, node, suffix)
+    for choice in ('ordo', 'perditio', 'quartz'):
+        assert data.get(f'screen.alkahest.stabilization.{choice}'), (locale, choice)
+    for result in ('stability_success', 'stability_perditio', 'stability_quartz'):
+        assert data.get(f'message.alkahest.research.{result}'), (locale, result)
     for name in ('jar_bulk_full', 'jar_bulk_added', 'cauldron_no_residue', 'cauldron_crystallized',
                  'cauldron_contents', 'cauldron_dissolved', 'cauldron_essence_full',
                  'cauldron_missing_essences', 'cauldron_cannot_dissolve',

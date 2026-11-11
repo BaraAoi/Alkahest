@@ -46,7 +46,9 @@ public final class JournalScreen extends Screen {
         new Node("binding", EarlyResearch.IGNIS_COMPLETED | EarlyResearch.AQUA_COMPLETED, EarlyResearch.BINDING_DISCOVERED, EarlyResearch.BINDING_COMPLETED, 400, 0,
             new ItemStack(ModItems.BINDING_SALT), new String[]{"string", "slime", "bonemeal"}, new long[]{0L, EarlyResearch.FAILED_SLIME, EarlyResearch.FAILED_BONE_MEAL}),
         new Node("the_alkahest", EarlyResearch.BINDING_COMPLETED, EarlyResearch.ALKAHEST_DISCOVERED, EarlyResearch.ALKAHEST_COMPLETED, 476, 0,
-            new ItemStack(ModItems.ALKAHEST_VIAL), new String[]{"diamond", "gold", "obsidian"}, new long[]{0L, EarlyResearch.FAILED_GOLD, EarlyResearch.FAILED_OBSIDIAN})
+            new ItemStack(ModItems.ALKAHEST_VIAL), new String[]{"diamond", "gold", "obsidian"}, new long[]{0L, EarlyResearch.FAILED_GOLD, EarlyResearch.FAILED_OBSIDIAN}),
+        new Node("stabilization", EarlyResearch.ALKAHEST_COMPLETED, EarlyResearch.STABILIZATION_DISCOVERED, EarlyResearch.STABILIZATION_COMPLETED, 552, 0,
+            new ItemStack(ModBlocks.STABILIZER_CORE), new String[]{"ordo", "perditio", "quartz"}, new long[]{0L, EarlyResearch.FAILED_STABILITY_PERDITIO, EarlyResearch.FAILED_STABILITY_QUARTZ})
     };
     private final long researchFlags;
     private boolean guide;
@@ -110,7 +112,7 @@ public final class JournalScreen extends Screen {
         link(c, NODES[2], NODES[4]); link(c, NODES[3], NODES[4]);
         link(c, NODES[4], NODES[5]); link(c, NODES[4], NODES[6]);
         link(c, NODES[5], NODES[7]); link(c, NODES[6], NODES[7]);
-        link(c, NODES[7], NODES[8]);
+        link(c, NODES[7], NODES[8]); link(c, NODES[8], NODES[9]);
         for (Node node : NODES) if (!state(node).equals("hidden")) drawNode(c, node, mouseX, mouseY);
         c.disableScissor();
         c.drawCenteredTextWithShadow(textRenderer, Text.translatable("screen.alkahest.journal.map_hint"), left + bookWidth / 2, top + bookHeight - 24, 0xFFD4C4A0);
@@ -292,7 +294,9 @@ public final class JournalScreen extends Screen {
     }
     @Override public boolean mouseDragged(double x, double y, int button, double dx, double dy) {
         if (button == 0 && dragging && !guide && selected == null) {
-            panX = MathHelper.clamp(panX + dx, -300, 120);
+            // Keep the farthest node reachable even on a narrow book/GUI scale.
+            double minPanX = Math.min(-300, mapW() - NODES[NODES.length - 1].x() - 36);
+            panX = MathHelper.clamp(panX + dx, minPanX, 120);
             panY = MathHelper.clamp(panY + dy, -70, 70);
             return true;
         }

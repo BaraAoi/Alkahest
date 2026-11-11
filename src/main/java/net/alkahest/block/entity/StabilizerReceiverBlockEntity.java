@@ -116,6 +116,8 @@ public class StabilizerReceiverBlockEntity extends BlockEntity {
         setContents(current.merge(addition, CAPACITY));
         // The jar is not consumed: it stays in hand, now empty or holding what did not fit.
         JarItem.set(held, new JarContentsComponent(remainder));
+        if (world != null && !world.isClient && active() && player instanceof net.minecraft.server.network.ServerPlayerEntity researcher)
+            net.alkahest.research.EarlyResearch.discoverStabilization(researcher, world, pos.up());
         if (remainder.isEmpty()) message(player, "message.alkahest.stabilizer_poured", addition.total());
         else message(player, "message.alkahest.stabilizer_pour_full", addition.total(), new JarContentsComponent(remainder).total());
     }

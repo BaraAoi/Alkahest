@@ -30,6 +30,8 @@ public final class EarlyResearch {
     public static final long AQUA_DISCOVERED = 1L << 21, FAILED_AQUA_SAND = 1L << 22, FAILED_ICE = 1L << 23, AQUA_COMPLETED = 1L << 24;
     public static final long BINDING_DISCOVERED = 1L << 25, FAILED_SLIME = 1L << 26, FAILED_BONE_MEAL = 1L << 27, BINDING_COMPLETED = 1L << 28;
     public static final long ALKAHEST_DISCOVERED = 1L << 29, FAILED_GOLD = 1L << 30, FAILED_OBSIDIAN = 1L << 31, ALKAHEST_COMPLETED = 1L << 32;
+    public static final long STABILIZATION_DISCOVERED = 1L << 33, FAILED_STABILITY_PERDITIO = 1L << 34,
+        FAILED_STABILITY_QUARTZ = 1L << 35, STABILIZATION_COMPLETED = 1L << 36;
 
     private static final String[] IDS = {
         "root", "cauldron_discovered", "cauldron_sand", "cauldron_sugar", "cauldron_complete",
@@ -39,7 +41,8 @@ public final class EarlyResearch {
         "chain_ignis_discovered", "chain_ignis_cane", "chain_ignis_feather", "chain_ignis_complete",
         "chain_aqua_discovered", "chain_aqua_sand", "chain_aqua_ice", "chain_aqua_complete",
         "binding_discovered", "binding_slime", "binding_bone_meal", "binding_complete",
-        "alkahest_discovered", "alkahest_gold", "alkahest_obsidian", "alkahest_complete"
+        "alkahest_discovered", "alkahest_gold", "alkahest_obsidian", "alkahest_complete",
+        "stabilization_discovered", "stabilization_perditio", "stabilization_quartz", "stabilization_complete"
     };
     private static final long[] BITS = {
         ROOT, DISCOVERED, FAILED_SAND, FAILED_SUGAR, COMPLETED,
@@ -49,7 +52,8 @@ public final class EarlyResearch {
         IGNIS_DISCOVERED, FAILED_CANE, FAILED_IGNIS_FEATHER, IGNIS_COMPLETED,
         AQUA_DISCOVERED, FAILED_AQUA_SAND, FAILED_ICE, AQUA_COMPLETED,
         BINDING_DISCOVERED, FAILED_SLIME, FAILED_BONE_MEAL, BINDING_COMPLETED,
-        ALKAHEST_DISCOVERED, FAILED_GOLD, FAILED_OBSIDIAN, ALKAHEST_COMPLETED
+        ALKAHEST_DISCOVERED, FAILED_GOLD, FAILED_OBSIDIAN, ALKAHEST_COMPLETED,
+        STABILIZATION_DISCOVERED, FAILED_STABILITY_PERDITIO, FAILED_STABILITY_QUARTZ, STABILIZATION_COMPLETED
     };
 
     public enum Attempt {
@@ -59,6 +63,7 @@ public final class EarlyResearch {
         AQUA_KELP, AQUA_SAND, AQUA_ICE,
         BINDING_STRING, BINDING_SLIME, BINDING_BONE_MEAL,
         ALKAHEST_DIAMOND, ALKAHEST_GOLD, ALKAHEST_OBSIDIAN,
+        STABILITY_ORDO, STABILITY_PERDITIO, STABILITY_QUARTZ,
         ALREADY_FAILED
     }
 
@@ -70,6 +75,8 @@ public final class EarlyResearch {
     private static final Map<EssenceType, Integer> AQUA_COST = Map.of(AQUA, 5, TERRA, 2);
     private static final Map<EssenceType, Integer> BINDING_COST = Map.of(ORDO, 2, TERRA, 1, AQUA, 1);
     private static final Map<EssenceType, Integer> ALKAHEST_COST = Map.of(HERBA, 3, VITIUM, 2, ORDO, 2);
+    // Quartz is a reachable experimental subject; normal jars cannot contain mixtures.
+    private static final Map<EssenceType, Integer> STABILITY_COST = Map.of(ORDO, 3, POTENTIA, 2);
 
     private static AdvancementEntry entry(ServerPlayerEntity player, String name) {
         return player.getServer().getAdvancementLoader().get(Alkahest.id("research/" + name));
@@ -134,6 +141,12 @@ public final class EarlyResearch {
             insight(player, world, pos);
     }
 
+    /** Pouring into an active stabilizer substitutes for the forbidden mixed-jar trigger. */
+    public static void discoverStabilization(ServerPlayerEntity player, World world, BlockPos pos) {
+        if (has(player, "alkahest_complete") && !has(player, "stabilization_discovered")
+            && grant(player, "stabilization_discovered")) insight(player, world, pos);
+    }
+
     private static void insight(ServerPlayerEntity player, World world, BlockPos pos) {
         player.sendMessage(Text.translatable("message.alkahest.research.insight"), false);
         player.sendMessage(Text.translatable("message.alkahest.research.insight"), true);
@@ -186,6 +199,11 @@ public final class EarlyResearch {
             if (catalyst.isOf(Items.GOLD_INGOT)) return (flags & FAILED_GOLD) == 0 ? Attempt.ALKAHEST_GOLD : Attempt.ALREADY_FAILED;
             if (catalyst.isOf(Items.OBSIDIAN)) return (flags & FAILED_OBSIDIAN) == 0 ? Attempt.ALKAHEST_OBSIDIAN : Attempt.ALREADY_FAILED;
         }
+        if ((flags & STABILIZATION_DISCOVERED) != 0 && (flags & STABILIZATION_COMPLETED) == 0 && hasAll(essences, STABILITY_COST)) {
+            if (catalyst.isOf(ModItems.CRYSTALS.get(ORDO))) return Attempt.STABILITY_ORDO;
+            if (catalyst.isOf(ModItems.CRYSTALS.get(PERDITIO))) return (flags & FAILED_STABILITY_PERDITIO) == 0 ? Attempt.STABILITY_PERDITIO : Attempt.ALREADY_FAILED;
+            if (catalyst.isOf(Items.QUARTZ)) return (flags & FAILED_STABILITY_QUARTZ) == 0 ? Attempt.STABILITY_QUARTZ : Attempt.ALREADY_FAILED;
+        }
         return Attempt.NONE;
     }
 
@@ -199,6 +217,7 @@ public final class EarlyResearch {
             case AQUA_KELP, AQUA_SAND, AQUA_ICE -> AQUA_COST;
             case BINDING_STRING, BINDING_SLIME, BINDING_BONE_MEAL -> BINDING_COST;
             case ALKAHEST_DIAMOND, ALKAHEST_GOLD, ALKAHEST_OBSIDIAN -> ALKAHEST_COST;
+            case STABILITY_ORDO, STABILITY_PERDITIO, STABILITY_QUARTZ -> STABILITY_COST;
             default -> Map.of();
         };
     }
@@ -218,6 +237,7 @@ public final class EarlyResearch {
             case AQUA_KELP -> "chain_aqua_complete"; case AQUA_SAND -> "chain_aqua_sand"; case AQUA_ICE -> "chain_aqua_ice";
             case BINDING_STRING -> "binding_complete"; case BINDING_SLIME -> "binding_slime"; case BINDING_BONE_MEAL -> "binding_bone_meal";
             case ALKAHEST_DIAMOND -> "alkahest_complete"; case ALKAHEST_GOLD -> "alkahest_gold"; case ALKAHEST_OBSIDIAN -> "alkahest_obsidian";
+            case STABILITY_ORDO -> "stabilization_complete"; case STABILITY_PERDITIO -> "stabilization_perditio"; case STABILITY_QUARTZ -> "stabilization_quartz";
             default -> null;
         };
         if (id == null || !grant(player, id)) return false;
@@ -230,12 +250,13 @@ public final class EarlyResearch {
             case AQUA_KELP -> "aqua_success"; case AQUA_SAND -> "aqua_sand"; case AQUA_ICE -> "aqua_ice";
             case BINDING_STRING -> "binding_success"; case BINDING_SLIME -> "binding_slime"; case BINDING_BONE_MEAL -> "binding_bone_meal";
             case ALKAHEST_DIAMOND -> "alkahest_success"; case ALKAHEST_GOLD -> "alkahest_gold"; case ALKAHEST_OBSIDIAN -> "alkahest_obsidian";
+            case STABILITY_ORDO -> "stability_success"; case STABILITY_PERDITIO -> "stability_perditio"; case STABILITY_QUARTZ -> "stability_quartz";
             default -> throw new IllegalStateException("Unexpected attempt");
         };
         player.sendMessage(Text.translatable("message.alkahest.research." + result), false);
         boolean success = attempt == Attempt.COAL || attempt == Attempt.REDSTONE || attempt == Attempt.RAW_COPPER
             || attempt == Attempt.SIGHT_GLASS || attempt == Attempt.IGNIS_COAL || attempt == Attempt.AQUA_KELP
-            || attempt == Attempt.BINDING_STRING || attempt == Attempt.ALKAHEST_DIAMOND;
+            || attempt == Attempt.BINDING_STRING || attempt == Attempt.ALKAHEST_DIAMOND || attempt == Attempt.STABILITY_ORDO;
         world.spawnParticles(success ? ParticleTypes.TOTEM_OF_UNDYING : ParticleTypes.LARGE_SMOKE,
             pos.getX() + .5, pos.getY() + 1.15, pos.getZ() + .5, success ? 30 : 55, .32, .28, .32, .08);
         if (!success) {
