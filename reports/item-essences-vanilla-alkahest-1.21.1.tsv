@@ -258,7 +258,7 @@ minecraft:cake	block	recipe	aqua=10,aer=4,ordo=3,herba=17,motus=2
 minecraft:calcite	block	manual	terra=3,ordo=1
 minecraft:calibrated_sculk_sensor	block	recipe	ordo=15,lux=9,mortuus=2,spiritus=2
 minecraft:camel_spawn_egg	item	manual	spiritus=3,herba=2
-minecraft:campfire	block	recipe	ignis=3,terra=10,herba=18
+minecraft:campfire	block	manual	ignis=3,terra=10,herba=18,vapor=1
 minecraft:candle	block	recipe	ordo=2,herba=3
 minecraft:carrot	block	manual	herba=3,aqua=1
 minecraft:carrot_on_a_stick	item	recipe	aqua=1,terra=3,ordo=2,herba=11
@@ -1161,7 +1161,7 @@ minecraft:snow	block	recipe	aqua=2,gelum=2
 minecraft:snow_block	block	recipe	aqua=4,gelum=4
 minecraft:snow_golem_spawn_egg	item	manual	spiritus=3,herba=2
 minecraft:snowball	item	manual	aqua=1,gelum=1
-minecraft:soul_campfire	block	recipe	terra=11,herba=18,mortuus=2
+minecraft:soul_campfire	block	manual	terra=11,herba=18,mortuus=2,vapor=1
 minecraft:soul_lantern	block	recipe	terra=1,lux=2,mortuus=4
 minecraft:soul_sand	block	manual	terra=2,mortuus=2
 minecraft:soul_soil	block	manual	terra=2,mortuus=2
@@ -1310,7 +1310,7 @@ minecraft:warped_stairs	block	recipe	terra=3,herba=6
 minecraft:warped_stem	block	manual	herba=4,terra=2
 minecraft:warped_trapdoor	block	recipe	terra=6,herba=12
 minecraft:warped_wart_block	block	manual	herba=4,ignis=2
-minecraft:water_bucket	item	manual	aqua=10
+minecraft:water_bucket	item	manual	aqua=10,metallum=18,terra=6
 minecraft:waxed_chiseled_copper	block	recipe	ordo=1,herba=2,metallum=36,potentia=9
 minecraft:waxed_copper_block	block	recipe	ordo=1,herba=2,metallum=36,potentia=9
 minecraft:waxed_copper_bulb	block	recipe	ignis=2,ordo=1,herba=2,metallum=27,potentia=9
@@ -1358,7 +1358,7 @@ minecraft:weathered_cut_copper	block	recipe	metallum=36,potentia=9
 minecraft:weathered_cut_copper_slab	block	recipe	metallum=18,potentia=5
 minecraft:weathered_cut_copper_stairs	block	recipe	metallum=54,potentia=14
 minecraft:weeping_vines	block	manual	herba=3,aqua=1
-minecraft:wet_sponge	block	recipe	aqua=3,herba=1
+minecraft:wet_sponge	block	manual	aqua=3,herba=1,vapor=1
 minecraft:wheat	item	manual	herba=3,ordo=1
 minecraft:wheat_seeds	block	manual	herba=3,aqua=1
 minecraft:white_banner	block	recipe	terra=1,ordo=24,herba=26
