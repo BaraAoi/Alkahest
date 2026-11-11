@@ -12,7 +12,7 @@ import net.minecraft.test.TestContext;
 
 public class PracticalResearchGameTests implements FabricGameTest {
     @GameTest(templateName = EMPTY_STRUCTURE)
-    public void observationsArePlayerSpecificPersistentAndWaitForParents(TestContext c) {
+    public void observationsPersistAndWaitForParents(TestContext c) {
         var player = c.createMockCreativeServerPlayerInWorld();
         for (var step : PracticalResearchPlan.STEPS) for (String kind : new String[]{"observed", "completed"}) {
             var entry = player.getServer().getAdvancementLoader().get(Alkahest.id("practice/" + kind + "_" + step.id()));
@@ -34,6 +34,38 @@ public class PracticalResearchGameTests implements FabricGameTest {
         player.getAdvancementTracker().reload(c.getWorld().getServer().getAdvancementLoader());
         c.assertTrue(PracticalResearchStorage.completed(player) == expected, "Completion survives reload");
         c.assertTrue((PracticalResearchStorage.observed(player) & PracticalResearchPlan.MONOCLE) != 0, "Observation survives reload");
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void completedLegacyResearchMigratesWithoutDeletingOldState(TestContext c) {
+        var player = c.createMockCreativeServerPlayerInWorld();
+        for (var step : PracticalResearchPlan.STEPS) for (String kind : new String[]{"observed", "completed"}) {
+            var entry = player.getServer().getAdvancementLoader().get(Alkahest.id("practice/" + kind + "_" + step.id()));
+            player.getAdvancementTracker().revokeCriterion(entry, "done");
+        }
+        // A fresh tracker state for the legacy milestones used here, including a discovered-only node.
+        for (String name : new String[]{"cauldron_complete", "alkahest_complete", "stabilization_discovered", "stabilization_complete"}) {
+            var entry = player.getServer().getAdvancementLoader().get(Alkahest.id("research/" + name));
+            player.getAdvancementTracker().revokeCriterion(entry, "done");
+        }
+        var oldCauldron = player.getServer().getAdvancementLoader().get(Alkahest.id("research/cauldron_complete"));
+        var oldAlkahest = player.getServer().getAdvancementLoader().get(Alkahest.id("research/alkahest_complete"));
+        var oldDiscovered = player.getServer().getAdvancementLoader().get(Alkahest.id("research/stabilization_discovered"));
+        player.getAdvancementTracker().grantCriterion(oldCauldron, "done");
+        player.getAdvancementTracker().grantCriterion(oldAlkahest, "done");
+        player.getAdvancementTracker().grantCriterion(oldDiscovered, "done");
+        PracticalResearchStorage.migrate(player);
+        long migrated = PracticalResearchStorage.completed(player);
+        c.assertTrue((migrated & (PracticalResearchPlan.CAULDRON | PracticalResearchPlan.ALKAHEST))
+            == (PracticalResearchPlan.CAULDRON | PracticalResearchPlan.ALKAHEST), "Completed old nodes are preserved even when the new order differs");
+        c.assertTrue((migrated & PracticalResearchPlan.STABILIZER) == 0, "Merely discovering an old node does not complete it");
+        c.assertTrue(player.getAdvancementTracker().getProgress(oldAlkahest).isDone(), "Migration does not revoke original progress");
+        PracticalResearchStorage.migrate(player);
+        c.assertTrue(PracticalResearchStorage.completed(player) == migrated, "Repeated migration is idempotent");
+        player.getAdvancementTracker().save();
+        player.getAdvancementTracker().reload(c.getWorld().getServer().getAdvancementLoader());
+        c.assertTrue(PracticalResearchStorage.completed(player) == migrated, "Migrated progress survives reload");
         c.complete();
     }
 }
