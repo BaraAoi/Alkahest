@@ -105,47 +105,17 @@ public final class EarlyResearch {
             .orElse(false);
     }
 
-    public static void openJournal(ServerPlayerEntity player) { grant(player, "root"); }
-    public static void discoverCauldron(ServerPlayerEntity player, World world, BlockPos pos) {
-        if (!has(player, "root") || has(player, "cauldron_discovered")) return;
-        if (grant(player, "cauldron_discovered")) insight(player, world, pos);
-    }
-    public static void discoverReactive(ServerPlayerEntity player, World world, BlockPos pos) {
-        if (!has(player, "cauldron_complete") || has(player, "reactive_discovered")) return;
-        if (grant(player, "reactive_discovered")) insight(player, world, pos);
-    }
-    public static void discoverRaw(ServerPlayerEntity player, World world, BlockPos pos) {
-        if (has(player, "cauldron_complete") && !has(player, "raw_discovered") && grant(player, "raw_discovered"))
-            insight(player, world, pos);
-    }
-    public static void discoverSight(ServerPlayerEntity player, World world, BlockPos pos) {
-        if (has(player, "raw_complete") && has(player, "reactive_complete") &&
-            !has(player, "sight_discovered") && grant(player, "sight_discovered"))
-            insight(player, world, pos);
-    }
-    public static void discoverIgnis(ServerPlayerEntity player, World world, BlockPos pos) {
-        if (has(player, "sight_complete") && !has(player, "chain_ignis_discovered") && grant(player, "chain_ignis_discovered"))
-            insight(player, world, pos);
-    }
-    public static void discoverAqua(ServerPlayerEntity player, World world, BlockPos pos) {
-        if (has(player, "sight_complete") && !has(player, "chain_aqua_discovered") && grant(player, "chain_aqua_discovered"))
-            insight(player, world, pos);
-    }
-    public static void discoverBinding(ServerPlayerEntity player, World world, BlockPos pos) {
-        if (has(player, "chain_ignis_complete") && has(player, "chain_aqua_complete") &&
-            !has(player, "binding_discovered") && grant(player, "binding_discovered"))
-            insight(player, world, pos);
-    }
-    public static void discoverAlkahest(ServerPlayerEntity player, World world, BlockPos pos) {
-        if (has(player, "binding_complete") && !has(player, "alkahest_discovered") && grant(player, "alkahest_discovered"))
-            insight(player, world, pos);
-    }
-
-    /** Pouring into an active stabilizer substitutes for the forbidden mixed-jar trigger. */
-    public static void discoverStabilization(ServerPlayerEntity player, World world, BlockPos pos) {
-        if (has(player, "alkahest_complete") && !has(player, "stabilization_discovered")
-            && grant(player, "stabilization_discovered")) insight(player, world, pos);
-    }
+    // Old trigger hooks are intentionally inert. Stored achievements are retained for migration.
+    public static void openJournal(ServerPlayerEntity player) { }
+    public static void discoverCauldron(ServerPlayerEntity p, World w, BlockPos pos) { }
+    public static void discoverReactive(ServerPlayerEntity p, World w, BlockPos pos) { }
+    public static void discoverRaw(ServerPlayerEntity p, World w, BlockPos pos) { }
+    public static void discoverSight(ServerPlayerEntity p, World w, BlockPos pos) { }
+    public static void discoverIgnis(ServerPlayerEntity p, World w, BlockPos pos) { }
+    public static void discoverAqua(ServerPlayerEntity p, World w, BlockPos pos) { }
+    public static void discoverBinding(ServerPlayerEntity p, World w, BlockPos pos) { }
+    public static void discoverAlkahest(ServerPlayerEntity p, World w, BlockPos pos) { }
+    public static void discoverStabilization(ServerPlayerEntity p, World w, BlockPos pos) { }
 
     private static void insight(ServerPlayerEntity player, World world, BlockPos pos) {
         player.sendMessage(Text.translatable("message.alkahest.research.insight"), false);

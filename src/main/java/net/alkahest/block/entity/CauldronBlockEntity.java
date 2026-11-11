@@ -366,34 +366,6 @@ public class CauldronBlockEntity extends BlockEntity {
             return false;
         }
 
-        if (player instanceof ServerPlayerEntity researcher && world instanceof ServerWorld serverWorld) {
-            var attempt = EarlyResearch.identify(EarlyResearch.flags(researcher), essences, held);
-            if (attempt == EarlyResearch.Attempt.ALREADY_FAILED) {
-                message(player, "message.alkahest.research.already_failed");
-                return false;
-            }
-            if (attempt != EarlyResearch.Attempt.NONE) {
-                if (!EarlyResearch.record(researcher, attempt, serverWorld, pos)) return false;
-                deductEssences(EarlyResearch.cost(attempt));
-                if (!player.isCreative()) held.decrement(1);
-                if (attempt == EarlyResearch.Attempt.ALKAHEST_GOLD) {
-                    explodeIntoDissolved(serverWorld, player);
-                    return true;
-                }
-                if (attempt == EarlyResearch.Attempt.SAND || attempt == EarlyResearch.Attempt.ALKAHEST_OBSIDIAN) {
-                    dirtyWater = true;
-                    syncWaterState();
-                }
-                if (attempt == EarlyResearch.Attempt.ALKAHEST_DIAMOND
-                    || attempt == EarlyResearch.Attempt.ALKAHEST_OBSIDIAN) {
-                    mossStabilized = false;
-                }
-                evaporation = 0;
-                syncEssences();
-                return true;
-            }
-        }
-
         // Binary Alkahest synthesis & instability reactions when striking with a Diamond lattice
         if (held.isOf(Items.DIAMOND) && world instanceof ServerWorld serverWorld) {
             if (mossStabilized) {

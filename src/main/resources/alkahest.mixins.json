@@ -6,7 +6,8 @@
   "mixins": [
     "OverworldBiomeMixin",
     "LivingEntityMidasLootMixin",
-    "EntityMidasDropMixin"
+    "EntityMidasDropMixin",
+    "PlayerInventoryResearchMixin"
   ],
   "injectors": {
     "defaultRequire": 1

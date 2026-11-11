@@ -7,8 +7,7 @@ import net.minecraft.registry.Registries;
 import net.minecraft.server.network.ServerPlayerEntity;
 
 /**
- * Server-side persistence for the new practical tree. Not yet connected to gameplay;
- * keep the old progress and handlers intact until all recipe gates are ready.
+ * Server-side persistence for practical research. Recipes are never blocked.
  */
 public final class PracticalResearchStorage {
     private static AdvancementEntry entry(ServerPlayerEntity player, String kind, PracticalResearchPlan.Step step) {
@@ -34,9 +33,27 @@ public final class PracticalResearchStorage {
     public static void observe(ServerPlayerEntity player, ItemStack stack) {
         if (stack.isEmpty()) return;
         var step = PracticalResearchPlan.forItem(Registries.ITEM.getId(stack.getItem()).toString());
-        if (step == null) return;
+        if (step == null || has(player, "observed", step)) return;
         grant(player, "observed", step);
         settle(player);
+    }
+
+    /** Scan only items belonging to the player, not items in an open container. */
+    public static void scan(ServerPlayerEntity player) {
+        long before = completed(player);
+        for (int i = 0; i < player.getInventory().size(); i++) observe(player, player.getInventory().getStack(i));
+        observe(player, player.currentScreenHandler.getCursorStack());
+        dev.emi.trinkets.api.TrinketsApi.getTrinketComponent(player).ifPresent(component -> {
+            for (var step : PracticalResearchPlan.STEPS) {
+                var item = Registries.ITEM.get(net.minecraft.util.Identifier.of(step.itemId()));
+                if (component.isEquipped(item)) observe(player, new ItemStack(item));
+            }
+        });
+        if (completed(player) != before) {
+            player.sendMessage(net.minecraft.text.Text.translatable("message.alkahest.practice.completed"), true);
+            player.getWorld().playSound(null, player.getBlockPos(), net.minecraft.sound.SoundEvents.ENTITY_EXPERIENCE_ORB_PICKUP,
+                net.minecraft.sound.SoundCategory.PLAYERS, 0.7f, 1.0f);
+        }
     }
 
     /** Idempotent migration; no old advancement is removed or modified. */

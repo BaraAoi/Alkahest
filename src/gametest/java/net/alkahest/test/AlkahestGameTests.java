@@ -211,60 +211,6 @@ public class AlkahestGameTests implements FabricGameTest {
         BlockPos pos = c.getAbsolutePos(new BlockPos(3, 2, 3));
         ServerPlayerEntity player = c.createMockCreativeServerPlayerInWorld();
 
-        // Advance through Elemental Binding so The Alkahest can unlock
-        EarlyResearch.openJournal(player);
-        EarlyResearch.discoverCauldron(player, c.getWorld(), pos);
-        clickCauldron(cauldron, player, new ItemStack(Items.WATER_BUCKET));
-        clickCauldron(cauldron, player, new ItemStack(Items.CHARCOAL));
-        clickCauldron(cauldron, player, new ItemStack(Items.COAL));
-        EarlyResearch.discoverReactive(player, c.getWorld(), pos);
-        EarlyResearch.discoverRaw(player, c.getWorld(), pos);
-        clickCauldron(cauldron, player, new ItemStack(Items.GUNPOWDER));
-        clickCauldron(cauldron, player, new ItemStack(Items.REDSTONE));
-        clickCauldron(cauldron, player, new ItemStack(ModItems.HERBAL_PASTE));
-        clickCauldron(cauldron, player, new ItemStack(Items.COPPER_INGOT));
-        EarlyResearch.discoverSight(player, c.getWorld(), pos);
-        clickCauldron(cauldron, player, new ItemStack(ModItems.CRYSTALS.get(EssenceType.ORDO)));
-        clickCauldron(cauldron, player, new ItemStack(Items.GLASS_PANE));
-        EarlyResearch.discoverIgnis(player, c.getWorld(), pos);
-        EarlyResearch.discoverAqua(player, c.getWorld(), pos);
-        clickCauldron(cauldron, player, new ItemStack(Items.BLAZE_ROD));
-        clickCauldron(cauldron, player, new ItemStack(Items.COAL));
-        clickCauldron(cauldron, player, new ItemStack(Items.PRISMARINE_SHARD));
-        clickCauldron(cauldron, player, new ItemStack(Items.KELP));
-        EarlyResearch.discoverBinding(player, c.getWorld(), pos);
-        clickCauldron(cauldron, player, new ItemStack(ModItems.SALT));
-        clickCauldron(cauldron, player, new ItemStack(Items.STRING));
-
-        // Dissolving Alchemical Moss unlocks The Alkahest
-        c.assertTrue(clickCauldron(cauldron, player, new ItemStack(ModBlocks.ALCHEMICAL_MOSS)), "Moss dissolves and unlocks The Alkahest");
-        c.assertTrue((EarlyResearch.flags(player) & EarlyResearch.ALKAHEST_DISCOVERED) != 0, "The Alkahest discovered");
-
-        // Wrong hypothesis 1: Obsidian petrifies moss and clouds water
-        c.assertTrue(clickCauldron(cauldron, player, new ItemStack(Items.OBSIDIAN)), "Obsidian hypothesis processed");
-        c.assertTrue((EarlyResearch.flags(player) & EarlyResearch.FAILED_OBSIDIAN) != 0, "Obsidian failure recorded");
-        c.assertTrue(c.getWorld().getBlockState(pos).get(AlchemyCauldronBlock.DIRTY), "Obsidian clouds water");
-
-        // Wrong hypothesis 2: Gold Ingot explodes cauldron and spawns Dissolved
-        clickCauldron(cauldron, player, new ItemStack(Items.WATER_BUCKET));
-        clickCauldron(cauldron, player, new ItemStack(ModBlocks.ALCHEMICAL_MOSS));
-        c.assertTrue(clickCauldron(cauldron, player, new ItemStack(Items.GOLD_INGOT)), "Gold hypothesis processed");
-        c.assertTrue((EarlyResearch.flags(player) & EarlyResearch.FAILED_GOLD) != 0, "Gold failure recorded");
-        c.assertTrue(c.getWorld().getBlockState(pos).isAir(), "Gold hypothesis explodes cauldron");
-        c.getWorld().getEntitiesByClass(DissolvedEntity.class, new Box(pos).expand(2.5), e -> true).forEach(DissolvedEntity::discard);
-
-        // Correct hypothesis: Diamond completes The Alkahest
-        CauldronBlockEntity rebuilt = setupCauldron(c, 3, 2, 3);
-        clickCauldron(rebuilt, player, new ItemStack(Items.WATER_BUCKET));
-        clickCauldron(rebuilt, player, new ItemStack(ModBlocks.ALCHEMICAL_MOSS));
-        c.assertTrue(clickCauldron(rebuilt, player, new ItemStack(Items.DIAMOND)), "Diamond completes The Alkahest");
-        c.assertTrue((EarlyResearch.flags(player) & EarlyResearch.ALKAHEST_COMPLETED) != 0, "The Alkahest completed");
-
-        player.getAdvancementTracker().save();
-        player.getAdvancementTracker().reload(c.getWorld().getServer().getAdvancementLoader());
-        long expected = EarlyResearch.ALKAHEST_COMPLETED | EarlyResearch.FAILED_GOLD | EarlyResearch.FAILED_OBSIDIAN;
-        c.assertTrue((EarlyResearch.flags(player) & expected) == expected, "64-bit Era III research flags survive save and reload");
-
         // Verify Alkahest Amulet crafting recipe, 5-uses-per-charge efficiency, and Ordo recharging
         var input = CraftingRecipeInput.create(3, 3, List.of(
             ItemStack.EMPTY, new ItemStack(Items.STRING), ItemStack.EMPTY,

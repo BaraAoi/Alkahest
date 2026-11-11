@@ -139,3 +139,17 @@ for locale in ('ru_ru', 'en_us'):
         assert data.get('screen.alkahest.monocle.' + name), (locale, name)
 
 print('Laboratory items, Elementals, Alkahest Era III assets, worldgen and translations validated')
+
+# Practical research entries and persistent criteria are both required for every node.
+for name in ('cauldron', 'water', 'distillery', 'monocle', 'ignis_wand', 'aqua_wand', 'binding_salt', 'alkahest', 'stabilizer'):
+    for kind in ('observed', 'completed'):
+        entry = json.loads((data_root / f'advancement/practice/{kind}_{name}.json').read_text())
+        assert entry['criteria']['done']['trigger'] == 'minecraft:impossible', (kind, name)
+    for locale in ('ru_ru', 'en_us'):
+        lang = json.loads((base / f'lang/{locale}.json').read_text())
+        for field in ('title', 'recipe'):
+            assert lang.get(f'screen.alkahest.practice.{name}.{field}'), (locale, name, field)
+        assert lang.get('message.alkahest.practice.completed'), locale
+        for page in range(9):
+            text = lang.get(f'screen.alkahest.journal.page.{page}', '').lower()
+            assert 'гипотез' not in text and 'hypothesis' not in text, (locale, page)

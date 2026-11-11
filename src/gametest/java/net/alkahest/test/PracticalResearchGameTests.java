@@ -68,4 +68,30 @@ public class PracticalResearchGameTests implements FabricGameTest {
         c.assertTrue(PracticalResearchStorage.completed(player) == migrated, "Migrated progress survives reload");
         c.complete();
     }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void inventoryScanAndCauldronNoLongerTriggerHypotheses(TestContext c) {
+        var player = c.createMockCreativeServerPlayerInWorld();
+        for (var step : PracticalResearchPlan.STEPS) for (String kind : new String[]{"observed", "completed"}) {
+            var entry = player.getServer().getAdvancementLoader().get(Alkahest.id("practice/" + kind + "_" + step.id()));
+            player.getAdvancementTracker().revokeCriterion(entry, "done");
+        }
+        var old = player.getServer().getAdvancementLoader().get(Alkahest.id("research/cauldron_discovered"));
+        player.getAdvancementTracker().grantCriterion(old, "done");
+        c.setBlockState(2, 1, 2, net.minecraft.block.Blocks.MAGMA_BLOCK);
+        c.setBlockState(2, 2, 2, ModBlocks.ALCHEMY_CAULDRON);
+        var cauldron = (net.alkahest.block.entity.CauldronBlockEntity)c.getWorld().getBlockEntity(c.getAbsolutePos(new net.minecraft.util.math.BlockPos(2, 2, 2)));
+        player.setStackInHand(net.minecraft.util.Hand.MAIN_HAND, new ItemStack(net.minecraft.item.Items.WATER_BUCKET));
+        cauldron.useItem(player, net.minecraft.util.Hand.MAIN_HAND);
+        player.setStackInHand(net.minecraft.util.Hand.MAIN_HAND, new ItemStack(net.minecraft.item.Items.CHARCOAL));
+        c.assertTrue(cauldron.useItem(player, net.minecraft.util.Hand.MAIN_HAND), "Charcoal dissolves");
+        player.setStackInHand(net.minecraft.util.Hand.MAIN_HAND, new ItemStack(net.minecraft.item.Items.COAL));
+        c.assertTrue(cauldron.useItem(player, net.minecraft.util.Hand.MAIN_HAND), "Coal dissolves instead of launching an obsolete hypothesis");
+        c.assertTrue(cauldron.essences().get(net.alkahest.essence.EssenceType.IGNIS) == 6, "No hypothesis consumes the contents");
+        ItemStack received = new ItemStack(ModBlocks.ALCHEMY_CAULDRON);
+        c.assertTrue(player.getInventory().insertStack(received), "The player receives the cauldron");
+        c.assertTrue((PracticalResearchStorage.completed(player) & PracticalResearchPlan.CAULDRON) != 0, "Inventory insertion immediately advances the tree");
+        c.assertTrue(player.getInventory().contains(new ItemStack(ModBlocks.ALCHEMY_CAULDRON)), "Research never consumes the item");
+        c.complete();
+    }
 }

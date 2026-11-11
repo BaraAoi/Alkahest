@@ -5,7 +5,7 @@ import net.alkahest.essence.EssenceType;
 import net.alkahest.matrix.MatrixRecipe;
 import net.alkahest.registry.ModBlocks;
 import net.alkahest.registry.ModItems;
-import net.alkahest.research.EarlyResearch;
+import net.alkahest.research.PracticalResearchPlan;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.item.Item;
@@ -26,29 +26,15 @@ public final class JournalScreen extends Screen {
     private static final int GUIDE_PAGES = 10;
     /** The last page of the field notes is not text: it lists every synthesis of the Matrix. */
     private static final int RECIPES_PAGE = GUIDE_PAGES - 1;
-    private record Node(String key, long parents, long discovered, long completed, int x, int y,
-                        ItemStack icon, String[] choices, long[] failed) { }
+    private record Node(String key, long parents, long completed, int x, int y, ItemStack icon) { }
+    private static Node node(int index, int x, int y) {
+        var step = PracticalResearchPlan.STEPS.get(index);
+        var item = net.minecraft.registry.Registries.ITEM.get(Identifier.of(step.itemId()));
+        return new Node(step.id(), step.parents(), step.bit(), x, y, new ItemStack(item));
+    }
     private static final Node[] NODES = {
-        new Node("root", 0L, EarlyResearch.ROOT, EarlyResearch.ROOT, 24, 0,
-            new ItemStack(ModItems.ALCHEMICAL_JOURNAL), new String[0], new long[0]),
-        new Node("research", EarlyResearch.ROOT, EarlyResearch.DISCOVERED, EarlyResearch.COMPLETED, 96, 0,
-            new ItemStack(ModBlocks.ALCHEMY_CAULDRON), new String[]{"sand", "sugar", "coal"}, new long[]{EarlyResearch.FAILED_SAND, EarlyResearch.FAILED_SUGAR, 0L}),
-        new Node("reactive", EarlyResearch.COMPLETED, EarlyResearch.REACTIVE_DISCOVERED, EarlyResearch.REACTIVE_COMPLETED, 172, -40,
-            new ItemStack(ModItems.FIRE_DUST), new String[]{"feather", "redstone", "clay"}, new long[]{EarlyResearch.FAILED_FEATHER, 0L, EarlyResearch.FAILED_CLAY}),
-        new Node("raw", EarlyResearch.COMPLETED, EarlyResearch.RAW_DISCOVERED, EarlyResearch.RAW_COMPLETED, 172, 40,
-            new ItemStack(ModBlocks.DISTILLERY), new String[]{"copper", "iron", "cobble"}, new long[]{0L, EarlyResearch.FAILED_IRON, EarlyResearch.FAILED_COBBLE}),
-        new Node("sight", EarlyResearch.RAW_COMPLETED | EarlyResearch.REACTIVE_COMPLETED, EarlyResearch.SIGHT_DISCOVERED, EarlyResearch.SIGHT_COMPLETED, 248, 0,
-            new ItemStack(ModItems.CRYSTALS.get(EssenceType.ORDO)), new String[]{"glass", "eye", "torch"}, new long[]{0L, EarlyResearch.FAILED_EYE, EarlyResearch.FAILED_TORCH}),
-        new Node("chain_ignis", EarlyResearch.SIGHT_COMPLETED, EarlyResearch.IGNIS_DISCOVERED, EarlyResearch.IGNIS_COMPLETED, 324, -40,
-            new ItemStack(Items.BLAZE_ROD), new String[]{"cane", "feather", "coal"}, new long[]{EarlyResearch.FAILED_CANE, EarlyResearch.FAILED_IGNIS_FEATHER, 0L}),
-        new Node("chain_aqua", EarlyResearch.SIGHT_COMPLETED, EarlyResearch.AQUA_DISCOVERED, EarlyResearch.AQUA_COMPLETED, 324, 40,
-            new ItemStack(Items.PRISMARINE_SHARD), new String[]{"kelp", "sand", "ice"}, new long[]{0L, EarlyResearch.FAILED_AQUA_SAND, EarlyResearch.FAILED_ICE}),
-        new Node("binding", EarlyResearch.IGNIS_COMPLETED | EarlyResearch.AQUA_COMPLETED, EarlyResearch.BINDING_DISCOVERED, EarlyResearch.BINDING_COMPLETED, 400, 0,
-            new ItemStack(ModItems.BINDING_SALT), new String[]{"string", "slime", "bonemeal"}, new long[]{0L, EarlyResearch.FAILED_SLIME, EarlyResearch.FAILED_BONE_MEAL}),
-        new Node("the_alkahest", EarlyResearch.BINDING_COMPLETED, EarlyResearch.ALKAHEST_DISCOVERED, EarlyResearch.ALKAHEST_COMPLETED, 476, 0,
-            new ItemStack(ModItems.ALKAHEST_VIAL), new String[]{"diamond", "gold", "obsidian"}, new long[]{0L, EarlyResearch.FAILED_GOLD, EarlyResearch.FAILED_OBSIDIAN}),
-        new Node("stabilization", EarlyResearch.ALKAHEST_COMPLETED, EarlyResearch.STABILIZATION_DISCOVERED, EarlyResearch.STABILIZATION_COMPLETED, 552, 0,
-            new ItemStack(ModBlocks.STABILIZER_CORE), new String[]{"ordo", "perditio", "quartz"}, new long[]{0L, EarlyResearch.FAILED_STABILITY_PERDITIO, EarlyResearch.FAILED_STABILITY_QUARTZ})
+        node(0, 24, 0), node(1, 100, -40), node(2, 100, 40), node(3, 176, 0),
+        node(4, 252, -40), node(5, 252, 40), node(6, 328, 0), node(7, 404, 0), node(8, 480, 0)
     };
     private final long researchFlags;
     private boolean guide;
@@ -75,12 +61,11 @@ public final class JournalScreen extends Screen {
     private int ny(Node node) { return mapY() + mapH() / 2 + node.y() + (int)panY; }
     private boolean within(double x, double y, int x1, int y1, int x2, int y2) { return x >= x1 && x < x2 && y >= y1 && y < y2; }
     private String state(Node node) {
-        if ((researchFlags & node.parents()) != node.parents()) return "hidden";
         if ((researchFlags & node.completed()) != 0) return "completed";
-        if ((researchFlags & node.discovered()) != 0) return "hypothesis";
-        return "locked";
+        if ((researchFlags & node.parents()) != node.parents()) return "hidden";
+        return "active";
     }
-    private Text label(Node node) { return Text.translatable("screen.alkahest." + node.key() + ".title"); }
+    private Text label(Node node) { return Text.translatable("screen.alkahest.practice." + node.key() + ".title"); }
 
     @Override public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         renderBackground(context, mouseX, mouseY, delta);
@@ -108,11 +93,11 @@ public final class JournalScreen extends Screen {
         int x = mapX(), y = mapY(), w = mapW(), h = mapH();
         panel(c, x, y, w, h);
         c.enableScissor(x + 2, y + 2, x + w - 2, y + h - 2);
-        link(c, NODES[0], NODES[1]); link(c, NODES[1], NODES[2]); link(c, NODES[1], NODES[3]);
-        link(c, NODES[2], NODES[4]); link(c, NODES[3], NODES[4]);
-        link(c, NODES[4], NODES[5]); link(c, NODES[4], NODES[6]);
-        link(c, NODES[5], NODES[7]); link(c, NODES[6], NODES[7]);
-        link(c, NODES[7], NODES[8]); link(c, NODES[8], NODES[9]);
+        link(c, NODES[0], NODES[1]); link(c, NODES[0], NODES[2]);
+        link(c, NODES[1], NODES[3]); link(c, NODES[2], NODES[3]);
+        link(c, NODES[3], NODES[4]); link(c, NODES[3], NODES[5]);
+        link(c, NODES[4], NODES[6]); link(c, NODES[5], NODES[6]);
+        link(c, NODES[6], NODES[7]); link(c, NODES[7], NODES[8]);
         for (Node node : NODES) if (!state(node).equals("hidden")) drawNode(c, node, mouseX, mouseY);
         c.disableScissor();
         c.drawCenteredTextWithShadow(textRenderer, Text.translatable("screen.alkahest.journal.map_hint"), left + bookWidth / 2, top + bookHeight - 24, 0xFFD4C4A0);
@@ -137,14 +122,14 @@ public final class JournalScreen extends Screen {
         int x = nx(node), y = ny(node);
         String state = state(node);
         boolean hover = hitNode(node, mx, my) && within(mx, my, mapX(), mapY(), mapX() + mapW(), mapY() + mapH());
-        int border = state.equals("completed") ? 0xFFE5C16E : state.equals("hypothesis") ? 0xFF82DCD9 : 0xFF76716C;
+        int border = state.equals("completed") ? 0xFFE5C16E : state.equals("active") ? 0xFF82DCD9 : 0xFF76716C;
         if (hover) { c.fill(x - 19, y - 19, x + 19, y + 19, 0x664FD3D4); border = 0xFFFFE6AA; }
         c.fill(x - 16, y - 16, x + 16, y + 16, border);
         c.fill(x - 14, y - 14, x + 14, y + 14, 0xFF1A2231);
         c.fill(x - 12, y - 12, x + 12, y + 12, 0xFF30384B);
         if (state.equals("locked")) c.drawCenteredTextWithShadow(textRenderer, "?", x, y - 4, 0xFFD0CAC2);
         else c.drawItem(node.icon(), x - 8, y - 8);
-        if (state.equals("hypothesis")) c.fill(x + 11, y - 17, x + 17, y - 11, 0xFF90EBE2);
+        if (state.equals("active")) c.fill(x + 11, y - 17, x + 17, y - 11, 0xFF90EBE2);
     }
     private int wrapped(DrawContext c, Text text, int x, int y, int w, int color) {
         c.drawTextWrapped(textRenderer, text, x, y, w, color);
@@ -155,23 +140,13 @@ public final class JournalScreen extends Screen {
         panel(c, x, y, w, h);
         c.fill(x + 5, y + 5, x + w - 5, y + h - 5, 0xF4E7D4A7);
         c.enableScissor(x + 7, y + 7, x + w - 7, y + h - 7);
-        String state = state(node), key = "screen.alkahest." + node.key() + ".";
-        Text title = state.equals("locked") ? Text.translatable("screen.alkahest.journal.unknown") : label(node);
-        c.drawText(textRenderer, title, x + 12, y + 11, 0xFF4F3520, false);
+        String state = state(node);
+        c.drawText(textRenderer, label(node), x + 12, y + 11, 0xFF4F3520, false);
         c.fill(x + 12, y + 23, x + w - 12, y + 24, 0xFFB19A6E);
         int line = y + 31 - scroll;
-        line += wrapped(c, Text.translatable(key + state), x + 12, line, w - 24, 0xFF30251C) + 6;
-        if (state.equals("hypothesis")) {
-            line += wrapped(c, Text.translatable(key + "instructions"), x + 12, line, w - 24, 0xFF594633) + 5;
-            for (int i = 0; i < node.choices().length; i++) {
-                boolean failed = (researchFlags & node.failed()[i]) != 0;
-                Text choice = failed ? Text.translatable(key + node.choices()[i]).formatted(Formatting.RED, Formatting.STRIKETHROUGH) : Text.translatable(key + node.choices()[i]);
-                c.drawText(textRenderer, choice, x + 16, line, failed ? 0xFF9F302C : 0xFF382B20, false);
-                line += 12;
-            }
-            line += 4;
-            line += wrapped(c, Text.translatable("screen.alkahest.journal.experiment_note"), x + 12, line, w - 24, 0xFF594633);
-        }
+        line += wrapped(c, Text.translatable("screen.alkahest.practice." + state), x + 12, line, w - 24, 0xFF594633) + 6;
+        line += wrapped(c, Text.translatable("screen.alkahest.practice." + node.key() + ".recipe"), x + 12, line, w - 24, 0xFF30251C) + 6;
+        line += wrapped(c, Text.translatable("screen.alkahest.practice.free_recipes"), x + 12, line, w - 24, 0xFF594633);
         maxScroll = Math.max(0, line + scroll - (y + h - 9));
         c.disableScissor();
         if (maxScroll > 0) c.drawTextWithShadow(textRenderer, Text.translatable("screen.alkahest.journal.scroll"), left + bookWidth - 100, top + bookHeight - 21, 0xFFD8C69D);

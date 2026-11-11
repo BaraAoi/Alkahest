@@ -40,41 +40,11 @@ public final class Alkahest implements ModInitializer {
         ModScreenHandlers.register();
         ModWorldGen.register();
 
-        ServerEntityCombatEvents.AFTER_KILLED_OTHER_ENTITY.register((world, entity, killedEntity) -> {
-            if (!(entity instanceof ServerPlayerEntity player) || !EarlyResearch.hasMonocle(player)) return;
-            if (killedEntity.getType() == EntityType.BLAZE) {
-                EarlyResearch.discoverIgnis(player, world, killedEntity.getBlockPos());
-            } else if (killedEntity.getType() == EntityType.GUARDIAN || killedEntity.getType() == EntityType.ELDER_GUARDIAN) {
-                EarlyResearch.discoverAqua(player, world, killedEntity.getBlockPos());
-            }
-        });
-
-        PlayerBlockBreakEvents.AFTER.register((world, player, pos, state, blockEntity) -> {
-            if (!(player instanceof ServerPlayerEntity serverPlayer)) return;
-            if (state.isOf(ModBlocks.SALT_ORE)) {
-                EarlyResearch.discoverBinding(serverPlayer, world, pos);
-                return;
-            }
-            if (state.isOf(ModBlocks.ALCHEMICAL_MOSS)) {
-                EarlyResearch.discoverAlkahest(serverPlayer, world, pos);
-                return;
-            }
-            if (EarlyResearch.hasMonocle(serverPlayer) && (
-                    state.isOf(Blocks.PRISMARINE)
-                    || state.isOf(Blocks.PRISMARINE_BRICKS)
-                    || state.isOf(Blocks.DARK_PRISMARINE)
-                    || state.isOf(Blocks.SEA_LANTERN))) {
-                EarlyResearch.discoverAqua(serverPlayer, world, pos);
-            }
-        });
-
+        net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents.JOIN.register((handler, sender, server) ->
+            net.alkahest.research.PracticalResearchStorage.migrate(handler.player));
         ServerTickEvents.END_SERVER_TICK.register(server -> {
-            if (server.getTicks() % 40 != 0) return;
             for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
-                if (player.isSpectator()) continue;
-                if (player.getWorld().getBiome(player.getBlockPos()).matchesKey(ModWorldGen.ALCHEMICAL_WASTES)) {
-                    EarlyResearch.discoverAlkahest(player, player.getWorld(), player.getBlockPos());
-                }
+                if (!player.isSpectator()) net.alkahest.research.PracticalResearchStorage.scan(player);
             }
         });
 
