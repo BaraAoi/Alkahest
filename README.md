@@ -2,7 +2,7 @@
 
 ## Скачать мод
 
-[**Скачать Alkahest Alpha 0.1.56 для Minecraft 1.21.1 (JAR)**](https://github.com/BaraAoi/Alkahest/raw/refs/heads/arena/2bd65852-alkahest/downloads/Alkahest-alpha-0.1.56-fabric-1.21.1.jar)
+[**Скачать Alkahest Alpha 0.1.57 для Minecraft 1.21.1 (JAR)**](https://github.com/BaraAoi/Alkahest/raw/refs/heads/arena/2bd65852-alkahest/downloads/Alkahest-alpha-0.1.57-fabric-1.21.1.jar)
 
 Это ранняя неполная версия мода. Поместите JAR в папку `mods`; также необходимы Fabric Loader, Fabric API и Trinkets для Minecraft 1.21.1. Сборка и автоматический запуск клиента и сервера проверены; игровой процесс пока не проверен полностью.
 
