@@ -138,6 +138,33 @@ public class AtmosphereGameTests implements FabricGameTest {
     }
 
     @GameTest(templateName = EMPTY_STRUCTURE)
+    public void blockedWorkAndRejectedOverflowDoNotEmit(TestContext c) {
+        var w = c.getWorld(); c.setBlockState(3, 2, 3, ModBlocks.DISTILLERY);
+        var pos = c.getAbsolutePos(new BlockPos(3, 2, 3));
+        var cube = (DistilleryBlockEntity) w.getBlockEntity(pos);
+        for (int i = DistilleryBlockEntity.OUTPUT_START; i < DistilleryBlockEntity.OUTPUT_END; i++)
+            cube.setStack(i, new ItemStack(Items.STONE, 64));
+        cube.setStack(DistilleryBlockEntity.PENDING, new ItemStack(ModItems.ASH));
+        cube.setStack(0, new ItemStack(Items.WATER_BUCKET));
+        var air = AtmosphereState.of(w); double before = air.levels(w, pos).get(EssenceType.AQUA);
+        for (int i = 0; i < DistilleryBlockEntity.RAW_DURATION + 1; i++) DistilleryBlockEntity.tick(w, pos, cube);
+        c.assertTrue(cube.getStack(0).isOf(Items.WATER_BUCKET), "Blocked cycle keeps its input");
+        c.assertTrue(Math.abs(air.levels(w, pos).get(EssenceType.AQUA) - before) < 1e-8, "Blocked cycle emits nothing");
+        c.setBlockState(5, 2, 3, ModBlocks.JAR); var jarPos = c.getAbsolutePos(new BlockPos(5, 2, 3));
+        var jar = (JarBlockEntity) w.getBlockEntity(jarPos);
+        jar.setContents(new JarContentsComponent(List.of(new EssenceStack(EssenceType.IGNIS, 99, 1))));
+        var donor = new ItemStack(ModBlocks.JAR);
+        JarItem.set(donor, new JarContentsComponent(List.of(new EssenceStack(EssenceType.AQUA, 10, 1))));
+        var player = c.createMockPlayer(GameMode.SURVIVAL); player.setStackInHand(Hand.MAIN_HAND, donor);
+        double aqua = air.levels(w, jarPos).get(EssenceType.AQUA);
+        var hit = new BlockHitResult(Vec3d.ofCenter(jarPos), Direction.UP, jarPos, false);
+        w.getBlockState(jarPos).onUseWithItem(donor, w, player, Hand.MAIN_HAND, hit);
+        c.assertTrue(JarItem.contents(donor).total() == 10 && jar.contents().total() == 99, "Incompatible pour preserves both containers");
+        c.assertTrue(Math.abs(air.levels(w, jarPos).get(EssenceType.AQUA) - aqua) < 1e-8, "Refused pour creates no atmospheric essence");
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
     public void manifestationChecksDistanceCapAndSpendsExcess(TestContext c) {
         var w = c.getWorld();
         BlockPos origin = AtmosphereState.cellOrigin(c.getAbsolutePos(new BlockPos(3, 3, 3)));

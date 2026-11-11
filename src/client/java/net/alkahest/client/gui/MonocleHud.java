@@ -44,12 +44,13 @@ public final class MonocleHud {
             lines.add(Text.translatable("screen.alkahest.monocle.matrix_core"));
             lines.add(matrix.statusText());
             MatrixRecipe expected = matrix.recipe();
+            boolean matchedRecipe = expected != null;
             if (expected == null && !matrix.started())
                 expected = MatrixRecipe.uniqueForBase(matrix.getStack(MatrixCoreBlockEntity.BASE));
             if (expected == null && MatrixRecipe.hasMultipleForBase(matrix.getStack(MatrixCoreBlockEntity.BASE)))
                 lines.add(Text.translatable("screen.alkahest.monocle.matrix_choose_recipe"));
             if (expected != null) {
-                lines.add(Text.translatable("screen.alkahest.monocle.matrix_air_stability", matrix.atmosphereStability()));
+                if (matchedRecipe) lines.add(Text.translatable("screen.alkahest.monocle.matrix_air_stability", matrix.atmosphereStability()));
                 for (var entry : expected.cost().entrySet()) {
                     int stored = Math.min(matrix.stored(entry.getKey()), entry.getValue());
                     int remaining = entry.getValue() - stored;
