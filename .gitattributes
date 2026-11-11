@@ -1,0 +1,2 @@
+# Empty final field is meaningful in the generated TSV report.
+reports/*.tsv whitespace=-blank-at-eol
