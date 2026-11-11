@@ -11,12 +11,19 @@ prima = ('ignis', 'aqua', 'terra', 'aer', 'ordo', 'perditio')
 
 for name in (
     'lightning_in_a_bottle', 'miasma', 'crystallization_powder',
-    'alchemical_moss', 'alkahest_vial', 'alkahest_amulet',
+    'alchemical_moss', 'alkahest_vial',
     'binding_salt', *(f'binding_salt_{t}' for t in prima)
 ):
     model = json.loads((base / f'models/item/{name}.json').read_text())
     assert model['textures']['layer0'] == f'alkahest:item/{name}', name
     assert (base / f'textures/item/{name}.png').read_bytes().startswith(b'\x89PNG\r\n\x1a\n'), name
+
+# The amulet is a full cuboid model now, not an item/generated layer0 sprite.
+amulet_model = json.loads((base / 'models/item/alkahest_amulet.json').read_text())
+assert len(amulet_model['elements']) >= 10
+for ref in ('gold', 'gem', 'dark'):
+    texture = amulet_model['textures'][ref].split(':', 1)[1]
+    assert (base / f'textures/{texture}.png').read_bytes().startswith(b'\x89PNG\r\n\x1a\n'), ref
 
 assert (base / 'textures/mob_effect/crystallized.png').read_bytes().startswith(b'\x89PNG\r\n\x1a\n')
 assert (base / 'textures/block/alchemical_moss.png').read_bytes().startswith(b'\x89PNG\r\n\x1a\n')
