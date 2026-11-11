@@ -126,6 +126,12 @@ tests = (GAMETEST / 'java/net/alkahest/test/TransmutatorGameTests.java').read_te
 test_count = len(re.findall(r'@GameTest', tests))
 check(test_count >= 7, f'expected at least seven transmutator game tests, found {test_count}')
 
+collect = core_be.split('private boolean collect(', 1)[1].split('private static int jarsAround(', 1)[0]
+check(collect.count('for (Map.Entry<EssenceType, Integer> entry : cost.entrySet())') >= 3,
+      'collect must preflight every type, reserve every type, then commit payment in separate passes')
+check('missingLaterEssenceNeverConsumesEarlierType' in tests and 'disappearingEssenceKeepsReservationsUntilPayment' in tests,
+      'game tests must check repeated waiting and interrupted reservations')
+
 check('MidasTouchEffect.progressStep' in core_be and 'before / 10 != self.progress / 10' in core_be, 'Midas speed must not skip essence prefill boundaries')
 
 # --- report ----------------------------------------------------------------------------------

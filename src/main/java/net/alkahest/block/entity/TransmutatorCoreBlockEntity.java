@@ -185,18 +185,27 @@ public class TransmutatorCoreBlockEntity extends BlockEntity implements Inventor
     /** Pulls the price out of the surrounding jars through the pillars. */
     private boolean collect(World world, Map<EssenceType, Integer> cost) {
         List<TransmutatorPillarBlockEntity> pillars = pillars();
+        // The entire price must be available before anything is pulled or consumed. Checking
+        // and spending one type at a time destroys the earlier types on every waiting tick when
+        // a later type is missing.
+        for (Map.Entry<EssenceType, Integer> entry : cost.entrySet()) {
+            if (stored(pillars, entry.getKey()) + jarsAround(world, pillars, entry.getKey()) < entry.getValue()) return false;
+        }
+        // Reserve every type first. A full or unreachable pillar may still prevent a request;
+        // in that case any reservation remains in its saved buffer, never partly spent.
         for (Map.Entry<EssenceType, Integer> entry : cost.entrySet()) {
             EssenceType type = entry.getKey();
-            int need = entry.getValue();
-            // Look before pulling: a short price must leave the jars exactly as they were.
-            if (stored(pillars, type) + jarsAround(world, pillars, type) < need) return false;
-            // Only pull what the whole platform is still missing, so jars are never drained greedily.
             for (TransmutatorPillarBlockEntity pillar : pillars) {
-                int missing = need - stored(pillars, type);
+                int missing = entry.getValue() - stored(pillars, type);
                 if (missing <= 0) break;
                 pillar.request(world, type, missing);
             }
-            if (stored(pillars, type) < need) return false;
+            if (stored(pillars, type) < entry.getValue()) return false;
+        }
+        // All costs are present in the buffers; only now commit the payment.
+        for (Map.Entry<EssenceType, Integer> entry : cost.entrySet()) {
+            EssenceType type = entry.getKey();
+            int need = entry.getValue();
             for (TransmutatorPillarBlockEntity pillar : pillars) {
                 if (need <= 0) break;
                 int taken = pillar.take(type, need);

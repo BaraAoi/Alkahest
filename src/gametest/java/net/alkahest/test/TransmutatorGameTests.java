@@ -24,6 +24,19 @@ import java.util.List;
 public class TransmutatorGameTests implements FabricGameTest {
     private static final int CX = 3, CY = 2, CZ = 3;
 
+    /** Isolate conservation tests from the neighbouring structures' jars in the shared world. */
+    private static BlockPos isolatedPlatform(TestContext c, int y) {
+        c.setBlockState(CX, y, CZ, ModBlocks.TRANSMUTATOR_CORE);
+        for (int dx = -1; dx <= 1; dx++) for (int dz = -1; dz <= 1; dz++) {
+            if (dx != 0 || dz != 0) c.setBlockState(CX + dx, y, CZ + dz, ModBlocks.TRANSMUTATOR_PILLAR);
+        }
+        return c.getAbsolutePos(new BlockPos(CX, y, CZ));
+    }
+
+    private static int stored(TransmutatorCoreBlockEntity core, EssenceType type) {
+        return core.pillars().stream().mapToInt(p -> p.stored(type)).sum();
+    }
+
     private static JarContentsComponent of(EssenceType type, int amount) {
         return new JarContentsComponent(List.of(new EssenceStack(type, amount, 0.4f)));
     }
@@ -163,6 +176,57 @@ public class TransmutatorGameTests implements FabricGameTest {
         c.assertTrue(core.getStack(TransmutatorCoreBlockEntity.OUTPUT).isEmpty(), "An incomplete price produces nothing");
         c.assertTrue(core.getStack(TransmutatorCoreBlockEntity.INPUT).getCount() == 2, "The input stays");
         c.assertTrue(metallum.contents().total() == 1, "The essence stays in the jar");
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void missingLaterEssenceNeverConsumesEarlierType(TestContext c) {
+        int y = CY + 32;
+        BlockPos pos = isolatedPlatform(c, y);
+        var core = (TransmutatorCoreBlockEntity) c.getWorld().getBlockEntity(pos);
+        installInput(c, core);
+        var metallum = jar(c, CX + 3, y, CZ, EssenceType.METALLUM, 60);
+        run(c.getWorld(), pos, TransmutatorCoreBlockEntity.DURATION + 200);
+        c.assertTrue(metallum.contents().total() + stored(core, EssenceType.METALLUM) == 60,
+            "Missing Ordo cannot repeatedly destroy Metallum while waiting");
+        c.assertTrue(core.getStack(TransmutatorCoreBlockEntity.INPUT).getCount() == 2 && core.getStack(TransmutatorCoreBlockEntity.OUTPUT).isEmpty(),
+            "An incomplete price never consumes the input or creates output");
+        c.assertTrue(core.getStack(TransmutatorCoreBlockEntity.AMULET).get(ModDataComponents.ESSENCE_CHARGE) == 4,
+            "Waiting never spends an amulet charge");
+        var ordo = jar(c, CX - 3, y, CZ, EssenceType.ORDO, 10);
+        run(c.getWorld(), pos, 1);
+        c.assertTrue(core.getStack(TransmutatorCoreBlockEntity.OUTPUT).isOf(Items.GOLD_INGOT), "Providing the missing type completes one operation");
+        c.assertTrue(metallum.contents().total() + stored(core, EssenceType.METALLUM) == 57 &&
+            ordo.contents().total() + stored(core, EssenceType.ORDO) == 8, "Successful operation spends exactly 3 Metallum and 2 Ordo");
+        c.assertTrue(core.getStack(TransmutatorCoreBlockEntity.AMULET).get(ModDataComponents.ESSENCE_CHARGE) == 3, "Exactly one charge is spent");
+        c.setBlockState(CX + 3, y, CZ, net.minecraft.block.Blocks.AIR);
+        c.setBlockState(CX - 3, y, CZ, net.minecraft.block.Blocks.AIR);
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void disappearingEssenceKeepsReservationsUntilPayment(TestContext c) {
+        int y = CY + 48;
+        BlockPos pos = isolatedPlatform(c, y);
+        var core = (TransmutatorCoreBlockEntity) c.getWorld().getBlockEntity(pos);
+        installInput(c, core);
+        var metallum = jar(c, CX + 3, y, CZ, EssenceType.METALLUM, 20);
+        var ordo = jar(c, CX - 3, y, CZ, EssenceType.ORDO, 10);
+        run(c.getWorld(), pos, 10);
+        int reservedOrdo = stored(core, EssenceType.ORDO);
+        c.assertTrue(reservedOrdo == 1 && stored(core, EssenceType.METALLUM) == 1, "Both types are partially reserved");
+        int savedOrdo = ordo.contents().total();
+        ordo.setContents(JarContentsComponent.EMPTY);
+        run(c.getWorld(), pos, 400);
+        c.assertTrue(metallum.contents().total() + stored(core, EssenceType.METALLUM) == 20 && stored(core, EssenceType.ORDO) == reservedOrdo,
+            "A missing jar never spends or drains earlier reservations");
+        ordo.setContents(of(EssenceType.ORDO, savedOrdo));
+        run(c.getWorld(), pos, 1);
+        c.assertTrue(core.getStack(TransmutatorCoreBlockEntity.OUTPUT).isOf(Items.GOLD_INGOT), "Returning the jar resumes the waiting operation");
+        c.assertTrue(metallum.contents().total() + stored(core, EssenceType.METALLUM) == 17 &&
+            ordo.contents().total() + stored(core, EssenceType.ORDO) == 8, "Only the successful price was spent");
+        c.setBlockState(CX + 3, y, CZ, net.minecraft.block.Blocks.AIR);
+        c.setBlockState(CX - 3, y, CZ, net.minecraft.block.Blocks.AIR);
         c.complete();
     }
 
