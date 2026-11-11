@@ -9,6 +9,7 @@
       "net.alkahest.test.ReagentGameTests",
       "net.alkahest.test.CauldronGameTests",
       "net.alkahest.test.ResearchGameTests",
+      "net.alkahest.test.PracticalResearchGameTests",
       "net.alkahest.test.DistilleryGameTests",
       "net.alkahest.test.JarGameTests",
       "net.alkahest.test.ChargerGameTests",
