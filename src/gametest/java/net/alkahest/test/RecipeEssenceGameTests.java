@@ -21,7 +21,7 @@ import net.minecraft.test.TestContext;
 public class RecipeEssenceGameTests implements FabricGameTest {
     @GameTest(templateName = EMPTY_STRUCTURE)
     public void actualRecipesSupplyCauldronAndDistilleries(TestContext c) {
-        ItemStack crafted = new ItemStack(ModItems.ASH);
+        ItemStack crafted = new ItemStack(TestItems.CRAFTED);
         var composition = CauldronBlockEntity.essencesOf(crafted, c.getWorld());
         c.assertTrue(composition.getOrDefault(EssenceType.HERBA, 0) == 2, "Apple Herba divided by two and rounded");
         c.assertTrue(composition.getOrDefault(EssenceType.AQUA, 0) == 1, "Half an Aqua rounds up");
@@ -30,7 +30,7 @@ public class RecipeEssenceGameTests implements FabricGameTest {
         c.assertTrue(Tier2DistilleryBlockEntity.accepts(crafted, c.getWorld()), "Tier two accepts computed material");
         var outputs = Tier2DistilleryBlockEntity.outputs(crafted, c.getWorld().random, false, c.getWorld());
         c.assertTrue(outputs.stream().anyMatch(e -> e.type() == EssenceType.METALLUM && e.amount() == 3), "Cube outputs match calculated composition");
-        c.assertTrue(ItemEssenceMap.get(new ItemStack(Items.BEDROCK), c.getWorld()).isEmpty(), "Unknown raw material remains unmapped");
+        c.assertTrue(ItemEssenceMap.get(new ItemStack(TestItems.UNKNOWN), c.getWorld()).isEmpty(), "Unknown raw material remains unmapped");
         c.setBlockState(3, 1, 3, Blocks.MAGMA_BLOCK);
         c.setBlockState(3, 2, 3, ModBlocks.ALCHEMY_CAULDRON);
         var cauldron = (CauldronBlockEntity) c.getWorld().getBlockEntity(c.getAbsolutePos(new BlockPos(3, 2, 3)));
@@ -98,6 +98,30 @@ public class RecipeEssenceGameTests implements FabricGameTest {
             }
             c.assertTrue(entries.size() == total, "Report has exactly one row for each registered item");
         } catch (java.io.IOException e) { throw new AssertionError("Cannot read essence report", e); }
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void filledContainersCannotBeDestroyedForEssence(TestContext c) {
+        var world = c.getWorld();
+        ItemStack shulker = new ItemStack(Items.SHULKER_BOX);
+        c.assertTrue(Tier2DistilleryBlockEntity.accepts(shulker, world), "Empty shulker has a composition");
+        shulker.set(net.minecraft.component.DataComponentTypes.CONTAINER,
+            net.minecraft.component.type.ContainerComponent.fromStacks(java.util.List.of(new ItemStack(Items.DIAMOND))));
+        ItemStack bundle = new ItemStack(Items.BUNDLE);
+        bundle.set(net.minecraft.component.DataComponentTypes.BUNDLE_CONTENTS,
+            new net.minecraft.component.type.BundleContentsComponent(java.util.List.of(new ItemStack(Items.DIAMOND))));
+        ItemStack jar = new ItemStack(ModBlocks.JAR);
+        net.alkahest.item.custom.JarItem.set(jar, new net.alkahest.essence.JarContentsComponent(
+            java.util.List.of(new net.alkahest.essence.EssenceStack(EssenceType.AQUA, 5, 1f))));
+        for (ItemStack filled : java.util.List.of(shulker, bundle, jar)) {
+            c.assertFalse(ItemEssenceMap.get(filled, world).isEmpty(), "Monocle can still show the base composition");
+            c.assertTrue(CauldronBlockEntity.essencesOf(filled, world).isEmpty(), "Cauldron must not destroy a filled container");
+            c.assertFalse(Tier2DistilleryBlockEntity.accepts(filled, world), "Cube II must reject a filled container");
+            c.assertFalse(DistilleryBlockEntity.acceptsWithAlkahest(filled, world), "Cube I must reject a filled container");
+        }
+        c.assertTrue(shulker.get(net.minecraft.component.DataComponentTypes.CONTAINER).streamNonEmpty().count() == 1,
+            "Stored diamond is untouched");
         c.complete();
     }
 

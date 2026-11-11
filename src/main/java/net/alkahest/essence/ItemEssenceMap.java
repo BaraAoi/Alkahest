@@ -200,6 +200,13 @@ public final class ItemEssenceMap {
             if (entry.getKey() != VACUUM && stack.isOf(entry.getValue())) return List.of(s(entry.getKey(), 1));
         }
         Identifier itemId = Registries.ITEM.getId(stack.getItem());
+        if (itemId.equals(Identifier.of("alkahest", "ash"))) return List.of(s(PERDITIO, 1));
+        if (itemId.equals(Identifier.of("alkahest", "philosophers_stone"))) return List.of(s(ORDO, 10), s(SPIRITUS, 10));
+        if (itemId.equals(Identifier.of("alkahest", "dissolved_spawn_egg"))) return List.of(s(SPIRITUS, 3), s(PERDITIO, 2));
+        for (EssenceType type : List.of(IGNIS, AQUA, TERRA, AER, ORDO, PERDITIO)) {
+            if (itemId.equals(Identifier.of("alkahest", "elemental_" + type.asString() + "_spawn_egg")))
+                return List.of(s(SPIRITUS, 3), s(type, 2));
+        }
         if (itemId.equals(Identifier.of("alkahest", "salt_ore"))) {
             return List.of(s(TERRA, 3), s(ORDO, 2), s(AQUA, 1));
         }
@@ -233,6 +240,23 @@ public final class ItemEssenceMap {
         if (stack.isIn(LOGS) || stack.isIn(PLANKS)) return List.of(s(HERBA, 4), s(TERRA, 2));
         return List.of();
     }
+    /** Do not destroy stored items, loot tables, bees, saved entities or filled essence jars. */
+    public static boolean safeToConsume(ItemStack stack) {
+        if (stack.isEmpty()) return false;
+        var container = stack.get(net.minecraft.component.DataComponentTypes.CONTAINER);
+        if (container != null && container.streamNonEmpty().findAny().isPresent()) return false;
+        var bundle = stack.get(net.minecraft.component.DataComponentTypes.BUNDLE_CONTENTS);
+        if (bundle != null && !bundle.isEmpty()) return false;
+        var bees = stack.get(net.minecraft.component.DataComponentTypes.BEES);
+        if (bees != null && !bees.isEmpty()) return false;
+        if (stack.contains(net.minecraft.component.DataComponentTypes.CONTAINER_LOOT)
+            || stack.contains(net.minecraft.component.DataComponentTypes.BLOCK_ENTITY_DATA)
+            || stack.contains(net.minecraft.component.DataComponentTypes.ENTITY_DATA)
+            || stack.contains(net.minecraft.component.DataComponentTypes.BUCKET_ENTITY_DATA)) return false;
+        return !(stack.getItem() instanceof net.alkahest.item.custom.JarItem)
+            || net.alkahest.item.custom.JarItem.contents(stack).total() == 0;
+    }
+
     /** Context-free access to explicit values, retained for existing API users. */
     public static List<EssenceStack> get(ItemStack stack) { return base(stack); }
 

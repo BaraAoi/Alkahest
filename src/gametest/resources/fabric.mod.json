@@ -5,6 +5,7 @@
   "name": "Alkahest Game Tests",
   "environment": "server",
   "entrypoints": {
+    "main": ["net.alkahest.test.TestItems"],
     "fabric-gametest": [
       "net.alkahest.test.RecipeEssenceGameTests",
       "net.alkahest.test.ReagentGameTests",

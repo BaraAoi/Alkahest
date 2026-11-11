@@ -86,7 +86,7 @@ public class DistilleryBlockEntity extends BlockEntity implements SidedInventory
         return accepts(stack, null);
     }
     public static boolean accepts(ItemStack stack, World world) {
-        return !stack.isEmpty() && ItemEssenceMap.get(stack, world).stream().anyMatch(e ->
+        return ItemEssenceMap.safeToConsume(stack) && ItemEssenceMap.get(stack, world).stream().anyMatch(e ->
             e.type() == EssenceType.HERBA || e.type() == EssenceType.AQUA || e.type() == EssenceType.MORTUUS);
     }
 
@@ -95,7 +95,7 @@ public class DistilleryBlockEntity extends BlockEntity implements SidedInventory
         return acceptsWithAlkahest(stack, null);
     }
     public static boolean acceptsWithAlkahest(ItemStack stack, World world) {
-        return !stack.isEmpty() && ItemEssenceMap.get(stack, world).stream()
+        return ItemEssenceMap.safeToConsume(stack) && ItemEssenceMap.get(stack, world).stream()
             .anyMatch(e -> ModItems.CRYSTALS.containsKey(e.type()));
     }
 

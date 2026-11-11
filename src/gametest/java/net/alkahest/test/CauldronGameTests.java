@@ -71,10 +71,10 @@ public class CauldronGameTests implements FabricGameTest {
         supplyEssences(cauldron, Map.of(EssenceType.IGNIS, 3, EssenceType.POTENTIA, 3));
         // Dropping gunpowder into the cauldron MUST dissolve it into essences instead of triggering the catalyst!
         ItemEntity droppedGunpowder = item(context, 3.5, 4.2, 3.5, new ItemStack(Items.GUNPOWDER));
-        ItemEntity droppedUnknown = item(context, 3.5, 4.5, 3.5, new ItemStack(Items.BEDROCK));
+        ItemEntity droppedUnknown = item(context, 3.5, 4.5, 3.5, new ItemStack(TestItems.UNKNOWN));
         context.runAtTick(35, () -> {
             context.assertTrue(droppedGunpowder.isRemoved(), "Dropped gunpowder must dissolve into essences even when its recipe is ready");
-            context.assertTrue(!droppedUnknown.isRemoved(), "Unmapped bedrock dropped into water does not brew or vanish");
+            context.assertTrue(!droppedUnknown.isRemoved(), "Unmapped test item dropped into water does not brew or vanish");
             droppedUnknown.discard();
             context.assertTrue(context.getWorld().getBlockState(pos).get(AlchemyCauldronBlock.FILLED), "Dissolving does not consume water");
             context.assertTrue(cauldron.essences().getOrDefault(EssenceType.IGNIS, 0) == 7, "3 + 4 = 7 Ignis after dissolving gunpowder");
@@ -120,7 +120,7 @@ public class CauldronGameTests implements FabricGameTest {
         PlayerEntity survival = fill(context, cauldron);
         BlockPos pos = context.getAbsolutePos(new BlockPos(3, 2, 3));
 
-        survival.setStackInHand(Hand.MAIN_HAND, new ItemStack(Items.BEDROCK, 2));
+        survival.setStackInHand(Hand.MAIN_HAND, new ItemStack(TestItems.UNKNOWN, 2));
         context.assertFalse(cauldron.useItem(survival, Hand.MAIN_HAND), "Unmapped item without essences must not be consumed");
         context.assertTrue(survival.getStackInHand(Hand.MAIN_HAND).getCount() == 2, "Unmapped item must remain in hand");
         context.assertFalse(cauldron.createNbt(context.getWorld().getRegistryManager()).contains("Items"), "No hidden item slots exist");

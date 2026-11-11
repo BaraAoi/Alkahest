@@ -194,7 +194,7 @@ public class CauldronBlockEntity extends BlockEntity {
     }
     public static EnumMap<EssenceType, Integer> essencesOf(ItemStack stack, World world) {
         var additions = new EnumMap<EssenceType, Integer>(EssenceType.class);
-        if (stack.isEmpty()) return additions;
+        if (!ItemEssenceMap.safeToConsume(stack)) return additions;
         for (var entry : ModItems.CRYSTALS.entrySet()) {
             if (stack.isOf(entry.getValue())) {
                 if (entry.getKey() != EssenceType.VACUUM) additions.put(entry.getKey(), 1);

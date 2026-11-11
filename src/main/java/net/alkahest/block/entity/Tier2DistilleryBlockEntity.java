@@ -78,7 +78,7 @@ public class Tier2DistilleryBlockEntity extends BlockEntity implements Inventory
         return accepts(stack, null);
     }
     public static boolean accepts(ItemStack stack, World world) {
-        if (stack.isEmpty()) return false;
+        if (!ItemEssenceMap.safeToConsume(stack)) return false;
         return ItemEssenceMap.get(stack, world).stream()
             .anyMatch(essence -> essence.type() != EssenceType.VACUUM && essence.amount() > 0);
     }

@@ -114,6 +114,38 @@ final class VanillaEssenceSources {
             Items.AXOLOTL_BUCKET, Items.COD_BUCKET, Items.PUFFERFISH_BUCKET, Items.SALMON_BUCKET,
             Items.TADPOLE_BUCKET, Items.TROPICAL_FISH_BUCKET, Items.POWDER_SNOW_BUCKET
         );
+        // Naturally generated and loot-only vanilla materials.
+        put(values, List.of(new EssenceStack(TERRA, 4, 1f), new EssenceStack(ORDO, 2, 1f)),
+            Items.BEDROCK, Items.REINFORCED_DEEPSLATE, Items.END_PORTAL_FRAME,
+            Items.PETRIFIED_OAK_SLAB, Items.SUSPICIOUS_SAND, Items.SUSPICIOUS_GRAVEL);
+        put(values, List.of(new EssenceStack(HERBA, 2, 1f), new EssenceStack(ORDO, 1, 1f)),
+            Items.BEE_NEST, Items.COBWEB, Items.BUNDLE, Items.TURTLE_EGG, Items.SNIFFER_EGG, Items.FROGSPAWN);
+        put(values, List.of(new EssenceStack(MORTUUS, 3, 1f), new EssenceStack(ORDO, 1, 1f)),
+            Items.CREEPER_HEAD, Items.DRAGON_HEAD, Items.PIGLIN_HEAD, Items.PLAYER_HEAD,
+            Items.SKELETON_SKULL, Items.WITHER_SKELETON_SKULL, Items.ZOMBIE_HEAD);
+        put(values, List.of(new EssenceStack(SPIRITUS, 3, 1f), new EssenceStack(ORDO, 2, 1f)),
+            Items.DRAGON_EGG, Items.TRIAL_KEY, Items.OMINOUS_TRIAL_KEY, Items.SPAWNER, Items.TRIAL_SPAWNER, Items.VAULT);
+        // Creative/operator items are known vanilla registry entries, assigned explicitly too.
+        put(values, List.of(new EssenceStack(POTENTIA, 3, 1f), new EssenceStack(ORDO, 2, 1f)),
+            Items.BARRIER, Items.LIGHT, Items.COMMAND_BLOCK, Items.CHAIN_COMMAND_BLOCK,
+            Items.REPEATING_COMMAND_BLOCK, Items.JIGSAW, Items.STRUCTURE_BLOCK, Items.STRUCTURE_VOID,
+            Items.COMMAND_BLOCK_MINECART, Items.DEBUG_STICK, Items.KNOWLEDGE_BOOK);
+        // Loot-only equipment with no vanilla crafting recipe.
+        put(values, List.of(new EssenceStack(METALLUM, 4, 1f), new EssenceStack(ORDO, 1, 1f)),
+            Items.CHAINMAIL_BOOTS, Items.CHAINMAIL_CHESTPLATE, Items.CHAINMAIL_HELMET,
+            Items.CHAINMAIL_LEGGINGS, Items.IRON_HORSE_ARMOR, Items.GOLDEN_HORSE_ARMOR, Items.DIAMOND_HORSE_ARMOR);
+        put(values, List.of(new EssenceStack(HERBA, 2, 1f), new EssenceStack(ORDO, 1, 1f)),
+            Items.ENCHANTED_BOOK, Items.FILLED_MAP, Items.WRITTEN_BOOK);
+        put(values, List.of(new EssenceStack(HERBA, 3, 1f), new EssenceStack(ORDO, 4, 1f), new EssenceStack(POTENTIA, 3, 1f)),
+            Items.ENCHANTED_GOLDEN_APPLE);
+        put(values, List.of(new EssenceStack(IGNIS, 3, 1f), new EssenceStack(POTENTIA, 2, 1f)), Items.FIREWORK_STAR);
+        put(values, List.of(new EssenceStack(HERBA, 2, 1f), new EssenceStack(VITIUM, 2, 1f)), Items.POISONOUS_POTATO);
+        put(values, List.of(new EssenceStack(METALLUM, 18, 1f), new EssenceStack(TERRA, 6, 1f), new EssenceStack(IGNIS, 10, 1f)), Items.LAVA_BUCKET);
+        // The base vessel is known; potion contents vary with item components and are not inferred.
+        put(values, List.of(new EssenceStack(TERRA, 2, 1f), new EssenceStack(ORDO, 1, 1f), new EssenceStack(AQUA, 1, 1f)),
+            Items.POTION, Items.SPLASH_POTION, Items.LINGERING_POTION, Items.OMINOUS_BOTTLE, Items.EXPERIENCE_BOTTLE);
+        put(values, List.of(new EssenceStack(TERRA, 2, 1f), new EssenceStack(HERBA, 2, 1f), new EssenceStack(MOTUS, 1, 1f)), Items.TIPPED_ARROW);
+        put(values, List.of(new EssenceStack(HERBA, 3, 1f), new EssenceStack(AQUA, 2, 1f)), Items.SUSPICIOUS_STEW);
         return Map.copyOf(values);
     }
     private static void put(Map<Item, List<EssenceStack>> values, List<EssenceStack> aspects, Item... items) {

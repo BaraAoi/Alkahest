@@ -32,4 +32,7 @@ required = ['minecraft:blast_furnace', 'alkahest:distillery_tier2', 'minecraft:c
 for name in required:
     assert name in by_id and by_id[name]['status'] != 'missing', f'Missing composition for {name}'
 missing = [row for row in rows if row['status'] == 'missing']
-print(f'Coverage report: {len(rows) - len(missing)}/{len(rows)} item IDs mapped; {len(missing)} need rules')
+# This smoke server contains vanilla and Alkahest only. Air is a registry sentinel, not an item.
+unresolved = [row['id'] for row in missing if row['id'] != 'minecraft:air']
+assert not unresolved, f'Unmapped vanilla/Alkahest IDs: {unresolved}'
+print(f'Coverage report: {len(rows) - len(missing)}/{len(rows)} item IDs mapped; only minecraft:air is not an item')
