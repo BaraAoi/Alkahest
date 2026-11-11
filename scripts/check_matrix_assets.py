@@ -183,6 +183,11 @@ check('new ItemStack(ModItems.MIDAS_ELIXIR)' in recipe_source and 'Items.GOLDEN_
 )
 check('synthesis(ModItems.FIRE_DUST, List.of(Items.SLIME_BALL, Items.BLAZE_POWDER)' in recipe_source and 'new ItemStack(ModItems.NAPALM, 3)' in recipe_source,
       'the new napalm synthesis must need two components and produce three')
+check('synthesis(ModItems.CAUSTIC_SLIME, List.of(Items.GUNPOWDER, Items.IRON_NUGGET)' in recipe_source and 'new ItemStack(ModItems.ACID_BOMB, 3)' in recipe_source,
+      'the acid bomb batch needs two pedestal ingredients and produces three')
+check('EssenceType.VITIUM, 12, EssenceType.PERDITIO, 8, EssenceType.METALLUM, 4' in recipe_source,
+      'the acid bomb batch must have its full price')
+
 check('MidasTouchEffect.progressStep' in core and 'before / 10 != self.progress / 10' in core,
       'Midas speed must preserve every essence prefill crossing')
 check((A / 'textures/item/midas_elixir.png').exists() and (A / 'textures/mob_effect/midas_touch.png').exists(),
@@ -206,6 +211,7 @@ check('net.alkahest.test.MatrixGameTests' in gametest_mod['entrypoints']['fabric
 tests = (GAMETEST / 'java/net/alkahest/test/MatrixGameTests.java').read_text()
 test_count = len(re.findall(r'@GameTest', tests))
 check(test_count >= 11, f'expected at least eleven matrix game tests, found {test_count}')
+check('acidBombBatchNeedsBothComponentsAndExactEssence' in tests, 'acid batch needs gameplay conservation tests')
 
 # --- report ----------------------------------------------------------------------------------------
 if failures:

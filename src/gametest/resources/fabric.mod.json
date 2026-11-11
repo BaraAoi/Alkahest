@@ -16,6 +16,7 @@
       "net.alkahest.test.MiningGameTests",
       "net.alkahest.test.SeparatorGameTests",
       "net.alkahest.test.StabilizerGameTests",
+      "net.alkahest.block.entity.MidasStabilizerGameTests",
       "net.alkahest.test.Tier2DistilleryGameTests",
       "net.alkahest.block.entity.MidasDistilleryGameTests",
       "net.alkahest.test.ElementalGameTests",

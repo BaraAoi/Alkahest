@@ -1,6 +1,7 @@
 package net.alkahest.block.entity;
 
 import net.alkahest.block.custom.StabilizerReceiverBlock;
+import net.alkahest.effect.MidasTouchEffect;
 import net.alkahest.essence.EssenceStack;
 import net.alkahest.essence.EssenceType;
 import net.alkahest.essence.JarContentsComponent;
@@ -33,7 +34,8 @@ import java.util.List;
 /**
  * Early, working Stabilizer slice. Essence is poured straight into the receiver as a liquid,
  * the player's jar stays in hand (emptied, or with the part that did not fit). The activated
- * tower then sorts the tank one essence type at a time into nearby jars at 90% stability.
+ * tower then sorts the tank one essence type at a time into nearby jars at 90% stability
+ * (100% for a freshly stabilised batch when Midas is present).
  * The tank is stored in the same NBT slot as 0.1.30, so old saves keep their contents.
  */
 public class StabilizerReceiverBlockEntity extends BlockEntity {
@@ -169,6 +171,10 @@ public class StabilizerReceiverBlockEntity extends BlockEntity {
 
     /** One full cycle: move as much of the current type as fits into its target jar. */
     public boolean extractCurrent() {
+        return extractCurrent(world != null && MidasTouchEffect.nearby(world, pos.up()));
+    }
+
+    private boolean extractCurrent(boolean midas) {
         EssenceType type = currentType();
         if (type == null) return false;
         JarBlockEntity target = findTarget(type);
@@ -196,7 +202,7 @@ public class StabilizerReceiverBlockEntity extends BlockEntity {
         }
         if (delivered > 0) {
             target.setContents(target.contents().merge(
-                new JarContentsComponent(List.of(new EssenceStack(type, delivered, OUTPUT_STABILITY))),
+                new JarContentsComponent(List.of(new EssenceStack(type, delivered, MidasTouchEffect.outputStability(OUTPUT_STABILITY, midas)))),
                 JarItem.CAPACITY));
         }
         setContents(new JarContentsComponent(remainder));
@@ -212,18 +218,28 @@ public class StabilizerReceiverBlockEntity extends BlockEntity {
 
     public static void tick(World world, BlockPos pos, StabilizerReceiverBlockEntity be) {
         if (world.isClient) return;
+        // Distance is measured from the tower core, not the receiver below it.
+        boolean midas = be.active() && be.contents().total() > 0 && MidasTouchEffect.nearby(world, pos.up());
+        tickWithMidas(world, pos, be, midas, world.getTime());
+    }
+
+    /** Shared by the real ticker and deterministic server tests, including effect changes mid-cycle. */
+    static void tickWithMidas(World world, BlockPos pos, StabilizerReceiverBlockEntity be, boolean midas, long time) {
+        if (world.isClient) return;
         if (!be.active() || be.contents().total() == 0) {
             if (be.progress != 0) { be.progress = 0; be.markDirty(); }
             return;
         }
-        be.progress++;
-        if (be.progress % 20 == 0 && world instanceof ServerWorld serverWorld) {
+        int before = be.progress;
+        be.progress += MidasTouchEffect.progressStep(midas, time);
+        // A boosted step can skip a multiple of 20; do not skip its visual effect.
+        if (before / 20 != be.progress / 20 && world instanceof ServerWorld serverWorld) {
             serverWorld.spawnParticles(ParticleTypes.ENCHANT,
                 pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5, 2, 0.2, 0.1, 0.2, 0.01);
         }
-        if (be.progress < TICKS_PER_TYPE) return;
+        if (be.progress < TICKS_PER_TYPE) { be.markDirty(); return; }
         be.progress = 0;
-        be.extractCurrent();
+        be.extractCurrent(midas);
         be.markDirty();
     }
 

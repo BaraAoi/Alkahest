@@ -21,4 +21,19 @@ assert 'net.alkahest.block.entity.MidasDistilleryGameTests' in mod['entrypoints'
 for lang in ('en_us','ru_ru'):
     data=json.loads(Path(f'src/main/resources/assets/alkahest/lang/{lang}.json').read_text())
     assert data.get('tooltip.alkahest.midas_elixir.distillery')
-print('Midas distillery rules and server GameTests validated')
+stabilizer=(root/'block/entity/StabilizerReceiverBlockEntity.java').read_text()
+assert 'MidasTouchEffect.nearby(world, pos.up())' in stabilizer, 'measure range from stabilizer core'
+assert 'MidasTouchEffect.progressStep(midas, time)' in stabilizer
+assert 'MidasTouchEffect.outputStability(OUTPUT_STABILITY, midas)' in stabilizer
+assert 'before / 20 != be.progress / 20' in stabilizer, 'boosted progress must not skip particles'
+assert 'tickWithMidas' in stabilizer
+stests=Path('src/gametest/java/net/alkahest/block/entity/MidasStabilizerGameTests.java').read_text()
+for name in ('boostedAndNormalSpeedAndStability','effectAtDeliveryDeterminesStability',
+             'inactiveOrBlockedCannotConsumeAndRecoveryIsExact','partialCapacityKeepsRemainderAndMergesStability',
+             'rangeUsesCoreAndDoesNotStack'):
+    assert f'void {name}(' in stests, name
+assert 'net.alkahest.block.entity.MidasStabilizerGameTests' in mod['entrypoints']['fabric-gametest']
+for lang in ('en_us','ru_ru'):
+    data=json.loads(Path(f'src/main/resources/assets/alkahest/lang/{lang}.json').read_text())
+    assert data.get('tooltip.alkahest.midas_elixir.stabilizer')
+print('Midas distillery and stabilizer rules and server GameTests validated')

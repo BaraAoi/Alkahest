@@ -37,7 +37,7 @@ jobs:
         run: python3 scripts/check_distillery_ui.py
       - name: Check distillery model and animation
         run: python3 scripts/check_distillery_model.py
-      - name: Check Midas distillery rules
+      - name: Check Midas distillery and stabilizer rules
         run: python3 scripts/check_midas_distilleries.py
       - name: Check pipe models and flow animation
         run: python3 scripts/check_pipe_model.py

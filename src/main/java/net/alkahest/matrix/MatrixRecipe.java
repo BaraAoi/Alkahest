@@ -45,7 +45,10 @@ public record MatrixRecipe(Item base, List<Item> components, ItemStack output,
             new ItemStack(ModItems.MIDAS_ELIXIR), EssenceType.ORDO, 15, EssenceType.LUX, 10, EssenceType.METALLUM, 5),
         // A higher-volume alternative to the early inventory mixture, not a replacement for it.
         synthesis(ModItems.FIRE_DUST, List.of(Items.SLIME_BALL, Items.BLAZE_POWDER), new ItemStack(ModItems.NAPALM, 3),
-            EssenceType.IGNIS, 12, EssenceType.POTENTIA, 8)
+            EssenceType.IGNIS, 12, EssenceType.POTENTIA, 8),
+        // Optional advanced batch; the earlier two-item inventory mixture remains available.
+        synthesis(ModItems.CAUSTIC_SLIME, List.of(Items.GUNPOWDER, Items.IRON_NUGGET), new ItemStack(ModItems.ACID_BOMB, 3),
+            EssenceType.VITIUM, 12, EssenceType.PERDITIO, 8, EssenceType.METALLUM, 4)
     );
 
     private static MatrixRecipe synthesis(Item base, List<Item> components, ItemStack output, Object... essence) {

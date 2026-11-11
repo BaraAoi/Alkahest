@@ -508,6 +508,50 @@ public class MatrixGameTests implements FabricGameTest {
     }
 
     @GameTest(templateName = EMPTY_STRUCTURE)
+    public void acidBombBatchNeedsBothComponentsAndExactEssence(TestContext c) {
+        // Keep jars well above other simultaneous structures in the shared GameTest world.
+        int y = CY + 48;
+        c.setBlockState(CX, y, CZ, ModBlocks.MATRIX_CORE);
+        for (int dx = -1; dx <= 1; dx++) for (int dy = -1; dy <= 1; dy++) for (int dz = -1; dz <= 1; dz++) {
+            if (dx == 0 && dy == 0 && dz == 0) continue;
+            c.setBlockState(CX + dx, y + dy, CZ + dz,
+                dx != 0 && dy != 0 && dz != 0 ? ModBlocks.MATRIX_PILLAR : ModBlocks.ALCHEMICAL_BRICK);
+        }
+        BlockPos pos = c.getAbsolutePos(new BlockPos(CX, y, CZ));
+        var core = (MatrixCoreBlockEntity)c.getWorld().getBlockEntity(pos);
+        core.setAwake(c.getWorld(), pos, true);
+        core.setStack(MatrixCoreBlockEntity.BASE, new ItemStack(ModItems.CAUSTIC_SLIME));
+        pedestal(c, 7, y - 1, 3, new ItemStack(Items.GUNPOWDER));
+        var player = c.createMockPlayer(net.minecraft.world.GameMode.CREATIVE);
+        var focus = new ItemStack(ModItems.ALKAHEST_AMULET);
+        c.assertFalse(core.startWith(focus, player), "Gunpowder alone is not enough for the new synthesis");
+        pedestal(c, 3, y - 1, 7, new ItemStack(Items.IRON_NUGGET));
+        var powder = (net.alkahest.block.entity.MatrixPedestalBlockEntity)c.getWorld().getBlockEntity(c.getAbsolutePos(new BlockPos(7, y - 1, 3)));
+        var iron = (net.alkahest.block.entity.MatrixPedestalBlockEntity)c.getWorld().getBlockEntity(c.getAbsolutePos(new BlockPos(3, y - 1, 7)));
+        var vitium = jar(c, 0, y, 0, EssenceType.VITIUM, 15);
+        var perditio = jar(c, 6, y, 0, EssenceType.PERDITIO, 10);
+        c.assertTrue(core.recipe() != null && core.recipe().output().isOf(ModItems.ACID_BOMB), "Both pedestals select the acid batch");
+        c.assertTrue(core.startWith(focus, player), "A focus starts the new recipe");
+        run(c.getWorld(), pos, MatrixCoreBlockEntity.DURATION + 3);
+        c.assertTrue(core.status() == MatrixCoreBlockEntity.STATUS_NO_ESSENCE && core.getStack(MatrixCoreBlockEntity.OUTPUT).isEmpty(),
+            "Missing Metallum prevents completion");
+        c.assertTrue(core.getStack(MatrixCoreBlockEntity.BASE).isOf(ModItems.CAUSTIC_SLIME) && !powder.isEmpty() && !iron.isEmpty(),
+            "Input and both components remain intact while waiting");
+        var metallum = jar(c, 0, y, 6, EssenceType.METALLUM, 6);
+        run(c.getWorld(), pos, 4);
+        var output = core.getStack(MatrixCoreBlockEntity.OUTPUT);
+        c.assertTrue(output.isOf(ModItems.ACID_BOMB) && output.getCount() == 3, "The synthesis creates exactly three acid bombs");
+        c.assertTrue(core.getStack(MatrixCoreBlockEntity.BASE).isEmpty() && powder.isEmpty() && iron.isEmpty(),
+            "One of each ingredient is consumed at completion");
+        c.assertTrue(vitium.contents().total() == 3 && perditio.contents().total() == 2 && metallum.contents().total() == 2,
+            "The exact price is Vitium 12, Perditio 8 and Metallum 4");
+        c.setBlockState(0, y, 0, Blocks.AIR);
+        c.setBlockState(6, y, 0, Blocks.AIR);
+        c.setBlockState(0, y, 6, Blocks.AIR);
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
     public void midasElixirDrinkingAndNearbyRange(TestContext c) {
         var player = c.createMockPlayer(net.minecraft.world.GameMode.SURVIVAL);
         var item = (net.alkahest.item.custom.MidasElixirItem) ModItems.MIDAS_ELIXIR;
