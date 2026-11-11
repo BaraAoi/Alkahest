@@ -61,8 +61,10 @@ public class JarItem extends BlockItem {
             if (!player.getWorld().isClient) player.sendMessage(Text.translatable("message.alkahest.jar_single_type"), true);
             return true; // Do not let vanilla rearrange or consume either jar on a refused pour.
         }
-        boolean overflow = from.total() + into.total() > CAPACITY;
+        int lost = Math.max(0, from.total() + into.total() - CAPACITY);
+        boolean overflow = lost > 0;
         if (!pour(source, target)) return false;
+        if (overflow) net.alkahest.atmosphere.AtmosphereEvents.emit(player.getWorld(), player.getBlockPos(), from.contents().getFirst().type(), lost);
         overflowFeedback(player, overflow); slot.markDirty(); return true;
     }
     @Override public boolean onStackClicked(ItemStack stack, Slot slot, ClickType click, PlayerEntity player) {

@@ -1,4 +1,8 @@
 {
+  "message.alkahest.air_header": "Atmosphere in cell from %s, %s, %s (16×16×16):",
+  "message.alkahest.air_value": "%s: %s (natural baseline: %s)",
+  "message.alkahest.air_chance": "Manifestation roll chance: %s%% per minute while a player is nearby.",
+  "message.alkahest.matrix_air_stability": "Matrix stability in the current atmosphere: %s%%.",
   "itemGroup.alkahest.main": "Alkahest",
   "item.alkahest.alchemists_monocle": "Alchemist's Monocle",
   "item.alkahest.crystal_ignis": "Ignis Crystal",

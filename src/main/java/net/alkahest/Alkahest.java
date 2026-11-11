@@ -39,6 +39,7 @@ public final class Alkahest implements ModInitializer {
         ModItems.register();
         ModScreenHandlers.register();
         ModWorldGen.register();
+        net.alkahest.atmosphere.AtmosphereEvents.register();
 
         net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.SERVER_STARTED.register(
             net.alkahest.essence.RecipeEssenceService::rebuild);

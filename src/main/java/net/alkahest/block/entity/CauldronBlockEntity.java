@@ -82,6 +82,9 @@ public class CauldronBlockEntity extends BlockEntity {
     private boolean dirtyWater;
     private boolean mossStabilized;
     private int evaporation;
+    // Loaded ticks without a change to the dissolved essences; persisted across chunk unloads.
+    private int essenceIdleTicks;
+    private int evaporationCursor;
 
     public CauldronBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.CAULDRON, pos, state);
@@ -220,6 +223,7 @@ public class CauldronBlockEntity extends BlockEntity {
             return false;
         }
         additions.forEach((type, amount) -> essences.merge(type, amount, Integer::sum));
+        essenceIdleTicks = 0;
         if (stack.isOf(ModBlocks.ALCHEMICAL_MOSS.asItem())) {
             mossStabilized = true;
         }
@@ -242,6 +246,7 @@ public class CauldronBlockEntity extends BlockEntity {
     }
 
     private void deductEssences(Map<EssenceType, Integer> cost) {
+        essenceIdleTicks = 0;
         cost.forEach((type, amount) -> {
             int rest = essences.getOrDefault(type, 0) - amount;
             if (rest <= 0) essences.remove(type);
@@ -520,6 +525,7 @@ public class CauldronBlockEntity extends BlockEntity {
     /** Convert all possible residue 1:1 into separately typed 5% crystals; no bank mixtures. */
     public int crystallize() {
         if (world == null || world.isClient) return 0;
+        essenceIdleTicks = 0;
         int produced = 0;
         for (EssenceType type : EssenceType.values()) {
             int remaining = essences.getOrDefault(type, 0);
@@ -640,6 +646,26 @@ public class CauldronBlockEntity extends BlockEntity {
         self.syncWaterState();
         self.ejectLegacyItems();
         self.collectDroppedIngredients(world, pos);
+        if (self.water && !self.essences.isEmpty()) {
+            self.essenceIdleTicks = Math.min(1400, self.essenceIdleTicks + 1);
+            if (self.essenceIdleTicks >= 1400) { // 60 seconds grace, then one unit per 10 seconds
+                EssenceType[] types = EssenceType.values();
+                for (int i = 0; i < types.length; i++) {
+                    int index = (self.evaporationCursor + i) % types.length;
+                    EssenceType type = types[index]; int amount = self.essences.getOrDefault(type, 0);
+                    if (amount <= 0) continue;
+                    if (amount == 1) self.essences.remove(type); else self.essences.put(type, amount - 1);
+                    self.evaporationCursor = (index + 1) % types.length;
+                    net.alkahest.atmosphere.AtmosphereEvents.emit(world, pos, type, 1);
+                    self.essenceIdleTicks = 1200;
+                    self.syncEssences();
+                    break;
+                }
+            }
+            if (self.essenceIdleTicks % 20 == 0) self.markDirty();
+        } else if (self.essenceIdleTicks != 0) {
+            self.essenceIdleTicks = 0; self.markDirty();
+        }
         if (self.water && self.isHeated() && self.essences.isEmpty()) {
             if (++self.evaporation >= 400) {
                 self.setWater(false);
@@ -667,6 +693,8 @@ public class CauldronBlockEntity extends BlockEntity {
         nbt.putBoolean("DirtyWater", dirtyWater);
         nbt.putBoolean("MossStabilized", mossStabilized);
         nbt.putInt("Evaporation", evaporation);
+        nbt.putInt("EssenceIdleTicks", essenceIdleTicks);
+        nbt.putInt("EssenceEvaporationCursor", evaporationCursor);
         NbtCompound stored = new NbtCompound();
         essences.forEach((type, amount) -> stored.putInt(type.asString(), amount));
         nbt.put("Essences", stored);
@@ -683,6 +711,8 @@ public class CauldronBlockEntity extends BlockEntity {
         dirtyWater = water && nbt.getBoolean("DirtyWater");
         mossStabilized = water && nbt.getBoolean("MossStabilized");
         evaporation = nbt.getInt("Evaporation");
+        essenceIdleTicks = Math.max(0, Math.min(1399, nbt.getInt("EssenceIdleTicks")));
+        evaporationCursor = Math.floorMod(nbt.getInt("EssenceEvaporationCursor"), EssenceType.values().length);
         essences.clear();
         NbtCompound stored = nbt.getCompound("Essences");
         for (EssenceType type : EssenceType.values()) {

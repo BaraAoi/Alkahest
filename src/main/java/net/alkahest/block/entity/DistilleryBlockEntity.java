@@ -271,6 +271,9 @@ public class DistilleryBlockEntity extends BlockEntity implements SidedInventory
                 }
                 self.stacks.set(PENDING, result);
             }
+            // A small atmospheric byproduct, independent of the useful output.
+            for (EssenceStack e : ItemEssenceMap.get(input, world))
+                net.alkahest.atmosphere.AtmosphereEvents.emit(world, pos, e.type(), Math.min(8, e.amount()) * 0.1);
             input.decrement(1);
             if (input.isEmpty()) self.stacks.set(0, ItemStack.EMPTY);
             self.progress = 0;

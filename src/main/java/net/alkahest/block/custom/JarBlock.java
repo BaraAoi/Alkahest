@@ -93,6 +93,8 @@ public class JarBlock extends Block implements BlockEntityProvider {
         if (fromJar) JarItem.set(stack, JarContentsComponent.EMPTY);
         else stack.decrementUnlessCreative(1, player);
         if (before + amount > JarItem.CAPACITY) {
+            int lost = before + amount - JarItem.CAPACITY;
+            net.alkahest.atmosphere.AtmosphereEvents.emit(world, pos, addition.contents().getFirst().type(), lost);
             ((ServerWorld) world).spawnParticles(ParticleTypes.SMOKE, pos.getX()+.5, pos.getY()+.8, pos.getZ()+.5, 12, .15, .1, .15, .02);
             world.playSound(null, pos, SoundEvents.BLOCK_FIRE_EXTINGUISH, SoundCategory.BLOCKS, .7f, 1.1f);
             player.sendMessage(Text.translatable("message.alkahest.jar_overflow"), true);

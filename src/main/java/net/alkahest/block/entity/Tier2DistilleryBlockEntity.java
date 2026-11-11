@@ -185,7 +185,10 @@ public class Tier2DistilleryBlockEntity extends BlockEntity implements Inventory
         setWorking(world, pos, true);
         self.progress += MidasTouchEffect.progressStep(midas, time);
         if (self.progress >= DURATION) {
-            self.pending.addAll(outputs(input, world.random, midas, world));
+            List<EssenceStack> output = outputs(input, world.random, midas, world);
+            self.pending.addAll(output);
+            for (EssenceStack e : output)
+                net.alkahest.atmosphere.AtmosphereEvents.emit(world, pos, e.type(), e.amount() * 0.1);
             input.decrement(1);
             if (input.isEmpty()) self.stacks.set(0, ItemStack.EMPTY);
             self.progress = 0;

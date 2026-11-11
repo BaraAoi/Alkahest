@@ -1,4 +1,8 @@
 {
+  "message.alkahest.air_header": "Атмосфера области от %s, %s, %s (16×16×16):",
+  "message.alkahest.air_value": "%s: %s (естественный фон: %s)",
+  "message.alkahest.air_chance": "Вероятность попытки проявления: %s%% в минуту при игроке поблизости.",
+  "message.alkahest.matrix_air_stability": "Устойчивость Матрицы к текущей атмосфере: %s%%.",
   "itemGroup.alkahest.main": "Алкагест",
   "item.alkahest.alchemists_monocle": "Монокль алхимика",
   "item.alkahest.crystal_ignis": "Кристалл Ignis",
