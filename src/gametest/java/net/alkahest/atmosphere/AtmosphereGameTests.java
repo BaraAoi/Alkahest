@@ -232,13 +232,31 @@ public class AtmosphereGameTests implements FabricGameTest {
     }
 
     @GameTest(templateName = EMPTY_STRUCTURE)
+    public void playersCanInspectTheirAir(TestContext c) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        var player = c.createMockCreativeServerPlayerInWorld();
+        BlockPos pos = c.getAbsolutePos(new BlockPos(3, 3, 3));
+        player.setPosition(pos.getX() + .5, pos.getY(), pos.getZ() + .5);
+        int result = c.getWorld().getServer().getCommandManager().getDispatcher()
+            .execute("alkahest_air", player.getCommandSource());
+        c.assertTrue(result == 1, "The player-facing atmosphere command executes successfully");
+        player.discard();
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
     public void manifestationsNeverForceLoadChunks(TestContext c) {
         var w = c.getWorld(); BlockPos unloaded = new BlockPos(29000000, 64, 29000000);
-        c.assertFalse(w.isChunkLoaded(unloaded), "Distant chunk starts unloaded");
-        c.assertFalse(AtmosphereEvents.spawnAt(w, unloaded, unloaded, EssenceType.IGNIS), "Unloaded target is rejected");
-        c.assertFalse(w.isChunkLoaded(unloaded), "Attempt did not force-load a chunk");
-        c.assertFalse(AtmosphereEvents.spawnAt(w, c.getAbsolutePos(new BlockPos(3, 2, 3)), unloaded, EssenceType.IGNIS),
-            "Manifestation cannot escape its source cell");
+        var rule = w.getGameRules().get(net.minecraft.world.GameRules.DO_MOB_SPAWNING);
+        boolean oldRule = rule.get();
+        rule.set(true, w.getServer());
+        try {
+            c.assertTrue(w.getDifficulty() != net.minecraft.world.Difficulty.PEACEFUL, "Test must exercise the loaded-chunk guard");
+            c.assertFalse(w.isChunkLoaded(unloaded), "Distant chunk starts unloaded");
+            c.assertFalse(AtmosphereEvents.spawnAt(w, unloaded, unloaded, EssenceType.IGNIS), "Unloaded target is rejected");
+            c.assertFalse(w.isChunkLoaded(unloaded), "Attempt did not force-load a chunk");
+            c.assertFalse(AtmosphereEvents.spawnAt(w, c.getAbsolutePos(new BlockPos(3, 2, 3)), unloaded, EssenceType.IGNIS),
+                "Manifestation cannot escape its source cell");
+        } finally { rule.set(oldRule, w.getServer()); }
         c.complete();
     }
 }
