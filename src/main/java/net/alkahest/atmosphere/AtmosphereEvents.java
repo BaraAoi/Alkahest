@@ -50,13 +50,15 @@ public final class AtmosphereEvents {
         if (world instanceof ServerWorld server) AtmosphereState.of(server).add(server, pos, amounts, factor);
     }
     private static void tick(ServerWorld world) {
-        if (world.getTime() % 1200 != 0 || world.getDifficulty() == Difficulty.PEACEFUL
+        if (world.getDifficulty() == Difficulty.PEACEFUL
                 || !world.getGameRules().getBoolean(GameRules.DO_MOB_SPAWNING)) return;
         Set<Long> visited = new HashSet<>();
         for (ServerPlayerEntity player : world.getPlayers()) {
             if (player.isSpectator()) continue;
             BlockPos origin = AtmosphereState.cellOrigin(player.getBlockPos());
-            if (visited.add(origin.asLong())) attempt(world, origin);
+            // Stagger cells over the minute instead of doing every player's scan in one tick.
+            if (Math.floorMod(world.getTime() + Long.hashCode(origin.asLong()), 1200) == 0
+                && visited.add(origin.asLong())) attempt(world, origin);
         }
     }
     /** Returns true only on a successful spawn; public for deterministic server tests. */

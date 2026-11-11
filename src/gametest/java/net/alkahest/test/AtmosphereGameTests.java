@@ -128,7 +128,12 @@ public class AtmosphereGameTests implements FabricGameTest {
         var player = c.createMockCreativeServerPlayerInWorld();
         player.setPosition(origin.getX() + 1.5, target.getY(), origin.getZ() + 1.5);
         c.assertTrue(w.getDifficulty() != net.minecraft.world.Difficulty.PEACEFUL, "Test world must permit hostile mobs: " + w.getDifficulty());
-        c.assertTrue(w.getGameRules().getBoolean(net.minecraft.world.GameRules.DO_MOB_SPAWNING), "Mob spawning gamerule must permit manifestations");
+        var rule = w.getGameRules().get(net.minecraft.world.GameRules.DO_MOB_SPAWNING);
+        boolean oldRule = rule.get();
+        rule.set(false, w.getServer());
+        c.assertFalse(AtmosphereEvents.spawnAt(w, origin, target, EssenceType.IGNIS), "Disabled mob spawning prevents manifestation");
+        rule.set(true, w.getServer());
+        try {
         c.assertTrue(w.isChunkLoaded(target), "Target chunk must be loaded");
         c.assertTrue(w.getPlayers().contains(player), "Mock server player must be in this world's player list: " + w.getPlayers().size());
         c.assertTrue(player.squaredDistanceTo(target.getX()+.5, target.getY(), target.getZ()+.5) >= 64
@@ -149,7 +154,10 @@ public class AtmosphereGameTests implements FabricGameTest {
         mobs.forEach(net.minecraft.entity.Entity::discard);
         player.setPosition(target.getX() + .5, target.getY(), target.getZ() + .5);
         c.assertFalse(AtmosphereEvents.spawnAt(w, origin, target, EssenceType.IGNIS), "Never spawn on top of a player");
-        w.getServer().getPlayerManager().remove(player);
+        } finally {
+            rule.set(oldRule, w.getServer());
+            w.getServer().getPlayerManager().remove(player);
+        }
         c.complete();
     }
 
