@@ -111,6 +111,13 @@ public final class ItemEssenceMap {
         e(Items.GHAST_TEAR, s(AQUA, 2), s(SPIRITUS, 2)),
         e(Items.PRISMARINE_CRYSTALS, s(AQUA, 3), s(LUX, 2)),
         e(Items.NETHER_STAR, s(SPIRITUS, 8), s(LUX, 6), s(POTENTIA, 6)),
+        e(Items.HEAVY_CORE, s(METALLUM, 6), s(ORDO, 4)),
+        e(Items.BELL, s(METALLUM, 4), s(ORDO, 2), s(MOTUS, 2)),
+        e(Items.GLOW_INK_SAC, s(AQUA, 1), s(LUX, 2)),
+        e(Items.CRIMSON_NYLIUM, s(TERRA, 3), s(HERBA, 2), s(IGNIS, 1)),
+        e(Items.WARPED_NYLIUM, s(TERRA, 3), s(HERBA, 2), s(IGNIS, 1)),
+        e(Items.WARPED_WART_BLOCK, s(HERBA, 4), s(IGNIS, 2)),
+        e(Items.GILDED_BLACKSTONE, s(TERRA, 3), s(IGNIS, 1), s(METALLUM, 2), s(ORDO, 2)),
         e(Items.BREEZE_ROD, s(AER, 6), s(MOTUS, 4)),
         e(Items.ANCIENT_DEBRIS, s(TERRA, 4), s(METALLUM, 4), s(IGNIS, 2)),
         e(Items.CHORUS_PLANT, s(HERBA, 2), s(SPIRITUS, 2)),
@@ -215,6 +222,8 @@ public final class ItemEssenceMap {
         }
         List<EssenceStack> exact = VALUES.get(stack.getItem());
         if (exact != null) return exact;
+        List<EssenceStack> vanilla = VanillaEssenceSources.get(stack.getItem());
+        if (!vanilla.isEmpty()) return vanilla;
         if (stack.isIn(FLOWERS) || stack.isIn(LEAVES) || stack.isIn(SEEDS)
             || stack.isOf(Items.WHEAT_SEEDS) || stack.isOf(Items.BEETROOT_SEEDS)
             || stack.isOf(Items.MELON_SEEDS) || stack.isOf(Items.PUMPKIN_SEEDS)

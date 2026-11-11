@@ -136,8 +136,26 @@ public final class RecipeEssenceService {
     private static void addVanillaWorldTransformations(List<RecipeEssenceCalculator.Recipe> recipes) {
         String[] colors = {"white", "orange", "magenta", "light_blue", "yellow", "lime", "pink", "gray",
             "light_gray", "cyan", "purple", "blue", "brown", "green", "red", "black"};
-        for (String color : colors)
+        for (String color : colors) {
             worldTransform(recipes, color + "_concrete_powder", color + "_concrete");
+            // Vanilla special crafting recolours a shulker box using one dye.
+            recipes.add(new RecipeEssenceCalculator.Recipe("~world/" + color + "_shulker_box",
+                "minecraft:" + color + "_shulker_box", 1,
+                List.of(List.of("minecraft:shulker_box"), List.of("minecraft:" + color + "_dye"))));
+        }
+        worldTransform(recipes, "dirt", "dirt_path");
+        worldTransform(recipes, "dirt", "farmland");
+        worldTransform(recipes, "pumpkin", "carved_pumpkin");
+        worldTransform(recipes, "sponge", "wet_sponge");
+        worldTransform(recipes, "anvil", "chipped_anvil");
+        worldTransform(recipes, "chipped_anvil", "damaged_anvil");
+        // Netherite smithing consumes the upgrade template, diamond equipment and netherite ingot.
+        for (String equipment : new String[]{"sword", "pickaxe", "axe", "shovel", "hoe", "helmet", "chestplate", "leggings", "boots"}) {
+            recipes.add(new RecipeEssenceCalculator.Recipe("~world/netherite_" + equipment,
+                "minecraft:netherite_" + equipment, 1,
+                List.of(List.of("minecraft:diamond_" + equipment), List.of("minecraft:netherite_ingot"),
+                    List.of("minecraft:netherite_upgrade_smithing_template"))));
+        }
         // Oxidation changes state but does not consume the underlying copper block or device.
         String[] variants = {"copper", "cut_copper", "cut_copper_slab", "cut_copper_stairs",
             "chiseled_copper", "copper_grate", "copper_bulb", "copper_door", "copper_trapdoor"};
