@@ -68,8 +68,11 @@ public final class RecipeEssenceService {
         for (var entry : computed.entrySet()) {
             Identifier id = Identifier.tryParse(entry.getKey());
             if (id != null && Registries.ITEM.containsId(id)) {
-                List<EssenceStack> values = RecipeEssenceCalculator.rounded(entry.getValue());
-                if (!values.isEmpty()) snapshot.put(Registries.ITEM.get(id), values);
+                Item item = Registries.ITEM.get(id);
+                List<EssenceStack> explicit = ItemEssenceMap.base(new ItemStack(item));
+                // Preserve the previous order of explicit values as it affects bellow/output order.
+                List<EssenceStack> values = explicit.isEmpty() ? RecipeEssenceCalculator.rounded(entry.getValue()) : explicit;
+                if (!values.isEmpty()) snapshot.put(item, values);
             }
         }
         SERVERS.put(server, Map.copyOf(snapshot));
