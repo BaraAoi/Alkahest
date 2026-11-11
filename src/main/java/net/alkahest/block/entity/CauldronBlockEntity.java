@@ -369,6 +369,9 @@ public class CauldronBlockEntity extends BlockEntity {
             return false;
         }
 
+        // Catalyst recipes consume the held stack too; never destroy stored contents through that path.
+        if (!ItemEssenceMap.safeToConsume(held)) return false;
+
         // Binary Alkahest synthesis & instability reactions when striking with a Diamond lattice
         if (held.isOf(Items.DIAMOND) && world instanceof ServerWorld serverWorld) {
             if (mossStabilized) {

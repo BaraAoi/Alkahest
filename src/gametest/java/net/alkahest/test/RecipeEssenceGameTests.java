@@ -122,6 +122,24 @@ public class RecipeEssenceGameTests implements FabricGameTest {
         }
         c.assertTrue(shulker.get(net.minecraft.component.DataComponentTypes.CONTAINER).streamNonEmpty().count() == 1,
             "Stored diamond is untouched");
+        // A catalyst may carry components even when its ordinary item type is not a container.
+        c.setBlockState(3, 1, 3, Blocks.MAGMA_BLOCK);
+        c.setBlockState(3, 2, 3, ModBlocks.ALCHEMY_CAULDRON);
+        var cauldron = (CauldronBlockEntity) world.getBlockEntity(c.getAbsolutePos(new BlockPos(3, 2, 3)));
+        var player = c.createMockPlayer(GameMode.SURVIVAL);
+        player.setStackInHand(Hand.MAIN_HAND, new ItemStack(Items.WATER_BUCKET));
+        cauldron.fill(player, Hand.MAIN_HAND);
+        for (int i = 0; i < 3; i++) {
+            cauldron.dissolveOne(new ItemStack(ModItems.CRYSTALS.get(EssenceType.IGNIS)));
+            cauldron.dissolveOne(new ItemStack(ModItems.CRYSTALS.get(EssenceType.POTENTIA)));
+        }
+        ItemStack catalyst = new ItemStack(Items.GUNPOWDER);
+        catalyst.set(net.minecraft.component.DataComponentTypes.CONTAINER,
+            net.minecraft.component.type.ContainerComponent.fromStacks(java.util.List.of(new ItemStack(Items.DIAMOND))));
+        player.setStackInHand(Hand.MAIN_HAND, catalyst);
+        c.assertFalse(cauldron.useItem(player, Hand.MAIN_HAND), "A ready catalyst may not destroy stored items");
+        c.assertTrue(player.getStackInHand(Hand.MAIN_HAND).getCount() == 1, "The filled catalyst remains untouched");
+        c.assertTrue(cauldron.essences().getOrDefault(EssenceType.IGNIS, 0) == 3, "Blocked catalyst does not spend essence");
         c.complete();
     }
 
