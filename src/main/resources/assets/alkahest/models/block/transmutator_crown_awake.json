@@ -1,11 +1,12 @@
 {
   "parent": "minecraft:block/block",
   "textures": {
-    "metal": "alkahest:block/transmutator_core_side",
-    "gold": "alkahest:block/transmutator_pillar_cap_side_lit",
+    "metal": "alkahest:block/transmutator_tower_copper",
+    "brass": "alkahest:block/transmutator_tower_brass",
+    "quartz": "alkahest:block/transmutator_tower_quartz",
     "glass": "alkahest:block/transmutator_tower_glass_awake",
     "gem": "alkahest:block/transmutator_tower_gem_awake",
-    "particle": "alkahest:block/transmutator_core_side"
+    "particle": "alkahest:block/transmutator_tower_copper"
   },
   "elements": [
     {
@@ -16,7 +17,7 @@
       ],
       "to": [
         15,
-        3,
+        2,
         15
       ],
       "faces": {
@@ -42,46 +43,78 @@
     },
     {
       "from": [
+        2,
+        2,
+        2
+      ],
+      "to": [
+        14,
+        3,
+        14
+      ],
+      "faces": {
+        "up": {
+          "texture": "#brass"
+        },
+        "down": {
+          "texture": "#brass"
+        },
+        "north": {
+          "texture": "#brass"
+        },
+        "south": {
+          "texture": "#brass"
+        },
+        "east": {
+          "texture": "#brass"
+        },
+        "west": {
+          "texture": "#brass"
+        }
+      }
+    },
+    {
+      "from": [
         3,
         3,
         3
       ],
       "to": [
         13,
-        5,
+        6,
         13
       ],
       "faces": {
         "up": {
-          "texture": "#gold"
+          "texture": "#quartz"
         },
         "down": {
-          "texture": "#gold"
+          "texture": "#quartz"
         },
         "north": {
-          "texture": "#gold"
+          "texture": "#quartz"
         },
         "south": {
-          "texture": "#gold"
+          "texture": "#quartz"
         },
         "east": {
-          "texture": "#gold"
+          "texture": "#quartz"
         },
         "west": {
-          "texture": "#gold"
+          "texture": "#quartz"
         }
       }
     },
     {
       "from": [
-        4,
-        5,
-        4
+        3,
+        6,
+        3
       ],
       "to": [
-        12,
+        13,
         8,
-        12
+        13
       ],
       "faces": {
         "up": {
@@ -112,91 +145,219 @@
       ],
       "to": [
         11,
-        12,
+        9,
         11
       ],
       "faces": {
         "up": {
-          "texture": "#gem"
+          "texture": "#brass"
         },
         "down": {
-          "texture": "#gem"
+          "texture": "#brass"
         },
         "north": {
-          "texture": "#gem"
+          "texture": "#brass"
         },
         "south": {
-          "texture": "#gem"
+          "texture": "#brass"
         },
         "east": {
-          "texture": "#gem"
+          "texture": "#brass"
         },
         "west": {
-          "texture": "#gem"
+          "texture": "#brass"
         }
       }
     },
     {
       "from": [
         6,
-        12,
+        9,
         6
       ],
       "to": [
         10,
-        14,
+        12,
         10
       ],
       "faces": {
         "up": {
-          "texture": "#gold"
+          "texture": "#gem"
         },
         "down": {
-          "texture": "#gold"
+          "texture": "#gem"
         },
         "north": {
-          "texture": "#gold"
+          "texture": "#gem"
         },
         "south": {
-          "texture": "#gold"
+          "texture": "#gem"
         },
         "east": {
-          "texture": "#gold"
+          "texture": "#gem"
         },
         "west": {
-          "texture": "#gold"
+          "texture": "#gem"
         }
       }
     },
     {
       "from": [
         7,
-        14,
+        12,
         7
       ],
       "to": [
         9,
-        16,
+        14,
         9
       ],
       "faces": {
         "up": {
-          "texture": "#gem"
+          "texture": "#brass"
         },
         "down": {
-          "texture": "#gem"
+          "texture": "#brass"
         },
         "north": {
-          "texture": "#gem"
+          "texture": "#brass"
         },
         "south": {
-          "texture": "#gem"
+          "texture": "#brass"
         },
         "east": {
-          "texture": "#gem"
+          "texture": "#brass"
         },
         "west": {
-          "texture": "#gem"
+          "texture": "#brass"
+        }
+      }
+    },
+    {
+      "from": [
+        1,
+        2,
+        1
+      ],
+      "to": [
+        4,
+        5,
+        4
+      ],
+      "faces": {
+        "up": {
+          "texture": "#metal"
+        },
+        "down": {
+          "texture": "#metal"
+        },
+        "north": {
+          "texture": "#metal"
+        },
+        "south": {
+          "texture": "#metal"
+        },
+        "east": {
+          "texture": "#metal"
+        },
+        "west": {
+          "texture": "#metal"
+        }
+      }
+    },
+    {
+      "from": [
+        1,
+        2,
+        12
+      ],
+      "to": [
+        4,
+        5,
+        15
+      ],
+      "faces": {
+        "up": {
+          "texture": "#metal"
+        },
+        "down": {
+          "texture": "#metal"
+        },
+        "north": {
+          "texture": "#metal"
+        },
+        "south": {
+          "texture": "#metal"
+        },
+        "east": {
+          "texture": "#metal"
+        },
+        "west": {
+          "texture": "#metal"
+        }
+      }
+    },
+    {
+      "from": [
+        12,
+        2,
+        1
+      ],
+      "to": [
+        15,
+        5,
+        4
+      ],
+      "faces": {
+        "up": {
+          "texture": "#metal"
+        },
+        "down": {
+          "texture": "#metal"
+        },
+        "north": {
+          "texture": "#metal"
+        },
+        "south": {
+          "texture": "#metal"
+        },
+        "east": {
+          "texture": "#metal"
+        },
+        "west": {
+          "texture": "#metal"
+        }
+      }
+    },
+    {
+      "from": [
+        12,
+        2,
+        12
+      ],
+      "to": [
+        15,
+        5,
+        15
+      ],
+      "faces": {
+        "up": {
+          "texture": "#metal"
+        },
+        "down": {
+          "texture": "#metal"
+        },
+        "north": {
+          "texture": "#metal"
+        },
+        "south": {
+          "texture": "#metal"
+        },
+        "east": {
+          "texture": "#metal"
+        },
+        "west": {
+          "texture": "#metal"
         }
       }
     }

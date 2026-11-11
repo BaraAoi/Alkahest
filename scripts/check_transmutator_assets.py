@@ -159,6 +159,21 @@ check('dropBufferedEssence' in pillar_be, 'legacy pillar buffers must be recover
 
 check('MidasTouchEffect.progressStep' in core_be and 'before / 10 != self.progress / 10' in core_be, 'Midas speed must not skip essence prefill boundaries')
 
+# A compact Matrix-inspired instrument, never a renderer for the old platform or Matrix.
+renderer = (CLIENT / 'client/render/TransmutatorCoreRenderer.java').read_text()
+check('TRANSMUTATOR_CORE' in client_registration and 'TransmutatorCoreRenderer::new' in client_registration,
+      'the new core renderer must be registered')
+check('TRANSMUTATOR_CHAMBER' in renderer and 'TransmutatorAssemblyBlock.AWAKE' in renderer and 'TRANSMUTATOR_CROWN' in renderer,
+      'animated rings may appear only in the awakened tower')
+check('matrix_ring_metal.png' in renderer and 'getEntitySolid' in renderer and 'SEGMENTS' in renderer,
+      'the tower needs compact real-metal rings on a quad layer')
+for name in ('transmutator_chamber', 'transmutator_crown'):
+    model = load(A / f'models/block/{name}.json')
+    for el in model['elements']:
+        check(all(0 <= n <= 16 for n in el['from'] + el['to']), f'{name} must remain within one block')
+    for ref in ('metal', 'brass', 'quartz', 'gem'):
+        check(ref in model['textures'], f'{name} needs visible {ref} materials')
+
 # --- report ----------------------------------------------------------------------------------
 if failures:
     print('transmutator checks FAILED:')

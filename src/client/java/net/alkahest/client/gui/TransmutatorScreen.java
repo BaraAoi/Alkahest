@@ -1,27 +1,28 @@
 package net.alkahest.client.gui;
 
+import net.alkahest.Alkahest;
 import net.alkahest.essence.EssenceStack;
 import net.alkahest.screen.TransmutatorScreenHandler;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.text.Text;
+import net.minecraft.util.Identifier;
 
+import java.util.ArrayList;
 import java.util.List;
 
-/** Drawn in code: copper panel, amulet socket, progress bar and the essence price of the input. */
+/** Separate instrument, essence, status and inventory panels; every slot keeps its real hitbox. */
 public final class TransmutatorScreen extends HandledScreen<TransmutatorScreenHandler> {
-    private static final int WIDTH = 176, HEIGHT = 166;
-    private static final int TRACK_X = 74, TRACK_Y = 32, TRACK_WIDTH = 34, TRACK_HEIGHT = 6;
+    private static final Identifier BACKGROUND = Alkahest.id("textures/gui/transmutator_panel.png");
+    private static final int WIDTH = TransmutatorScreenHandler.WIDTH, HEIGHT = TransmutatorScreenHandler.HEIGHT;
+    private static final int TRACK_X = 54, TRACK_Y = 50, TRACK_WIDTH = 43, TRACK_HEIGHT = 7;
+    private static final int COST_X = 146, COST_Y = 45, COST_ROW = 11, COST_WIDTH = 74, COST_ROWS = 5;
 
     public TransmutatorScreen(TransmutatorScreenHandler handler, PlayerInventory inventory, Text title) {
         super(handler, inventory, title);
-        backgroundWidth = WIDTH;
-        backgroundHeight = HEIGHT;
-        titleX = 8;
-        titleY = 6;
-        playerInventoryTitleX = 8;
-        playerInventoryTitleY = 72;
+        backgroundWidth = WIDTH; backgroundHeight = HEIGHT;
+        titleX = 13; titleY = 9; playerInventoryTitleX = 13; playerInventoryTitleY = 130;
     }
 
     private Text statusText() {
@@ -36,63 +37,93 @@ public final class TransmutatorScreen extends HandledScreen<TransmutatorScreenHa
         });
     }
 
-    private void slotFrame(DrawContext c, int sx, int sy) {
+    private int percent() {
+        return (int)Math.max(0, Math.min(100, (long)handler.progress() * 100 / handler.maxProgress()));
+    }
+
+    /** Guard translated/custom names against crossing a panel edge. Hover shows the full text. */
+    private String fit(String text, int maxWidth) {
+        if (textRenderer.getWidth(text) <= maxWidth) return text;
+        return textRenderer.trimToWidth(text, maxWidth - textRenderer.getWidth("…")) + "…";
+    }
+
+    private void slot(DrawContext c, int sx, int sy, boolean focus) {
         int px = x + sx, py = y + sy;
-        c.fill(px - 2, py - 2, px + 18, py + 18, 0xFF171117);
-        c.fill(px - 1, py - 1, px + 17, py + 17, 0xFF8A6A3F);
-        c.fill(px, py, px + 16, py + 16, 0xFF0E1B22);
-        c.fill(px, py, px + 16, py + 1, 0xFF1B2A30);
-        c.fill(px, py + 15, px + 16, py + 16, 0xFF3A4442);
+        c.fill(px - 2, py - 2, px + 18, py + 18, 0xFF110E0D);
+        c.fill(px - 1, py - 1, px + 17, py + 17, focus ? 0xFFD8AE66 : 0xFF8D7959);
+        c.fill(px, py, px + 16, py + 16, 0xFF0C181C);
+        c.fill(px, py, px + 16, py + 1, 0xFF2F4543);
+        c.fill(px, py + 15, px + 16, py + 16, 0xFF29302D);
+        if (focus) c.fill(px - 1, py - 1, px + 4, py, 0xFFFFDEA4);
     }
 
     @Override protected void drawBackground(DrawContext c, float delta, int mouseX, int mouseY) {
-        c.fill(x, y, x + WIDTH, y + HEIGHT, 0xFF241E18);
-        c.fill(x + 1, y + 1, x + WIDTH - 1, y + HEIGHT - 1, 0xFF17120E);
-        c.fill(x + 4, y + 4, x + WIDTH - 4, y + 20, 0xFF2E241A);
-        c.fill(x + 4, y + 20, x + WIDTH - 4, y + 21, 0xFF8A6A3F);
-        c.fill(x + 4, y + 68, x + WIDTH - 4, y + 69, 0xFF8A6A3F);
-        for (int[] rivet : new int[][]{{4, 4}, {WIDTH - 7, 4}, {4, HEIGHT - 7}, {WIDTH - 7, HEIGHT - 7}}) {
-            c.fill(x + rivet[0], y + rivet[1], x + rivet[0] + 3, y + rivet[1] + 3, 0xFFB08A52);
-        }
-        slotFrame(c, TransmutatorScreenHandler.INPUT_X, TransmutatorScreenHandler.INPUT_Y);
-        slotFrame(c, TransmutatorScreenHandler.AMULET_X, TransmutatorScreenHandler.AMULET_Y);
-        slotFrame(c, TransmutatorScreenHandler.OUTPUT_X, TransmutatorScreenHandler.OUTPUT_Y);
-        for (int row = 0; row < 3; row++) for (int col = 0; col < 9; col++) slotFrame(c, 8 + col * 18, 84 + row * 18);
-        for (int col = 0; col < 9; col++) slotFrame(c, 8 + col * 18, 142);
-
+        c.drawTexture(BACKGROUND, x, y, WIDTH, HEIGHT, 0, 0, WIDTH, HEIGHT, WIDTH, HEIGHT);
+        slot(c, TransmutatorScreenHandler.INPUT_X, TransmutatorScreenHandler.INPUT_Y, true);
+        slot(c, TransmutatorScreenHandler.AMULET_X, TransmutatorScreenHandler.AMULET_Y, true);
+        slot(c, TransmutatorScreenHandler.OUTPUT_X, TransmutatorScreenHandler.OUTPUT_Y, true);
+        for (int row = 0; row < 3; row++) for (int col = 0; col < 9; col++)
+            slot(c, TransmutatorScreenHandler.PLAYER_X + col * 18, TransmutatorScreenHandler.PLAYER_Y + row * 18, false);
+        for (int col = 0; col < 9; col++) slot(c, TransmutatorScreenHandler.PLAYER_X + col * 18, TransmutatorScreenHandler.HOTBAR_Y, false);
         int bx = x + TRACK_X, by = y + TRACK_Y;
-        c.fill(bx - 1, by - 1, bx + TRACK_WIDTH + 1, by + TRACK_HEIGHT + 1, 0xFFB08A52);
-        c.fill(bx, by, bx + TRACK_WIDTH, by + TRACK_HEIGHT, 0xFF0A171E);
-        int fill = (int) ((long) Math.max(0, Math.min(handler.progress(), handler.maxProgress()))
-            * (TRACK_WIDTH - 2) / Math.max(1, handler.maxProgress()));
+        c.fill(bx - 1, by - 1, bx + TRACK_WIDTH + 1, by + TRACK_HEIGHT + 1, 0xFF9F8259);
+        c.fill(bx, by, bx + TRACK_WIDTH, by + TRACK_HEIGHT, 0xFF091618);
+        int fill = (int)((long)Math.max(0, Math.min(handler.progress(), handler.maxProgress())) * (TRACK_WIDTH - 2) / handler.maxProgress());
         if (fill > 0) {
-            c.fill(bx + 1, by + 1, bx + 1 + fill, by + TRACK_HEIGHT - 1, 0xFFD9A93B);
-            c.fill(bx + 1, by + 1, bx + 1 + fill, by + 3, 0xFFF5E3A1);
+            c.fill(bx + 1, by + 1, bx + 1 + fill, by + TRACK_HEIGHT - 1, 0xFFB6843F);
+            c.fill(bx + 1, by + 1, bx + 1 + fill, by + 3, 0xFFFFD68A);
         }
     }
 
     @Override protected void drawForeground(DrawContext c, int mouseX, int mouseY) {
-        c.drawTextWithShadow(textRenderer, title, titleX, titleY, 0xFFF1D8A3);
-        c.drawTextWithShadow(textRenderer, playerInventoryTitle, playerInventoryTitleX, playerInventoryTitleY, 0xFFDFD0AB);
-        int color = switch (handler.status()) {
-            case 1 -> 0xFFFFE08A;
-            case 2 -> 0xFFFFC27D;
-            case 3 -> 0xFFFF9E7A;
-            default -> 0xFFD1C6AC;
+        c.drawTextWithShadow(textRenderer, fit(title.getString(), 205), titleX, titleY, 0xFFF0DBB6);
+        c.drawTextWithShadow(textRenderer, fit(playerInventoryTitle.getString(), 206), playerInventoryTitleX, playerInventoryTitleY, 0xFFDDD0B7);
+        c.drawTextWithShadow(textRenderer, fit(Text.translatable("screen.alkahest.transmutator.input").getString(), 43), 18, 32, 0xFFD1C4A8);
+        c.drawTextWithShadow(textRenderer, fit(Text.translatable("screen.alkahest.transmutator.output").getString(), 38), 96, 32, 0xFFD1C4A8);
+        c.drawTextWithShadow(textRenderer, fit(Text.translatable("screen.alkahest.transmutator.amulet").getString(), 76), 51, 82, 0xFFCFBD9B);
+        c.drawCenteredTextWithShadow(textRenderer, percent() + "%", 75, 63, 0xFFF1D49C);
+        c.drawTextWithShadow(textRenderer, fit(Text.translatable("screen.alkahest.transmutator.cost").getString(), 76), COST_X, 32, 0xFFF2D5A0);
+        int statusColor = switch (handler.status()) {
+            case 1 -> 0xFF94DFCC;
+            case 2 -> 0xFFFFD197;
+            case 3 -> 0xFFFFAB89;
+            default -> 0xFFE0D4BC;
         };
-        c.drawCenteredTextWithShadow(textRenderer, statusText(), 88, 48, color);
-
-        // Essence price of the input, one line per type, tinted with the essence colour.
-        List<EssenceStack> requirements = handler.requirements();
-        int lineY = 22;
-        for (int i = 0; i < requirements.size() && i < 5; i++) {
-            EssenceStack stack = requirements.get(i);
-            c.drawTextWithShadow(textRenderer, Text.literal(stack.type().displayName() + " × " + stack.amount()),
-                90, lineY, stack.type().color() | 0xFF000000);
-            lineY += 10;
+        c.drawCenteredTextWithShadow(textRenderer, fit(statusText().getString(), 200), WIDTH / 2, 113, statusColor);
+        List<EssenceStack> costs = handler.requirements();
+        if (costs.isEmpty()) {
+            c.drawTextWithShadow(textRenderer, fit(Text.translatable("screen.alkahest.transmutator.no_recipe").getString(), COST_WIDTH), COST_X, COST_Y, 0xFFACAAA0);
+        } else {
+            for (int i = 0; i < costs.size() && i < COST_ROWS; i++) {
+                EssenceStack essence = costs.get(i);
+                int yy = COST_Y + i * COST_ROW;
+                c.fill(COST_X, yy + 2, COST_X + 5, yy + 7, 0xFFB2A38B);
+                c.fill(COST_X + 1, yy + 3, COST_X + 4, yy + 6, essence.type().color() | 0xFF000000);
+                String label = essence.type().displayName() + " × " + essence.amount();
+                c.drawTextWithShadow(textRenderer, fit(label, COST_WIDTH - 8), COST_X + 8, yy, 0xFFE4DECE);
+            }
         }
-        if (requirements.isEmpty()) {
-            c.drawTextWithShadow(textRenderer, Text.translatable("screen.alkahest.transmutator.no_recipe"), 90, 22, 0xFF8C8578);
+    }
+
+    private boolean inside(int mouseX, int mouseY, int sx, int sy, int width, int height) {
+        return mouseX >= x + sx && mouseX < x + sx + width && mouseY >= y + sy && mouseY < y + sy + height;
+    }
+
+    @Override public void render(DrawContext c, int mouseX, int mouseY, float delta) {
+        renderBackground(c, mouseX, mouseY, delta);
+        super.render(c, mouseX, mouseY, delta);
+        drawMouseoverTooltip(c, mouseX, mouseY);
+        if (inside(mouseX, mouseY, TRACK_X, TRACK_Y, TRACK_WIDTH, TRACK_HEIGHT)) {
+            c.drawTooltip(textRenderer, Text.translatable("screen.alkahest.transmutator.progress", percent()), mouseX, mouseY);
+        } else if (inside(mouseX, mouseY, 10, 109, 216, 16)) {
+            c.drawTooltip(textRenderer, statusText(), mouseX, mouseY);
+        } else if (inside(mouseX, mouseY, 139, 43, 86, 59) && !handler.requirements().isEmpty()) {
+            List<Text> lines = new ArrayList<>();
+            lines.add(Text.translatable("screen.alkahest.transmutator.cost"));
+            for (EssenceStack e : handler.requirements()) lines.add(Text.literal(e.type().displayName() + " × " + e.amount()));
+            c.drawTooltip(textRenderer, lines, mouseX, mouseY);
+        } else if (!handler.getSlot(1).hasStack() && inside(mouseX, mouseY, TransmutatorScreenHandler.AMULET_X, TransmutatorScreenHandler.AMULET_Y, 16, 16)) {
+            c.drawTooltip(textRenderer, Text.translatable("screen.alkahest.transmutator.amulet_hint"), mouseX, mouseY);
         }
     }
 }

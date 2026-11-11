@@ -18,9 +18,12 @@ import net.minecraft.screen.slot.Slot;
 public class TransmutatorScreenHandler extends ScreenHandler {
     public static final int PLAYER_INV_START = 3;
     public static final int PLAYER_INV_END = PLAYER_INV_START + 36;
-    public static final int INPUT_X = 44, INPUT_Y = 28;
-    public static final int AMULET_X = 44, AMULET_Y = 56;
-    public static final int OUTPUT_X = 116, OUTPUT_Y = 28;
+    // Shared with the client artwork. Slot indices and storage remain unchanged.
+    public static final int WIDTH = 236, HEIGHT = 220;
+    public static final int INPUT_X = 26, INPUT_Y = 45;
+    public static final int AMULET_X = 26, AMULET_Y = 78;
+    public static final int OUTPUT_X = 102, OUTPUT_Y = 45;
+    public static final int PLAYER_X = 37, PLAYER_Y = 143, HOTBAR_Y = 201;
 
     private final Inventory inventory;
     private final PropertyDelegate properties;
@@ -47,9 +50,9 @@ public class TransmutatorScreenHandler extends ScreenHandler {
             @Override public boolean canInsert(ItemStack stack) { return false; }
         });
         for (int row = 0; row < 3; row++) for (int col = 0; col < 9; col++)
-            addSlot(new Slot(playerInventory, col + row * 9 + 9, 8 + col * 18, 84 + row * 18));
+            addSlot(new Slot(playerInventory, col + row * 9 + 9, PLAYER_X + col * 18, PLAYER_Y + row * 18));
         for (int col = 0; col < 9; col++)
-            addSlot(new Slot(playerInventory, col, 8 + col * 18, 142));
+            addSlot(new Slot(playerInventory, col, PLAYER_X + col * 18, HOTBAR_Y));
 
         addProperties(properties);
     }

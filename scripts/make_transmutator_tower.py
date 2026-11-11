@@ -39,6 +39,43 @@ def gem(lit):
             row.append(col)
         p.append(row)
     return p
+def metal(brass):
+    rows=[]
+    for y in range(16):
+        row=[]
+        for x in range(16):
+            n=((x*17+y*31+x*y*3)%9)-4
+            if brass:
+                base=(141,99,51) if y>8 else (178,133,71)
+                if y in (0,15): base=(70,48,28)
+                elif y in (1,14): base=(220,174,101)
+            else:
+                base=(115,69,40) if y>8 else (155,95,55)
+                if y in (0,15): base=(54,36,26)
+                elif y in (1,14): base=(197,137,83)
+            if x in (2,13) and y in (3,12): base=(233,199,140)
+            row.append(tuple(max(0,min(255,c+n)) for c in base)+(255,))
+        rows.append(row)
+    return rows
+
+def quartz():
+    rows=[]
+    for y in range(16):
+        row=[]
+        for x in range(16):
+            n=((x*19+y*29+x*y)%7)-3
+            base=(214,211,196)
+            if x in (0,15) or y in (0,15): base=(129,117,99)
+            elif x in (1,14) or y in (1,14): base=(237,231,212)
+            elif (x==y or x+y==15) and 4<=x<=11: base=(180,168,144)
+            row.append(tuple(max(0,min(255,c+n)) for c in base)+(255,))
+        rows.append(row)
+    return rows
+
+png(A/'textures/block/transmutator_tower_copper.png', metal(False))
+png(A/'textures/block/transmutator_tower_brass.png', metal(True))
+png(A/'textures/block/transmutator_tower_quartz.png', quartz())
+
 for active in (False, True):
     suffix='_awake' if active else ''
     png(A/'textures/block'/('transmutator_tower_glass'+suffix+'.png'), glass(active))
@@ -48,18 +85,31 @@ def element(a,b,tex):
     return {'from':a,'to':b,'faces':{face:{'texture':'#'+tex} for face in ('up','down','north','south','east','west')}}
 def model(name, active):
     suffix='_awake' if active else ''
-    textures={'metal':'alkahest:block/transmutator_core_side', 'gold':'alkahest:block/transmutator_pillar_cap_side_lit',
+    textures={'metal':'alkahest:block/transmutator_tower_copper',
+              'brass':'alkahest:block/transmutator_tower_brass',
+              'quartz':'alkahest:block/transmutator_tower_quartz',
               'glass':'alkahest:block/transmutator_tower_glass'+suffix,
-              'gem':'alkahest:block/transmutator_tower_gem'+suffix,'particle':'alkahest:block/transmutator_core_side'}
+              'gem':'alkahest:block/transmutator_tower_gem'+suffix,
+              'particle':'alkahest:block/transmutator_tower_copper'}
     if name=='transmutator_chamber':
-        parts=[element([1,0,1],[15,2,15],'metal'),element([2,2,2],[14,14,14],'glass'),
-               element([5,5,5],[11,11,11],'gem'), element([1,14,1],[15,16,15],'metal')]
-        for x in (1,13):
-            for z in (1,13): parts.append(element([x,2,z],[x+2,14,z+2],'gold'))
+        # The square instrument is supported by low quartz feet and a copper cage.
+        # Its centre remains transparent so the compact moving rings can be seen.
+        parts=[element([1,0,1],[15,2,15],'metal'), element([2,2,2],[14,3,14],'brass'),
+               element([3,3,3],[13,13,13],'glass'), element([6,5,6],[10,11,10],'gem'),
+               element([2,13,2],[14,14,14],'brass'), element([1,14,1],[15,16,15],'metal')]
+        for x in (1,12):
+            for z in (1,12):
+                parts.append(element([x,2,z],[x+3,5,z+3],'quartz'))
+                parts.append(element([x+1,5,z+1],[x+2,13,z+2],'metal'))
+                parts.append(element([x,12,z],[x+3,14,z+3],'brass'))
     else:
-        parts=[element([1,0,1],[15,3,15],'metal'),element([3,3,3],[13,5,13],'gold'),
-               element([4,5,4],[12,8,12],'metal'),element([5,8,5],[11,12,11],'gem'),
-               element([6,12,6],[10,14,10],'gold'),element([7,14,7],[9,16,9],'gem')]
+        # A grounded machined crown rather than another floating pyramid.
+        parts=[element([1,0,1],[15,2,15],'metal'), element([2,2,2],[14,3,14],'brass'),
+               element([3,3,3],[13,6,13],'quartz'), element([3,6,3],[13,8,13],'metal'),
+               element([5,8,5],[11,9,11],'brass'), element([6,9,6],[10,12,10],'gem'),
+               element([7,12,7],[9,14,9],'brass')]
+        for x in (1,12):
+            for z in (1,12): parts.append(element([x,2,z],[x+3,5,z+3],'metal'))
     return {'parent':'minecraft:block/block','textures':textures,'elements':parts}
 for name in ('transmutator_chamber','transmutator_crown'):
     for active in (False,True):

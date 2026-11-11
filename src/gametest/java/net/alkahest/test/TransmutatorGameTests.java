@@ -262,6 +262,28 @@ public class TransmutatorGameTests implements FabricGameTest {
         c.complete();
     }
 
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void redesignedGuiSlotsRemainUsable(TestContext c) {
+        BlockPos pos = tower(c, CY + 32);
+        var core = (TransmutatorCoreBlockEntity)c.getWorld().getBlockEntity(pos);
+        var player = c.createMockPlayer(net.minecraft.world.GameMode.SURVIVAL);
+        var h = new net.alkahest.screen.TransmutatorScreenHandler(1, player.getInventory(), core,
+            new net.minecraft.screen.ArrayPropertyDelegate(3));
+        c.assertTrue(h.getSlot(0).x == 26 && h.getSlot(0).y == 45 && h.getSlot(1).x == 26 && h.getSlot(1).y == 78,
+            "Input and amulet hitboxes align with their new frames");
+        c.assertTrue(h.getSlot(2).x == 102 && h.getSlot(2).y == 45 && h.getSlot(3).x == 37 && h.getSlot(3).y == 143 && h.getSlot(30).y == 201,
+            "Output, inventory and hotbar hitboxes align with their new frames");
+        c.assertFalse(h.getSlot(2).canInsert(new ItemStack(Items.STONE)), "Output still rejects insertion");
+        player.getInventory().setStack(9, new ItemStack(Items.COPPER_INGOT, 3));
+        c.assertFalse(h.quickMove(player, 3).isEmpty(), "Shift-click still inserts a valid input");
+        c.assertTrue(core.getStack(TransmutatorCoreBlockEntity.INPUT).getCount() == 3, "The input stack reaches the core");
+        player.getInventory().setStack(10, new ItemStack(ModItems.ALKAHEST_AMULET));
+        c.assertFalse(h.quickMove(player, 4).isEmpty(), "Shift-click still inserts the amulet");
+        c.assertTrue(core.getStack(TransmutatorCoreBlockEntity.AMULET).isOf(ModItems.ALKAHEST_AMULET), "The amulet reaches its dedicated slot");
+        c.assertFalse(h.quickMove(player, 0).isEmpty(), "Input can still be returned to inventory");
+        c.complete();
+    }
+
     /** One core alone is not a platform; the eight pillars make it one. */
     @GameTest(templateName = EMPTY_STRUCTURE)
     public void platformNeedsAllEightPillars(TestContext c) {
