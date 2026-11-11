@@ -72,6 +72,9 @@ public class AtmosphereGameTests implements FabricGameTest {
         for (int i = 0; i < 1399; i++) CauldronBlockEntity.tick(w, pos, cauldron);
         c.assertTrue(cauldron.essences().get(EssenceType.IGNIS) == 3, "No loss during grace or first ten seconds");
         var nbt = cauldron.createNbt(w.getRegistryManager());
+        var clientCopy = new CauldronBlockEntity(pos, cauldron.getCachedState());
+        clientCopy.readComponentlessNbt(cauldron.toUpdatePacket().getNbt(), w.getRegistryManager());
+        c.assertTrue(clientCopy.essenceEvaporationSeconds() == 1, "Evaporation countdown is synchronized to the monocle");
         cauldron.readComponentlessNbt(nbt, w.getRegistryManager());
         CauldronBlockEntity.tick(w, pos, cauldron);
         c.assertTrue(cauldron.essences().get(EssenceType.IGNIS) == 2, "Exactly one unit evaporates after reload");
@@ -134,6 +137,26 @@ public class AtmosphereGameTests implements FabricGameTest {
         w.getBlockState(jarPos).onUseWithItem(donor, w, player, Hand.MAIN_HAND, hit);
         c.assertTrue(jar.contents().total() == 100 && JarItem.contents(donor).total() == 0, "Overflow actually consumes the excess");
         c.assertTrue(Math.abs(air.levels(w, jarPos).get(EssenceType.IGNIS) - initial - 5) < 1e-8, "Exactly the lost five units enter the air");
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void inventoryOverflowSplitsCompositeIntoAir(TestContext c) {
+        var w = c.getWorld(); BlockPos pos = c.getAbsolutePos(new BlockPos(3, 2, 3));
+        var player = c.createMockPlayer(GameMode.SURVIVAL);
+        player.setPosition(pos.getX() + .5, pos.getY(), pos.getZ() + .5);
+        var receiver = new ItemStack(ModBlocks.JAR);
+        var donor = new ItemStack(ModBlocks.JAR);
+        JarItem.set(receiver, new JarContentsComponent(List.of(new EssenceStack(EssenceType.VAPOR, 95, 1))));
+        JarItem.set(donor, new JarContentsComponent(List.of(new EssenceStack(EssenceType.VAPOR, 10, 1))));
+        player.getInventory().setStack(0, receiver);
+        var slot = new net.minecraft.screen.slot.Slot(player.getInventory(), 0, 0, 0);
+        var air = AtmosphereState.of(w);
+        double ignis = air.levels(w, pos).get(EssenceType.IGNIS), aqua = air.levels(w, pos).get(EssenceType.AQUA);
+        c.assertTrue(donor.getItem().onStackClicked(donor, slot, net.minecraft.util.ClickType.RIGHT, player), "Inventory pour works");
+        c.assertTrue(JarItem.contents(receiver).total() == 100 && JarItem.contents(donor).total() == 0, "Only five units overflow");
+        c.assertTrue(Math.abs(air.levels(w, pos).get(EssenceType.IGNIS) - ignis - 2.5) < 1e-8, "Half of lost Vapor becomes Ignis");
+        c.assertTrue(Math.abs(air.levels(w, pos).get(EssenceType.AQUA) - aqua - 2.5) < 1e-8, "Half of lost Vapor becomes Aqua");
         c.complete();
     }
 
