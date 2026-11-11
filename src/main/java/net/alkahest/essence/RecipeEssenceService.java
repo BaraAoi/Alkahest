@@ -40,7 +40,7 @@ public final class RecipeEssenceService {
             seeds.put(Registries.ITEM.getId(item).toString(), counts);
         }
         List<RecipeEssenceCalculator.Recipe> recipes = new ArrayList<>();
-        for (var entry : server.getRecipeManager().getAllOfType(RecipeType.CRAFTING)) {
+        for (var entry : server.getRecipeManager().listAllOfType(RecipeType.CRAFTING)) {
             var recipe = entry.value();
             if (recipe instanceof SpecialCraftingRecipe) continue;
             try {
