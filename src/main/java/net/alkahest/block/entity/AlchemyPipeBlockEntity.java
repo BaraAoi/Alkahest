@@ -248,6 +248,7 @@ public class AlchemyPipeBlockEntity extends BlockEntity {
                     if (isPort(port) && !ports.contains(port)) ports.add(port);
                 }
             }
+            if (pipes.isEmpty()) return null; // A removed starting segment has no network or leader.
             pipes.sort(null);
             return new Network(List.copyOf(pipes), List.copyOf(ports));
         }
