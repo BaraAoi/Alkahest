@@ -49,6 +49,7 @@ public final class MonocleHud {
             if (expected == null && MatrixRecipe.hasMultipleForBase(matrix.getStack(MatrixCoreBlockEntity.BASE)))
                 lines.add(Text.translatable("screen.alkahest.monocle.matrix_choose_recipe"));
             if (expected != null) {
+                lines.add(Text.translatable("screen.alkahest.monocle.matrix_air_stability", matrix.atmosphereStability()));
                 for (var entry : expected.cost().entrySet()) {
                     int stored = Math.min(matrix.stored(entry.getKey()), entry.getValue());
                     int remaining = entry.getValue() - stored;

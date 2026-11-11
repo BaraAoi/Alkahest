@@ -66,7 +66,8 @@ public final class AtmosphereState extends PersistentState {
         AtmosphereMath.split(type, amount, parts);
         if (parts.isEmpty() || !world.isChunkLoaded(pos)) return;
         Cell cell = obtain(cellOrigin(pos).asLong(), world.getTime());
-        parts.forEach((key, value) -> cell.excess.merge(key, value, (a, b) -> Math.min(AtmosphereMath.MAX_EXCESS, a + b)));
+        parts.forEach((key, value) -> cell.excess.merge(key, Math.min(AtmosphereMath.MAX_EXCESS, value),
+            (a, b) -> Math.min(AtmosphereMath.MAX_EXCESS, a + b)));
         markDirty();
     }
     public void add(ServerWorld world, BlockPos pos, Map<EssenceType, ? extends Number> amounts, double factor) {

@@ -61,6 +61,7 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
     private JarContentsComponent buffer = JarContentsComponent.EMPTY;
     private int progress;
     private int atmosphereCredit;
+    private int atmosphereStability = 100;
     private boolean awake;
     private boolean started;
     private String startedRecipeKey = "";
@@ -74,6 +75,7 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
     }
 
     public int progress() { return progress; }
+    public int atmosphereStability() { return atmosphereStability; }
     public JarContentsComponent buffer() { return buffer; }
     public boolean awake() { return awake; }
     public boolean started() { return started; }
@@ -212,17 +214,22 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
             setActive(world, pos, self, false);
             return;
         }
+        if (world instanceof ServerWorld server) {
+            int stability = net.alkahest.atmosphere.AtmosphereMath.stability(recipe.cost(),
+                net.alkahest.atmosphere.AtmosphereState.of(server).levels(server, pos));
+            if (self.atmosphereStability != stability) {
+                self.atmosphereStability = stability;
+                self.markDirty();
+                self.sync();
+            }
+        }
         if (!self.started) {
             setActive(world, pos, self, false);
             return;
         }
         if (self.progress < DURATION) {
             int before = self.progress;
-            int rate = 100;
-            if (world instanceof ServerWorld server)
-                rate = net.alkahest.atmosphere.AtmosphereMath.stability(recipe.cost(),
-                    net.alkahest.atmosphere.AtmosphereState.of(server).levels(server, pos));
-            self.atmosphereCredit += rate * MidasTouchEffect.progressStep(MidasTouchEffect.nearby(world, pos), world.getTime());
+            self.atmosphereCredit += self.atmosphereStability * MidasTouchEffect.progressStep(MidasTouchEffect.nearby(world, pos), world.getTime());
             int increment = self.atmosphereCredit / 100;
             self.atmosphereCredit %= 100;
             self.progress = Math.min(DURATION, before + increment);
@@ -263,11 +270,6 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
         started = true;
         progress = 0;
         atmosphereCredit = 0;
-        if (world instanceof ServerWorld server) {
-            int stability = net.alkahest.atmosphere.AtmosphereMath.stability(recipe.cost(),
-                net.alkahest.atmosphere.AtmosphereState.of(server).levels(server, pos));
-            player.sendMessage(Text.translatable("message.alkahest.matrix_air_stability", stability), true);
-        }
         markDirty();
         sync();
         world.playSound(null, pos, SoundEvents.BLOCK_AMETHYST_BLOCK_CHIME, SoundCategory.BLOCKS, 0.7f, 1.4f);
@@ -683,6 +685,7 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
         Inventories.writeNbt(nbt, stacks, registries);
         nbt.putInt("Progress", progress);
         nbt.putInt("AtmosphereCredit", atmosphereCredit);
+        nbt.putInt("AtmosphereStability", atmosphereStability);
         nbt.putBoolean("Awake", awake);
         nbt.putBoolean("Started", started);
         nbt.putString("StartedRecipe", started ? startedRecipeKey : "");
@@ -698,6 +701,7 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
         Inventories.readNbt(nbt, stacks, registries);
         progress = nbt.getInt("Progress");
         atmosphereCredit = Math.max(0, Math.min(99, nbt.getInt("AtmosphereCredit")));
+        atmosphereStability = nbt.contains("AtmosphereStability") ? Math.max(50, Math.min(100, nbt.getInt("AtmosphereStability"))) : 100;
         awake = nbt.getBoolean("Awake");
         started = nbt.getBoolean("Started");
         startedRecipeKey = nbt.getString("StartedRecipe");

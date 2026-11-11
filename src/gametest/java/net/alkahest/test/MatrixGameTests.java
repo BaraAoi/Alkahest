@@ -75,6 +75,32 @@ public class MatrixGameTests implements FabricGameTest {
         for (int i = 0; i < ticks; i++) MatrixCoreBlockEntity.tick(world, pos, core);
     }
 
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void atmosphericOverloadSlowsButNeverBlocksSynthesis(TestContext c) {
+        BlockPos pos = build(c); wake(c); var world = c.getWorld(); var core = core(c);
+        var air = net.alkahest.atmosphere.AtmosphereState.of(world);
+        air.add(world, pos, EssenceType.ORDO, 65); air.add(world, pos, EssenceType.AQUA, 65);
+        core.setStack(MatrixCoreBlockEntity.BASE, new ItemStack(Items.STRING));
+        jar(c, CX + 3, CY, CZ, EssenceType.ORDO, 4);
+        jar(c, CX - 3, CY, CZ, EssenceType.AQUA, 2);
+        double before = air.levels(world, pos).get(EssenceType.ORDO);
+        start(c);
+        run(world, pos, MatrixCoreBlockEntity.DURATION);
+        c.assertTrue(core.progress() < MatrixCoreBlockEntity.DURATION, "Overload slows the actual synthesis");
+        c.assertTrue(core.getStack(MatrixCoreBlockEntity.OUTPUT).isEmpty(), "No early free output");
+        var saved = core.createNbt(world.getRegistryManager());
+        var clientCopy = new MatrixCoreBlockEntity(pos, core.getCachedState());
+        clientCopy.readComponentlessNbt(core.toUpdatePacket().getNbt(), world.getRegistryManager());
+        c.assertTrue(clientCopy.atmosphereStability() == core.atmosphereStability() && core.atmosphereStability() < 100,
+            "Monocle receives server-calculated stability");
+        core.readComponentlessNbt(saved, world.getRegistryManager());
+        run(world, pos, MatrixCoreBlockEntity.DURATION * 2 + 10);
+        c.assertTrue(core.getStack(MatrixCoreBlockEntity.OUTPUT).isOf(ModItems.BINDING_SALT),
+            "Even severely overloaded, the paid recipe eventually succeeds after save/reload");
+        c.assertTrue(air.levels(world, pos).get(EssenceType.ORDO) > before + .39, "Completed Matrix recipe emits its actual working byproduct");
+        c.complete();
+    }
+
     /** Reproduce client update packets on already-populated replicas, including omitted empty slots. */
     @GameTest(templateName = EMPTY_STRUCTURE)
     public void emptyUpdatesClearClientReplicas(TestContext c) {
