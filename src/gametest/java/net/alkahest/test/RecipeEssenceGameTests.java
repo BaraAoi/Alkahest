@@ -55,6 +55,50 @@ public class RecipeEssenceGameTests implements FabricGameTest {
     }
 
     @GameTest(templateName = EMPTY_STRUCTURE)
+    public void reportedBuildingMaterialsAndItemsHaveEssences(TestContext c) {
+        var world = c.getWorld();
+        for (var item : java.util.List.of(
+            Items.BLAST_FURNACE, ModBlocks.DISTILLERY_TIER2.asItem(), Items.CHERRY_SAPLING,
+            Items.BAMBOO_BLOCK, Items.STRIPPED_BAMBOO_BLOCK, Items.CRACKED_STONE_BRICKS,
+            Items.SMOOTH_STONE, Items.SMOOTH_STONE_SLAB, Items.MOSSY_COBBLESTONE,
+            Items.MOSSY_STONE_BRICKS, Items.DEEPSLATE, Items.COBBLED_DEEPSLATE,
+            Items.POLISHED_DEEPSLATE, Items.DEEPSLATE_BRICKS, Items.DEEPSLATE_TILES,
+            Items.CRACKED_DEEPSLATE_BRICKS, Items.CRACKED_DEEPSLATE_TILES,
+            Items.CHISELED_DEEPSLATE, Items.DEEPSLATE_DIAMOND_ORE, Items.TUFF,
+            Items.POLISHED_TUFF, Items.TUFF_BRICKS, Items.MUD_BRICKS,
+            Items.CHISELED_SANDSTONE, Items.SMOOTH_SANDSTONE)) {
+            c.assertFalse(ItemEssenceMap.get(new ItemStack(item), world).isEmpty(),
+                "Missing essence for " + net.minecraft.registry.Registries.ITEM.getId(item));
+        }
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void reportIncludesEveryRegisteredItem(TestContext c) {
+        var server = c.getWorld().getServer();
+        var path = RecipeEssenceService.reportPath(server);
+        try {
+            var lines = java.nio.file.Files.readAllLines(path);
+            var entries = lines.stream().filter(line -> !line.startsWith("#") && !line.startsWith("id\t"))
+                .collect(java.util.stream.Collectors.toMap(line -> line.split("\t", -1)[0], line -> line));
+            int total = 0;
+            for (var item : net.minecraft.registry.Registries.ITEM) {
+                total++;
+                String id = net.minecraft.registry.Registries.ITEM.getId(item).toString();
+                String line = entries.get(id);
+                c.assertTrue(line != null, "Report is missing registry entry " + id);
+                String[] columns = line.split("\t", -1);
+                c.assertTrue(columns.length == 4, "Report has four columns for " + id);
+                boolean mapped = !ItemEssenceMap.get(new ItemStack(item), c.getWorld()).isEmpty();
+                c.assertTrue(mapped == !columns[2].equals("missing"), "Report status matches actual map for " + id);
+                c.assertTrue(mapped == !columns[3].isEmpty(), "Report lists values exactly for mapped items " + id);
+            }
+            c.assertTrue(entries.size() == total, "Report has exactly one row for each registered item");
+        } catch (java.io.IOException e) { throw new AssertionError("Cannot read essence report", e); }
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
     public void clientSnapshotIsAtomicAndIsolatedFromServer(TestContext c) {
         var serverBefore = ItemEssenceMap.get(new ItemStack(Items.APPLE), c.getWorld());
         RecipeEssenceService.clearClient();

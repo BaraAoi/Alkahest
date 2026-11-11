@@ -30,6 +30,53 @@ public final class ItemEssenceMap {
         e(Items.CARROT, s(HERBA, 3), s(AQUA, 1)),
         // Additional vanilla resources that have no crafting recipe.
         e(Items.DIRT, s(TERRA, 3), s(HERBA, 1)),
+        e(Items.MUD, s(TERRA, 3), s(AQUA, 2)),
+        e(Items.CLAY, s(TERRA, 8), s(AQUA, 4)),
+        e(Items.DEEPSLATE, s(TERRA, 3), s(PERDITIO, 1)),
+        e(Items.COBBLED_DEEPSLATE, s(TERRA, 3), s(PERDITIO, 1)),
+        e(Items.INFESTED_DEEPSLATE, s(TERRA, 3), s(PERDITIO, 1), s(VITIUM, 1)),
+        e(Items.DEEPSLATE_COAL_ORE, s(TERRA, 3), s(PERDITIO, 1), s(IGNIS, 3)),
+        e(Items.DEEPSLATE_IRON_ORE, s(TERRA, 4), s(PERDITIO, 1), s(METALLUM, 5)),
+        e(Items.DEEPSLATE_COPPER_ORE, s(TERRA, 3), s(PERDITIO, 1), s(METALLUM, 3), s(POTENTIA, 1)),
+        e(Items.DEEPSLATE_GOLD_ORE, s(TERRA, 3), s(PERDITIO, 1), s(METALLUM, 3), s(ORDO, 5), s(LUX, 1)),
+        e(Items.DEEPSLATE_REDSTONE_ORE, s(TERRA, 3), s(PERDITIO, 1), s(POTENTIA, 4), s(ORDO, 2)),
+        e(Items.DEEPSLATE_EMERALD_ORE, s(TERRA, 9), s(PERDITIO, 1), s(ORDO, 8), s(LUX, 4)),
+        e(Items.DEEPSLATE_DIAMOND_ORE, s(TERRA, 18), s(PERDITIO, 1), s(ORDO, 15), s(LUX, 10)),
+        e(Items.DEEPSLATE_LAPIS_ORE, s(TERRA, 3), s(PERDITIO, 1), s(ORDO, 3), s(LUX, 2)),
+        e(Items.TUFF, s(TERRA, 3), s(PERDITIO, 1)),
+        e(Items.CALCITE, s(TERRA, 3), s(ORDO, 1)),
+        e(Items.GRANITE, s(TERRA, 3), s(IGNIS, 1)),
+        e(Items.DIORITE, s(TERRA, 3), s(ORDO, 1)),
+        e(Items.ANDESITE, s(TERRA, 3), s(ORDO, 1)),
+        e(Items.DRIPSTONE_BLOCK, s(TERRA, 3), s(AQUA, 1)),
+        e(Items.POINTED_DRIPSTONE, s(TERRA, 2), s(AQUA, 1)),
+        e(Items.BASALT, s(TERRA, 3), s(IGNIS, 1)),
+        e(Items.BLACKSTONE, s(TERRA, 3), s(IGNIS, 1)),
+        e(Items.SOUL_SAND, s(TERRA, 2), s(MORTUUS, 2)),
+        e(Items.SOUL_SOIL, s(TERRA, 2), s(MORTUUS, 2)),
+        e(Items.ICE, s(AQUA, 3), s(GELUM, 2)),
+        e(Items.SNOWBALL, s(AQUA, 1), s(GELUM, 1)),
+        e(Items.MOSS_BLOCK, s(HERBA, 3), s(AQUA, 1)),
+        e(Items.VINE, s(HERBA, 3), s(AQUA, 1)),
+        e(Items.BAMBOO, s(HERBA, 2), s(TERRA, 1)),
+        // Stripping changes the surface, not the bamboo resource in the block.
+        e(Items.STRIPPED_BAMBOO_BLOCK, s(HERBA, 18), s(TERRA, 9)),
+        e(Items.OAK_SAPLING, s(HERBA, 3), s(AQUA, 1)),
+        e(Items.SPRUCE_SAPLING, s(HERBA, 3), s(AQUA, 1)),
+        e(Items.BIRCH_SAPLING, s(HERBA, 3), s(AQUA, 1)),
+        e(Items.JUNGLE_SAPLING, s(HERBA, 3), s(AQUA, 1)),
+        e(Items.ACACIA_SAPLING, s(HERBA, 3), s(AQUA, 1)),
+        e(Items.DARK_OAK_SAPLING, s(HERBA, 3), s(AQUA, 1)),
+        e(Items.CHERRY_SAPLING, s(HERBA, 3), s(AQUA, 1)),
+        e(Items.MANGROVE_PROPAGULE, s(HERBA, 3), s(AQUA, 1)),
+        e(Items.AZALEA, s(HERBA, 3), s(AQUA, 1)),
+        e(Items.FLOWERING_AZALEA, s(HERBA, 3), s(AQUA, 1)),
+        e(Items.BROWN_MUSHROOM, s(HERBA, 2), s(AQUA, 1)),
+        e(Items.RED_MUSHROOM, s(HERBA, 2), s(AQUA, 1)),
+        e(Items.KELP, s(HERBA, 2), s(AQUA, 2)),
+        e(Items.SEAGRASS, s(HERBA, 2), s(AQUA, 2)),
+        e(Items.NETHER_WART, s(HERBA, 2), s(IGNIS, 1)),
+        e(Items.GLOWSTONE_DUST, s(LUX, 3), s(POTENTIA, 1)),
         e(Items.SAND, s(TERRA, 3)),
         e(Items.RED_SAND, s(TERRA, 3)),
         e(Items.GRAVEL, s(TERRA, 3), s(PERDITIO, 1)),
@@ -91,6 +138,11 @@ public final class ItemEssenceMap {
             if (entry.getKey() != VACUUM && stack.isOf(entry.getValue())) return List.of(s(entry.getKey(), 1));
         }
         Identifier itemId = Registries.ITEM.getId(stack.getItem());
+        if (itemId.equals(Identifier.of("alkahest", "alkahest_vial"))) {
+            // The cauldron consumes the diamond and the ten specified dissolved essence costs.
+            return List.of(s(IGNIS, 1), s(AQUA, 1), s(TERRA, 16), s(AER, 1), s(ORDO, 18),
+                s(PERDITIO, 3), s(HERBA, 3), s(VITIUM, 2), s(SPIRITUS, 6), s(MOTUS, 6), s(LUX, 10));
+        }
         if (itemId.equals(Identifier.of("alkahest", "herbal_paste"))) {
             return List.of(s(HERBA, 3), s(AQUA, 1));
         }
