@@ -95,7 +95,7 @@ def model(name, active):
         # The square instrument is supported by low quartz feet and a copper cage.
         # Its centre remains transparent so the compact moving rings can be seen.
         parts=[element([1,0,1],[15,2,15],'metal'), element([2,2,2],[14,3,14],'brass'),
-               element([3,3,3],[13,13,13],'glass'), element([6,5,6],[10,11,10],'gem'),
+               element([3,3,3],[13,13,13],'glass'),
                element([2,13,2],[14,14,14],'brass'), element([1,14,1],[15,16,15],'metal')]
         for x in (1,12):
             for z in (1,12):

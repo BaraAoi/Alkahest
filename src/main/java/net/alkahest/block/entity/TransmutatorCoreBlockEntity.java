@@ -181,6 +181,7 @@ public class TransmutatorCoreBlockEntity extends BlockEntity implements Inventor
             // A boosted step can cross a multiple of ten without landing on it.
             if (!self.verticalFormed() && before / 10 != self.progress / 10) self.prefill(world, recipe.cost());
             setWorking(world, pos, true);
+            if (self.verticalFormed() && world.getTime() % 4 == 0) showWorkingEssences(world, pos, recipe);
             self.markDirty();
             return;
         }
@@ -306,6 +307,29 @@ public class TransmutatorCoreBlockEntity extends BlockEntity implements Inventor
         int total = 0;
         for (TransmutatorPillarBlockEntity pillar : pillars) total += pillar.stored(type);
         return total;
+    }
+
+    /** Visual types come solely from the actual recipe, never from nearby jars or guesses. */
+    public static List<EssenceType> particleAspects(TransmutationRecipe recipe) {
+        return recipe == null ? List.of() : List.copyOf(recipe.cost().keySet());
+    }
+
+    /** Cosmetic only: show exactly the current recipe's aspect colours inside the chamber. */
+    private static void showWorkingEssences(World world, BlockPos pos, TransmutationRecipe recipe) {
+        if (!(world instanceof ServerWorld server)) return;
+        int index = 0;
+        List<EssenceType> aspects = particleAspects(recipe);
+        int count = aspects.size();
+        for (EssenceType type : aspects) {
+            int color = type.color();
+            DustParticleEffect dust = new DustParticleEffect(new Vector3f(
+                ((color >> 16) & 255) / 255f, ((color >> 8) & 255) / 255f, (color & 255) / 255f), .65f);
+            double angle = world.getTime() * .10 + index++ * Math.PI * 2 / count;
+            double x = pos.getX() + .5 + Math.cos(angle) * .20;
+            double y = pos.getY() + 1.5 + Math.sin(angle * 1.7) * .13;
+            double z = pos.getZ() + .5 + Math.sin(angle) * .20;
+            server.spawnParticles(dust, x, y, z, 0, -Math.cos(angle) * .012, 0, -Math.sin(angle) * .012, 1);
+        }
     }
 
     /** Sparks travel from the pillar into the core, so the payment is visible. */

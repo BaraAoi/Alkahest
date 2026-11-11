@@ -53,14 +53,14 @@ public final class TransmutatorCoreRenderer implements BlockEntityRenderer<Trans
             }
             matrices.pop();
         }
-        // Mounted on the north/front face of the core, not an invented decorative item.
+        // The real amulet replaces the former static crystal in the chamber, without a cord.
         // Render after the rings: switching render layers can invalidate an earlier consumer.
         ItemStack amulet = core.getStack(TransmutatorCoreBlockEntity.AMULET);
-        if (amulet.getItem() instanceof AlkahestAmuletItem) {
+        if (tower && amulet.getItem() instanceof AlkahestAmuletItem) {
             matrices.push();
-            matrices.translate(.5f, .52f, -.025f);
+            matrices.translate(.5f, 1.5f, .5f);
             matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(180f));
-            matrices.scale(.42f, .42f, .42f);
+            matrices.scale(.65f, .65f, .65f);
             ItemRenderer renderer = MinecraftClient.getInstance().getItemRenderer();
             var model = renderer.getModel(amulet, world, null, 0);
             renderer.renderItem(amulet, ModelTransformationMode.FIXED, false, matrices, vertices,

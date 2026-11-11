@@ -263,6 +263,31 @@ public class TransmutatorGameTests implements FabricGameTest {
     }
 
     @GameTest(templateName = EMPTY_STRUCTURE)
+    public void workingAspectColoursFollowRecipeWithoutChangingCosts(TestContext c) {
+        for (var recipe : net.alkahest.transmutation.TransmutationRecipe.all()) {
+            var aspects = TransmutatorCoreBlockEntity.particleAspects(recipe);
+            c.assertTrue(aspects.size() == recipe.cost().size() && aspects.containsAll(recipe.cost().keySet()),
+                "Particles use every and only the aspects required by this recipe");
+        }
+        c.assertTrue(TransmutatorCoreBlockEntity.particleAspects(null).isEmpty(), "No recipe has no aspect particles");
+        BlockPos pos = tower(c, CY + 32);
+        var core = (TransmutatorCoreBlockEntity)c.getWorld().getBlockEntity(pos);
+        core.wake();
+        installInput(c, core);
+        for (int i = 0; i < 20; i++) TransmutatorCoreBlockEntity.tick(c.getWorld(), pos, core);
+        c.assertTrue(core.progress() == 20 && core.status() == TransmutatorCoreBlockEntity.STATUS_WORKING,
+            "Visuals do not change normal work progress");
+        c.assertTrue(core.getStack(TransmutatorCoreBlockEntity.INPUT).getCount() == 2
+            && core.getStack(TransmutatorCoreBlockEntity.AMULET).get(ModDataComponents.ESSENCE_CHARGE) == 4,
+            "Visuals do not consume the input or amulet charge");
+        core.setStack(TransmutatorCoreBlockEntity.OUTPUT, new ItemStack(Items.STONE));
+        TransmutatorCoreBlockEntity.tick(c.getWorld(), pos, core);
+        c.assertTrue(core.status() == TransmutatorCoreBlockEntity.STATUS_BLOCKED && core.progress() == 0,
+            "Blocked output stops the work that emits aspect particles");
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
     public void visibleAmuletUpdatesAndClearsOnClientReplicas(TestContext c) {
         BlockPos pos = tower(c, CY + 32);
         var source = (TransmutatorCoreBlockEntity)c.getWorld().getBlockEntity(pos);

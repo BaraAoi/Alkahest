@@ -32,6 +32,8 @@ import org.slf4j.LoggerFactory;
 public final class AlkahestClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
+        dev.emi.trinkets.api.client.TrinketRendererRegistry.registerRenderer(
+            ModItems.ALKAHEST_AMULET, new net.alkahest.client.render.AmuletTrinketRenderer());
         net.minecraft.client.gui.screen.ingame.HandledScreens.register(net.alkahest.registry.ModScreenHandlers.DISTILLERY,
             net.alkahest.client.gui.DistilleryScreen::new);
         net.minecraft.client.gui.screen.ingame.HandledScreens.register(net.alkahest.registry.ModScreenHandlers.TIER2_DISTILLERY,

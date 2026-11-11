@@ -180,6 +180,33 @@ check('syncAmulet()' in core_be and 'sendToAround' in core_be and 'stacks.clear(
       'amulet changes must sync and clear omitted empty slots to avoid ghosts')
 check('visibleAmuletUpdatesAndClearsOnClientReplicas' in tests, 'amulet insertion and removal need replication tests')
 
+# 0.1.60: the chamber is empty unless the real focus is installed, and the same
+# dimensional focus is used in the player's trinket renderer (the cord is separate).
+amulet = load(A / 'models/item/alkahest_amulet.json')
+check(len(amulet.get('elements', [])) >= 10, 'amulet must have an actual layered 3D model')
+for el in amulet['elements']:
+    check(all(0 <= n <= 16 for n in el['from'] + el['to']), 'amulet cuboids must fit their item model')
+    check(all(a < b for a, b in zip(el['from'], el['to'])), 'amulet pieces must have volume')
+for ref, texture in amulet['textures'].items():
+    file = A / 'textures' / (texture.split(':')[-1] + '.png')
+    check(file.exists() and png_size(file)[:2] == (16,16), f'amulet texture {ref} is missing')
+for suffix in ('', '_awake'):
+    chamber = load(A / f'models/block/transmutator_chamber{suffix}.json')
+    check(not any(any(face['texture'] == '#gem' for face in el['faces'].values()) for el in chamber['elements']),
+          'the central decorative crystal must be absent in both chamber states')
+check('matrices.translate(.5f, 1.5f, .5f)' in renderer and 'if (tower && amulet.getItem()' in renderer,
+      'the installed real focus must be rendered at the rings centre inside a complete tower')
+check('matrices.translate(.5f, .52f, -.025f)' not in renderer, 'the old external amulet must be gone')
+check('TrinketRendererRegistry.registerRenderer' in client_registration and 'AmuletTrinketRenderer' in client_registration,
+      'the wearable amulet renderer must be registered')
+worn = (CLIENT / 'client/render/AmuletTrinketRenderer.java').read_text()
+check('biped.body.rotate(matrices)' in worn and 'ModelTransformationMode.FIXED' in worn and 'strap(' in worn,
+      'the necklace needs a separate cord and follows the animated torso')
+check('showWorkingEssences(world, pos, recipe)' in core_be and 'particleAspects(recipe)' in core_be
+      and 'world.getTime() % 4 == 0' in core_be and 'world instanceof ServerWorld' in core_be,
+      'work particles must use actual recipe aspects and be rate-limited')
+check('workingAspectColoursFollowRecipeWithoutChangingCosts' in tests, 'test aspect selection and work preservation')
+
 # --- report ----------------------------------------------------------------------------------
 if failures:
     print('transmutator checks FAILED:')
