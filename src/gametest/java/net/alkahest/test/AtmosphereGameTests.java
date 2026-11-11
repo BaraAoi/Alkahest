@@ -127,6 +127,16 @@ public class AtmosphereGameTests implements FabricGameTest {
         w.setBlockState(target.up(), Blocks.AIR.getDefaultState());
         var player = c.createMockCreativeServerPlayerInWorld();
         player.setPosition(origin.getX() + 1.5, target.getY(), origin.getZ() + 1.5);
+        c.assertTrue(w.getDifficulty() != net.minecraft.world.Difficulty.PEACEFUL, "Test world must permit hostile mobs: " + w.getDifficulty());
+        c.assertTrue(w.getGameRules().getBoolean(net.minecraft.world.GameRules.DO_MOB_SPAWNING), "Mob spawning gamerule must permit manifestations");
+        c.assertTrue(w.isChunkLoaded(target), "Target chunk must be loaded");
+        c.assertTrue(w.getPlayers().contains(player), "Mock server player must be in this world's player list: " + w.getPlayers().size());
+        c.assertTrue(player.squaredDistanceTo(target.getX()+.5, target.getY(), target.getZ()+.5) >= 64
+            && player.squaredDistanceTo(target.getX()+.5, target.getY(), target.getZ()+.5) <= 576, "Player must be in the 8–24 block range");
+        c.assertTrue(w.getEntitiesByClass(net.alkahest.entity.ElementalEntity.class,
+            new net.minecraft.util.math.Box(target).expand(24), e -> e.isAlive()).isEmpty(), "No nearby elemental before the test");
+        c.assertTrue(net.alkahest.entity.ElementalEntity.canSpawn(net.alkahest.registry.ModEntities.ELEMENTALS.get(EssenceType.IGNIS),
+            w, net.minecraft.entity.SpawnReason.EVENT, target, w.random), "Target must have space for an elemental");
         var air = AtmosphereState.of(w); air.add(w, target, EssenceType.IGNIS, 40);
         double before = air.levels(w, target).get(EssenceType.IGNIS);
         c.assertTrue(AtmosphereEvents.spawnAt(w, origin, target, EssenceType.IGNIS), "Valid player distance and clear loaded space allow manifestation");

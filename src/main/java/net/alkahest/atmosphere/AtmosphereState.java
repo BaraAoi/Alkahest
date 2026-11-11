@@ -22,9 +22,11 @@ import java.util.Map;
 /** Per-dimension saved excess. Environmental baselines are disposable, loaded-chunk-only caches. */
 public final class AtmosphereState extends PersistentState {
     private static final Type<AtmosphereState> TYPE = new Type<>(AtmosphereState::new, AtmosphereState::read, null);
-    private static final int MAX_CELLS = 4096, CACHE_SIZE = 128;
+    private static final int MAX_CELLS = 4096, CACHE_SIZE = 512;
     private static final long BASELINE_TICKS = 400;
     private final Map<Long, Cell> cells = new HashMap<>();
+    // Bound expensive scans across all active machines and players in this dimension.
+    private long lastScanTick = Long.MIN_VALUE;
     private final Map<Long, Baseline> baselines = new LinkedHashMap<>(16, .75f, true) {
         @Override protected boolean removeEldestEntry(Map.Entry<Long, Baseline> e) { return size() > CACHE_SIZE; }
     };
@@ -91,7 +93,9 @@ public final class AtmosphereState extends PersistentState {
         if (cached != null && now >= cached.time && now - cached.time < BASELINE_TICKS) return cached.values;
         var totals = new EnumMap<EssenceType, Double>(EssenceType.class);
         for (EssenceType type : AtmosphereMath.PRIMALS) totals.put(type, 10.0);
-        if (!world.isChunkLoaded(origin)) return totals;
+        if (!world.isChunkLoaded(origin)) return cached == null ? totals : cached.values;
+        if (lastScanTick == now) return cached == null ? totals : cached.values;
+        lastScanTick = now;
         var profiles = new HashMap<Block, Map<EssenceType, Double>>();
         BlockPos.Mutable cursor = new BlockPos.Mutable();
         for (int x = 0; x < 16; x++) for (int y = 0; y < 16; y++) for (int z = 0; z < 16; z++) {
