@@ -85,6 +85,25 @@ public class AtmosphereGameTests implements FabricGameTest {
     }
 
     @GameTest(templateName = EMPTY_STRUCTURE)
+    public void changingCauldronRestartsItsGracePeriod(TestContext c) {
+        var w = c.getWorld(); c.setBlockState(3, 1, 3, Blocks.MAGMA_BLOCK);
+        c.setBlockState(3, 2, 3, ModBlocks.ALCHEMY_CAULDRON);
+        BlockPos pos = c.getAbsolutePos(new BlockPos(3, 2, 3));
+        var cauldron = (CauldronBlockEntity) w.getBlockEntity(pos);
+        var player = c.createMockPlayer(GameMode.SURVIVAL);
+        player.setStackInHand(Hand.MAIN_HAND, new ItemStack(Items.WATER_BUCKET)); cauldron.fill(player, Hand.MAIN_HAND);
+        var crystal = new ItemStack(ModItems.CRYSTALS.get(EssenceType.AQUA));
+        c.assertTrue(cauldron.dissolveOne(crystal), "Initial essence dissolved");
+        for (int i = 0; i < 1300; i++) CauldronBlockEntity.tick(w, pos, cauldron);
+        c.assertTrue(cauldron.dissolveOne(crystal), "Adding essence counts as work");
+        for (int i = 0; i < 1399; i++) CauldronBlockEntity.tick(w, pos, cauldron);
+        c.assertTrue(cauldron.essences().get(EssenceType.AQUA) == 2, "Work restarts the complete grace and evaporation interval");
+        CauldronBlockEntity.tick(w, pos, cauldron);
+        c.assertTrue(cauldron.essences().get(EssenceType.AQUA) == 1, "Loss resumes only after the fresh interval");
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
     public void successfulMachineCyclesAndOverflowEmit(TestContext c) {
         var w = c.getWorld(); BlockPos p = c.getAbsolutePos(new BlockPos(3, 2, 3));
         c.setBlockState(3, 2, 3, ModBlocks.DISTILLERY_TIER2);
@@ -135,7 +154,8 @@ public class AtmosphereGameTests implements FabricGameTest {
         rule.set(true, w.getServer());
         try {
         c.assertTrue(w.isChunkLoaded(target), "Target chunk must be loaded");
-        c.assertTrue(w.getPlayers().contains(player), "Mock server player must be in this world's player list: " + w.getPlayers().size());
+        c.assertTrue(w.getServer().getPlayerManager().getPlayerList().contains(player), "Mock player is registered with the server");
+        c.assertTrue(player.getServerWorld() == w, "Mock player belongs to the test dimension");
         c.assertTrue(player.squaredDistanceTo(target.getX()+.5, target.getY(), target.getZ()+.5) >= 64
             && player.squaredDistanceTo(target.getX()+.5, target.getY(), target.getZ()+.5) <= 576, "Player must be in the 8–24 block range");
         c.assertTrue(w.getEntitiesByClass(net.alkahest.entity.ElementalEntity.class,

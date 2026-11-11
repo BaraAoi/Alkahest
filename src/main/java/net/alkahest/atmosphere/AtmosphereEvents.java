@@ -53,8 +53,8 @@ public final class AtmosphereEvents {
         if (world.getDifficulty() == Difficulty.PEACEFUL
                 || !world.getGameRules().getBoolean(GameRules.DO_MOB_SPAWNING)) return;
         Set<Long> visited = new HashSet<>();
-        for (ServerPlayerEntity player : world.getPlayers()) {
-            if (player.isSpectator()) continue;
+        for (ServerPlayerEntity player : world.getServer().getPlayerManager().getPlayerList()) {
+            if (player.getServerWorld() != world || player.isSpectator()) continue;
             BlockPos origin = AtmosphereState.cellOrigin(player.getBlockPos());
             // Stagger cells over the minute instead of doing every player's scan in one tick.
             if (Math.floorMod(world.getTime() + Long.hashCode(origin.asLong()), 1200) == 0
@@ -68,8 +68,11 @@ public final class AtmosphereEvents {
         var entityType = ModEntities.ELEMENTALS.get(type);
         if (entityType == null || target.getY() < world.getBottomY() || target.getY() >= world.getTopY() - 2) return false;
         if (!world.getEntitiesByClass(ElementalEntity.class, new Box(target).expand(24), e -> e.isAlive()).isEmpty()) return false;
-        if (world.getPlayers().stream().noneMatch(p -> !p.isSpectator() && p.squaredDistanceTo(target.getX()+.5, target.getY(), target.getZ()+.5) <= 24*24)) return false;
-        if (world.getPlayers().stream().anyMatch(p -> !p.isSpectator() && p.squaredDistanceTo(target.getX()+.5, target.getY(), target.getZ()+.5) < 8*8)) return false;
+        var players = world.getServer().getPlayerManager().getPlayerList();
+        if (players.stream().noneMatch(p -> p.getServerWorld() == world && !p.isSpectator()
+                && p.squaredDistanceTo(target.getX()+.5, target.getY(), target.getZ()+.5) <= 24*24)) return false;
+        if (players.stream().anyMatch(p -> p.getServerWorld() == world && !p.isSpectator()
+                && p.squaredDistanceTo(target.getX()+.5, target.getY(), target.getZ()+.5) < 8*8)) return false;
         if (!ElementalEntity.canSpawn(entityType, world, SpawnReason.EVENT, target, world.random)) return false;
         ElementalEntity entity = entityType.spawn(world, target, SpawnReason.EVENT);
         if (entity == null) return false;
