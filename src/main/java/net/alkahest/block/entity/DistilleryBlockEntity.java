@@ -83,13 +83,19 @@ public class DistilleryBlockEntity extends BlockEntity implements SidedInventory
 
     /** Raw Era II mode accepts only organic inputs containing Herba, Aqua or Mortuus. */
     public static boolean accepts(ItemStack stack) {
-        return !stack.isEmpty() && ItemEssenceMap.get(stack).stream().anyMatch(e ->
+        return accepts(stack, null);
+    }
+    public static boolean accepts(ItemStack stack, World world) {
+        return !stack.isEmpty() && ItemEssenceMap.get(stack, world).stream().anyMatch(e ->
             e.type() == EssenceType.HERBA || e.type() == EssenceType.AQUA || e.type() == EssenceType.MORTUUS);
     }
 
     /** Era III Alkahest mode accepts any mapped item that yields at least one crystallizable essence. */
     public static boolean acceptsWithAlkahest(ItemStack stack) {
-        return !stack.isEmpty() && ItemEssenceMap.get(stack).stream()
+        return acceptsWithAlkahest(stack, null);
+    }
+    public static boolean acceptsWithAlkahest(ItemStack stack, World world) {
+        return !stack.isEmpty() && ItemEssenceMap.get(stack, world).stream()
             .anyMatch(e -> ModItems.CRYSTALS.containsKey(e.type()));
     }
 
@@ -98,7 +104,7 @@ public class DistilleryBlockEntity extends BlockEntity implements SidedInventory
     }
 
     public boolean canProcess(ItemStack stack) {
-        return hasAlkahest() ? acceptsWithAlkahest(stack) : accepts(stack);
+        return hasAlkahest() ? acceptsWithAlkahest(stack, world) : accepts(stack, world);
     }
 
     /** Unique primary leaves, recursively resolving nested compounds; Vacuum has no parents and yields nothing. */
@@ -240,7 +246,7 @@ public class DistilleryBlockEntity extends BlockEntity implements SidedInventory
         if (self.progress >= targetTicks) {
             if (alkahestMode) {
                 List<ItemStack> outputs = new ArrayList<>();
-                for (EssenceStack es : ItemEssenceMap.get(input)) {
+                for (EssenceStack es : ItemEssenceMap.get(input, world)) {
                     Item crystalItem = ModItems.CRYSTALS.get(es.type());
                     if (crystalItem == null) continue;
                     ItemStack out = new ItemStack(crystalItem, Math.max(1, Math.min(8, es.amount())));
@@ -255,7 +261,7 @@ public class DistilleryBlockEntity extends BlockEntity implements SidedInventory
                     }
                 }
             } else {
-                List<EssenceType> primaries = primaryCandidates(ItemEssenceMap.get(input));
+                List<EssenceType> primaries = primaryCandidates(ItemEssenceMap.get(input, world));
                 ItemStack result;
                 if (primaries.isEmpty() || world.random.nextFloat() < 0.2f) result = new ItemStack(ModItems.ASH);
                 else {

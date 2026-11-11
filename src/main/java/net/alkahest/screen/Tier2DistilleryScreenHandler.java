@@ -35,7 +35,7 @@ public class Tier2DistilleryScreenHandler extends ScreenHandler {
 
         // Taking the input resets progress through the inventory's removeStack override.
         addSlot(new Slot(inventory, 0, INPUT_X, INPUT_Y) {
-            @Override public boolean canInsert(ItemStack stack) { return Tier2DistilleryBlockEntity.accepts(stack); }
+            @Override public boolean canInsert(ItemStack stack) { return Tier2DistilleryBlockEntity.accepts(stack, playerInventory.player.getWorld()); }
         });
         for (int row = 0; row < 3; row++) for (int col = 0; col < 9; col++)
             addSlot(new Slot(playerInventory, col + row * 9 + 9, 8 + col * 18, 84 + row * 18));

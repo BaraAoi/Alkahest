@@ -40,8 +40,21 @@ public final class Alkahest implements ModInitializer {
         ModScreenHandlers.register();
         ModWorldGen.register();
 
-        net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents.JOIN.register((handler, sender, server) ->
-            net.alkahest.research.PracticalResearchStorage.migrate(handler.player));
+        net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.SERVER_STARTED.register(
+            net.alkahest.essence.RecipeEssenceService::rebuild);
+        net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.SERVER_STOPPED.register(
+            net.alkahest.essence.RecipeEssenceService::clearServer);
+        net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.END_DATA_PACK_RELOAD.register((server, resources, success) -> {
+            if (success) {
+                net.alkahest.essence.RecipeEssenceService.rebuild(server);
+                for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList())
+                    net.alkahest.essence.RecipeEssenceService.send(player);
+            }
+        });
+        net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
+            net.alkahest.research.PracticalResearchStorage.migrate(handler.player);
+            net.alkahest.essence.RecipeEssenceService.send(handler.player);
+        });
         ServerTickEvents.END_SERVER_TICK.register(server -> {
             for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
                 if (!player.isSpectator()) net.alkahest.research.PracticalResearchStorage.scan(player);

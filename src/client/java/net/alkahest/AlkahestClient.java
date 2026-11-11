@@ -46,6 +46,10 @@ public final class AlkahestClient implements ClientModInitializer {
             net.alkahest.client.gui.MonocleHud.render(context));
         ClientPlayNetworking.registerGlobalReceiver(OpenJournalPayload.ID, (payload, context) ->
             context.client().execute(() -> context.client().setScreen(new JournalScreen(payload.flags()))));
+        ClientPlayNetworking.registerGlobalReceiver(net.alkahest.network.EssenceMapPayload.ID, (payload, context) ->
+            context.client().execute(() -> net.alkahest.essence.RecipeEssenceService.receive(payload.chunk())));
+        net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register((handler, client) ->
+            net.alkahest.essence.RecipeEssenceService.clearClient());
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.NAPALM_FLAME, RenderLayer.getCutout());
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.ALCHEMICAL_MOSS, RenderLayer.getCutout());
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.JAR, RenderLayer.getCutout());
@@ -135,7 +139,7 @@ public final class AlkahestClient implements ClientModInitializer {
             var player = MinecraftClient.getInstance().player;
             if (player == null || !TrinketsApi.getTrinketComponent(player)
                 .map(component -> component.isEquipped(ModItems.ALCHEMISTS_MONOCLE)).orElse(false)) return;
-            for (var essence : ItemEssenceMap.get(stack)) {
+            for (var essence : ItemEssenceMap.get(stack, MinecraftClient.getInstance().world)) {
                 lines.add(Text.literal("◆ " + essence.type().displayName() + ": " + essence.amount())
                     .styled(style -> style.withColor(essence.type().color())));
             }

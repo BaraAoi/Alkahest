@@ -26,12 +26,12 @@ public class DistilleryScreenHandler extends ScreenHandler {
         this(syncId, playerInventory, new SimpleInventory(DistilleryBlockEntity.SIZE), new ArrayPropertyDelegate(3));
     }
 
-    private static boolean canInsertInput(Inventory inv, ItemStack stack) {
+    private static boolean canInsertInput(Inventory inv, ItemStack stack, net.minecraft.world.World world) {
         ItemStack catalyst = inv.size() > DistilleryBlockEntity.CATALYST
             ? inv.getStack(DistilleryBlockEntity.CATALYST) : ItemStack.EMPTY;
         return DistilleryBlockEntity.acceptsCatalyst(catalyst)
-            ? DistilleryBlockEntity.acceptsWithAlkahest(stack)
-            : DistilleryBlockEntity.accepts(stack);
+            ? DistilleryBlockEntity.acceptsWithAlkahest(stack, world)
+            : DistilleryBlockEntity.accepts(stack, world);
     }
 
     public DistilleryScreenHandler(int syncId, PlayerInventory playerInventory, Inventory inventory, PropertyDelegate properties) {
@@ -44,7 +44,7 @@ public class DistilleryScreenHandler extends ScreenHandler {
 
         // Slot 0: Input (80, 31)
         addSlot(new Slot(inventory, 0, 80, 31) {
-            @Override public boolean canInsert(ItemStack stack) { return canInsertInput(inventory, stack); }
+            @Override public boolean canInsert(ItemStack stack) { return canInsertInput(inventory, stack, playerInventory.player.getWorld()); }
             @Override public void onTakeItem(PlayerEntity player, ItemStack stack) {
                 if (inventory instanceof DistilleryBlockEntity distillery) distillery.cancelProgress();
                 super.onTakeItem(player, stack);

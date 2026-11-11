@@ -190,6 +190,9 @@ public class CauldronBlockEntity extends BlockEntity {
     }
 
     public static EnumMap<EssenceType, Integer> essencesOf(ItemStack stack) {
+        return essencesOf(stack, null);
+    }
+    public static EnumMap<EssenceType, Integer> essencesOf(ItemStack stack, World world) {
         var additions = new EnumMap<EssenceType, Integer>(EssenceType.class);
         if (stack.isEmpty()) return additions;
         for (var entry : ModItems.CRYSTALS.entrySet()) {
@@ -198,7 +201,7 @@ public class CauldronBlockEntity extends BlockEntity {
                 return additions;
             }
         }
-        for (var value : ItemEssenceMap.get(stack)) {
+        for (var value : ItemEssenceMap.get(stack, world)) {
             if (value.type() == EssenceType.VACUUM || !ModItems.CRYSTALS.containsKey(value.type())) {
                 additions.clear();
                 return additions;
@@ -211,7 +214,7 @@ public class CauldronBlockEntity extends BlockEntity {
     /** Adds a single mapped item atomically; the caller owns and consumes the original item. */
     public boolean dissolveOne(ItemStack stack) {
         if (world == null || world.isClient || !water || !isHeated() || stack.isEmpty()) return false;
-        var additions = essencesOf(stack);
+        var additions = essencesOf(stack, world);
         if (additions.isEmpty()) return false;
         if (additions.entrySet().stream().anyMatch(e -> essences.getOrDefault(e.getKey(), 0) + e.getValue() > MAX_PER_TYPE)) {
             return false;
@@ -431,7 +434,7 @@ public class CauldronBlockEntity extends BlockEntity {
             return true;
         }
 
-        var perItem = essencesOf(held);
+        var perItem = essencesOf(held, world);
         if (!perItem.isEmpty()) {
             boolean wasSalt = held.isOf(ModItems.SALT);
             boolean wasMoss = held.isOf(ModBlocks.ALCHEMICAL_MOSS.asItem());

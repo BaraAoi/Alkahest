@@ -69,14 +69,17 @@ public class Tier2DistilleryBlockEntity extends BlockEntity implements Inventory
     public int status() {
         if (!depositDryRun()) return STATUS_BLOCKED;
         ItemStack input = stacks.get(0);
-        if (input.isEmpty() || !accepts(input)) return STATUS_IDLE;
+        if (input.isEmpty() || !accepts(input, world)) return STATUS_IDLE;
         return STATUS_WORKING;
     }
 
     /** Any mapped item with at least one usable essence is accepted; Vacuum cannot be produced. */
     public static boolean accepts(ItemStack stack) {
+        return accepts(stack, null);
+    }
+    public static boolean accepts(ItemStack stack, World world) {
         if (stack.isEmpty()) return false;
-        return ItemEssenceMap.get(stack).stream()
+        return ItemEssenceMap.get(stack, world).stream()
             .anyMatch(essence -> essence.type() != EssenceType.VACUUM && essence.amount() > 0);
     }
 
@@ -146,8 +149,11 @@ public class Tier2DistilleryBlockEntity extends BlockEntity implements Inventory
 
     /** All essences of the item, including composites, with a stable-tier stability roll. */
     public static List<EssenceStack> outputs(ItemStack input, net.minecraft.util.math.random.Random random, boolean midas) {
+        return outputs(input, random, midas, null);
+    }
+    public static List<EssenceStack> outputs(ItemStack input, net.minecraft.util.math.random.Random random, boolean midas, World world) {
         List<EssenceStack> result = new ArrayList<>();
-        for (EssenceStack essence : ItemEssenceMap.get(input)) {
+        for (EssenceStack essence : ItemEssenceMap.get(input, world)) {
             if (essence.type() == EssenceType.VACUUM || essence.amount() <= 0) continue;
             int total = Math.max(1, Math.min(8, essence.amount()));
             result.add(new EssenceStack(essence.type(), total, MidasTouchEffect.outputStability(0.55f + random.nextFloat() * 0.15f, midas)));
@@ -170,7 +176,7 @@ public class Tier2DistilleryBlockEntity extends BlockEntity implements Inventory
         if (world.isClient) return;
         if (!self.deposit()) { setWorking(world, pos, false); return; }
         ItemStack input = self.stacks.get(0);
-        if (input.isEmpty() || !accepts(input)) {
+        if (input.isEmpty() || !accepts(input, world)) {
             if (self.progress != 0) { self.progress = 0; self.markDirty(); }
             setWorking(world, pos, false);
             return;
@@ -179,7 +185,7 @@ public class Tier2DistilleryBlockEntity extends BlockEntity implements Inventory
         setWorking(world, pos, true);
         self.progress += MidasTouchEffect.progressStep(midas, time);
         if (self.progress >= DURATION) {
-            self.pending.addAll(outputs(input, world.random, midas));
+            self.pending.addAll(outputs(input, world.random, midas, world));
             input.decrement(1);
             if (input.isEmpty()) self.stacks.set(0, ItemStack.EMPTY);
             self.progress = 0;
@@ -210,7 +216,7 @@ public class Tier2DistilleryBlockEntity extends BlockEntity implements Inventory
     }
     @Override public void clear() { stacks.clear(); pending.clear(); progress = 0; markDirty(); }
     @Override public boolean canPlayerUse(PlayerEntity player) { return Inventory.canPlayerUse(this, player); }
-    @Override public boolean isValid(int slot, ItemStack stack) { return accepts(stack); }
+    @Override public boolean isValid(int slot, ItemStack stack) { return accepts(stack, world); }
 
     @Override public Text getDisplayName() { return Text.translatable("screen.alkahest.distillery_tier2.title"); }
     @Override public ScreenHandler createMenu(int syncId, PlayerInventory playerInventory, PlayerEntity player) {

@@ -28,6 +28,21 @@ public final class ItemEssenceMap {
         e(Items.GOLDEN_APPLE, s(HERBA, 3), s(ORDO, 3), s(POTENTIA, 2)),
         e(Items.BREAD, s(HERBA, 3), s(ORDO, 1)),
         e(Items.CARROT, s(HERBA, 3), s(AQUA, 1)),
+        // Additional vanilla resources that have no crafting recipe.
+        e(Items.DIRT, s(TERRA, 3), s(HERBA, 1)),
+        e(Items.SAND, s(TERRA, 3)),
+        e(Items.RED_SAND, s(TERRA, 3)),
+        e(Items.GRAVEL, s(TERRA, 3), s(PERDITIO, 1)),
+        e(Items.CLAY_BALL, s(TERRA, 2), s(AQUA, 1)),
+        e(Items.FLINT, s(TERRA, 2), s(PERDITIO, 1)),
+        e(Items.GLASS, s(TERRA, 2), s(ORDO, 1)),
+        e(Items.NETHERRACK, s(TERRA, 2), s(IGNIS, 1)),
+        e(Items.END_STONE, s(TERRA, 2), s(SPIRITUS, 1)),
+        e(Items.WHEAT, s(HERBA, 3), s(ORDO, 1)),
+        e(Items.POTATO, s(HERBA, 3), s(AQUA, 1)),
+        e(Items.SUGAR_CANE, s(HERBA, 3), s(AQUA, 1)),
+        e(Items.LEATHER, s(HERBA, 2), s(ORDO, 1)),
+        e(Items.INK_SAC, s(AQUA, 1), s(PERDITIO, 1)),
         e(Items.COBBLESTONE, s(TERRA, 2), s(PERDITIO, 1)),
         e(Items.STONE, s(TERRA, 2), s(ORDO, 1)),
         e(Items.COAL, s(IGNIS, 3), s(TERRA, 1)),
@@ -69,7 +84,12 @@ public final class ItemEssenceMap {
     private static EssenceStack s(EssenceType type, int amount) { return new EssenceStack(type, amount, 1.0f); }
     private static Map.Entry<Item, List<EssenceStack>> e(Item item, EssenceStack... values) { return Map.entry(item, List.of(values)); }
 
-    public static List<EssenceStack> get(ItemStack stack) {
+    /** The legacy manually assigned values; used as seeds, never as a guess for unknown raw materials. */
+    public static List<EssenceStack> base(ItemStack stack) {
+        if (stack.isEmpty()) return List.of();
+        for (var entry : net.alkahest.registry.ModItems.CRYSTALS.entrySet()) {
+            if (entry.getKey() != VACUUM && stack.isOf(entry.getValue())) return List.of(s(entry.getKey(), 1));
+        }
         Identifier itemId = Registries.ITEM.getId(stack.getItem());
         if (itemId.equals(Identifier.of("alkahest", "herbal_paste"))) {
             return List.of(s(HERBA, 3), s(AQUA, 1));
@@ -93,6 +113,17 @@ public final class ItemEssenceMap {
         }
         if (stack.isIn(LOGS) || stack.isIn(PLANKS)) return List.of(s(HERBA, 4), s(TERRA, 2));
         return List.of();
+    }
+    /** Context-free access to explicit values, retained for existing API users. */
+    public static List<EssenceStack> get(ItemStack stack) { return base(stack); }
+
+    /** Server and client snapshots are separate even in an integrated single-player JVM. */
+    public static List<EssenceStack> get(ItemStack stack, net.minecraft.world.World world) {
+        if (stack.isEmpty()) return List.of();
+        if (world == null) return base(stack);
+        Map<Item, List<EssenceStack>> snapshot = world.isClient
+            ? RecipeEssenceService.clientValues() : RecipeEssenceService.serverValues(world.getServer());
+        return snapshot == null ? base(stack) : snapshot.getOrDefault(stack.getItem(), List.of());
     }
     private ItemEssenceMap() { }
 }

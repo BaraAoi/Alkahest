@@ -6,6 +6,7 @@
   "environment": "server",
   "entrypoints": {
     "fabric-gametest": [
+      "net.alkahest.test.RecipeEssenceGameTests",
       "net.alkahest.test.ReagentGameTests",
       "net.alkahest.test.CauldronGameTests",
       "net.alkahest.test.PracticalResearchGameTests",
