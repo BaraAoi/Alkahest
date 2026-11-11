@@ -48,7 +48,25 @@ public record MatrixRecipe(Item base, List<Item> components, ItemStack output,
             EssenceType.IGNIS, 12, EssenceType.POTENTIA, 8),
         // Optional advanced batch; the earlier two-item inventory mixture remains available.
         synthesis(ModItems.CAUSTIC_SLIME, List.of(Items.GUNPOWDER, Items.IRON_NUGGET), new ItemStack(ModItems.ACID_BOMB, 3),
-            EssenceType.VITIUM, 12, EssenceType.PERDITIO, 8, EssenceType.METALLUM, 4)
+            EssenceType.VITIUM, 12, EssenceType.PERDITIO, 8, EssenceType.METALLUM, 4),
+        // New consumables are final products, not the future byproduct materials reserved for discussion.
+        synthesis(Items.SNOWBALL, List.of(Items.GLASS_BOTTLE, ModItems.CRYSTALS.get(EssenceType.GELUM)),
+            new ItemStack(ModItems.FROST_FLASK, 2), EssenceType.GELUM, 12, EssenceType.AQUA, 8),
+        synthesis(Items.HONEY_BOTTLE, List.of(ModItems.PURIFIED_WATER, ModItems.CRYSTALS.get(EssenceType.ORDO)),
+            new ItemStack(ModItems.PURIFYING_FLASK, 2), EssenceType.ORDO, 12, EssenceType.AQUA, 8),
+        // Intermediate resources from the Transmutator are useful as Matrix bases.
+        synthesis(Items.FLINT, List.of(Items.IRON_NUGGET, Items.FEATHER), new ItemStack(Items.ARROW, 8),
+            EssenceType.METALLUM, 4, EssenceType.AER, 4),
+        synthesis(Items.GOLD_NUGGET, List.of(Items.IRON_INGOT, Items.REDSTONE), new ItemStack(Items.POWERED_RAIL, 6),
+            EssenceType.METALLUM, 8, EssenceType.POTENTIA, 6),
+        synthesis(Items.GLOWSTONE_DUST, List.of(Items.QUARTZ, Items.PRISMARINE_SHARD), new ItemStack(Items.SEA_LANTERN),
+            EssenceType.LUX, 10, EssenceType.AQUA, 6),
+        synthesis(Items.NETHER_BRICK, List.of(Items.BLAZE_POWDER, Items.MAGMA_CREAM), new ItemStack(Items.MAGMA_BLOCK, 2),
+            EssenceType.IGNIS, 10, EssenceType.TERRA, 4),
+        synthesis(Items.SOUL_SOIL, List.of(Items.BONE, Items.GLOWSTONE_DUST), new ItemStack(Items.SOUL_LANTERN, 4),
+            EssenceType.MORTUUS, 8, EssenceType.LUX, 6),
+        synthesis(Items.IRON_NUGGET, List.of(Items.COPPER_INGOT, Items.REDSTONE), new ItemStack(Items.RAIL, 12),
+            EssenceType.METALLUM, 8, EssenceType.POTENTIA, 4)
     );
 
     private static MatrixRecipe synthesis(Item base, List<Item> components, ItemStack output, Object... essence) {

@@ -9,6 +9,7 @@ import net.minecraft.entity.EntityType;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.effect.StatusEffectInstance;
+import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.projectile.thrown.ThrownItemEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -63,6 +64,27 @@ public class ThrownReagentEntity extends ThrownItemEntity {
                 hit.getPos().x, hit.getPos().y + 0.2, hit.getPos().z, 16, 0.55, 0.35, 0.55, 0.02);
             world.playSound(null, getBlockPos(), SoundEvents.BLOCK_AMETHYST_BLOCK_CHIME, SoundCategory.PLAYERS, 0.9f, 1.15f);
             world.playSound(null, getBlockPos(), SoundEvents.BLOCK_GLASS_BREAK, SoundCategory.PLAYERS, 0.55f, 1.35f);
+        } else if (reagent.isOf(ModItems.FROST_FLASK) || reagent.isOf(ModItems.PURIFYING_FLASK)) {
+            boolean frost = reagent.isOf(ModItems.FROST_FLASK);
+            Entity owner = getOwner();
+            double radius = 3.0;
+            var impact = hit.getPos();
+            for (LivingEntity target : world.getEntitiesByClass(LivingEntity.class, new Box(impact, impact).expand(radius),
+                    entity -> !entity.isSpectator()
+                        && entity.squaredDistanceTo(impact.x, impact.y, impact.z) <= radius * radius
+                        && (!frost || entity != owner))) {
+                target.extinguish();
+                if (frost) {
+                    target.addStatusEffect(new StatusEffectInstance(StatusEffects.SLOWNESS, 160, 1), owner);
+                    target.addStatusEffect(new StatusEffectInstance(StatusEffects.WEAKNESS, 160, 0), owner);
+                } else {
+                    target.removeStatusEffect(StatusEffects.POISON);
+                    target.removeStatusEffect(StatusEffects.WITHER);
+                }
+            }
+            world.spawnParticles(frost ? ParticleTypes.SNOWFLAKE : ParticleTypes.SPLASH,
+                impact.x, impact.y + .15, impact.z, 45, .8, .45, .8, .06);
+            world.playSound(null, getBlockPos(), SoundEvents.BLOCK_GLASS_BREAK, SoundCategory.PLAYERS, .8f, frost ? 1.2f : 1.5f);
         } else if (reagent.isOf(ModItems.LIGHTNING_IN_A_BOTTLE)) {
             var bolt = EntityType.LIGHTNING_BOLT.create(world);
             if (bolt != null) {

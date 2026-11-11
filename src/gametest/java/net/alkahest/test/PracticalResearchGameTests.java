@@ -94,4 +94,33 @@ public class PracticalResearchGameTests implements FabricGameTest {
         c.assertTrue(player.getInventory().contains(new ItemStack(ModBlocks.ALCHEMY_CAULDRON)), "Research never consumes the item");
         c.complete();
     }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void expandedBranchesRememberItemsBeforeTheirParents(TestContext c) {
+        var player = c.createMockCreativeServerPlayerInWorld();
+        for (var step : PracticalResearchPlan.STEPS) for (String kind : new String[]{"observed", "completed"}) {
+            var entry = player.getServer().getAdvancementLoader().get(Alkahest.id("practice/" + kind + "_" + step.id()));
+            player.getAdvancementTracker().revokeCriterion(entry, "done");
+        }
+        var stabilizer = player.getServer().getAdvancementLoader().get(Alkahest.id("practice/completed_stabilizer"));
+        var alkahest = player.getServer().getAdvancementLoader().get(Alkahest.id("practice/completed_alkahest"));
+        player.getAdvancementTracker().grantCriterion(stabilizer, "done");
+        player.getAdvancementTracker().grantCriterion(alkahest, "done");
+        PracticalResearchStorage.observe(player, new ItemStack(ModItems.FROST_FLASK));
+        c.assertTrue((PracticalResearchStorage.observed(player) & PracticalResearchPlan.FROST) != 0, "Early reagent is remembered");
+        c.assertTrue((PracticalResearchStorage.completed(player) & PracticalResearchPlan.FROST) == 0, "It cannot finish before the Matrix path");
+        for (var item : new net.minecraft.item.ItemConvertible[]{ModBlocks.ALCHEMY_PIPE, ModBlocks.ESSENCE_CHARGER,
+                ModItems.ALKAHEST_AMULET, ModBlocks.TRANSMUTATOR_CORE, ModBlocks.TRANSMUTATOR_CHAMBER,
+                ModBlocks.TRANSMUTATOR_CROWN, ModBlocks.MATRIX_CORE, ModBlocks.MATRIX_PEDESTAL})
+            PracticalResearchStorage.observe(player, new ItemStack(item));
+        long expected = PracticalResearchPlan.PIPE | PracticalResearchPlan.CHARGER | PracticalResearchPlan.AMULET
+            | PracticalResearchPlan.TRANSMUTATOR | PracticalResearchPlan.CHAMBER | PracticalResearchPlan.CROWN
+            | PracticalResearchPlan.MATRIX | PracticalResearchPlan.PEDESTAL | PracticalResearchPlan.FROST;
+        c.assertTrue((PracticalResearchStorage.completed(player) & expected) == expected, "Both branches join and the early flask completes");
+        c.assertTrue((PracticalResearchStorage.completed(player) & PracticalResearchPlan.PURIFICATION) == 0, "Unobtained siblings remain unfinished");
+        player.getAdvancementTracker().save();
+        player.getAdvancementTracker().reload(c.getWorld().getServer().getAdvancementLoader());
+        c.assertTrue((PracticalResearchStorage.completed(player) & expected) == expected, "The expanded branch survives reload");
+        c.complete();
+    }
 }

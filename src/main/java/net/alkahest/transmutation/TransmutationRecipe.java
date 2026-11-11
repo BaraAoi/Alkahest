@@ -25,7 +25,14 @@ public record TransmutationRecipe(ItemStack input, ItemStack output, Map<Essence
         recipe(Items.COAL, Items.DIAMOND, EssenceType.METALLUM, 4, EssenceType.LUX, 4),
         recipe(Items.ROTTEN_FLESH, Items.LEATHER, EssenceType.MORTUUS, 2, EssenceType.HERBA, 2),
         recipe(Items.CLAY_BALL, Items.IRON_NUGGET, EssenceType.METALLUM, 2),
-        recipe(Items.QUARTZ, Items.AMETHYST_SHARD, EssenceType.LUX, 2, EssenceType.VITIUM, 1)
+        recipe(Items.QUARTZ, Items.AMETHYST_SHARD, EssenceType.LUX, 2, EssenceType.VITIUM, 1),
+        // Intermediate materials for later Matrix syntheses, always one input to one output.
+        recipe(Items.GRAVEL, Items.FLINT, EssenceType.TERRA, 2, EssenceType.ORDO, 1),
+        recipe(Items.FLINT, Items.QUARTZ, EssenceType.TERRA, 3, EssenceType.ORDO, 2),
+        recipe(Items.REDSTONE, Items.GLOWSTONE_DUST, EssenceType.LUX, 4, EssenceType.POTENTIA, 3),
+        recipe(Items.NETHERRACK, Items.NETHER_BRICK, EssenceType.IGNIS, 3, EssenceType.TERRA, 2),
+        recipe(Items.SOUL_SAND, Items.SOUL_SOIL, EssenceType.MORTUUS, 3, EssenceType.PERDITIO, 2),
+        recipe(Items.IRON_NUGGET, Items.GOLD_NUGGET, EssenceType.METALLUM, 2, EssenceType.ORDO, 1)
     );
 
     private static TransmutationRecipe recipe(net.minecraft.item.Item input, net.minecraft.item.Item output,

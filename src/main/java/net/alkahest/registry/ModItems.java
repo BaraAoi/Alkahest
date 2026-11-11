@@ -34,6 +34,8 @@ public final class ModItems {
     public static final Item ACID_BOMB = item("acid_bomb", new ReagentItem(new Item.Settings()));
     public static final Item LIGHTNING_IN_A_BOTTLE = item("lightning_in_a_bottle", new ReagentItem(new Item.Settings()));
     public static final Item MIASMA = item("miasma", new ReagentItem(new Item.Settings()));
+    public static final Item FROST_FLASK = item("frost_flask", new ReagentItem(new Item.Settings()));
+    public static final Item PURIFYING_FLASK = item("purifying_flask", new ReagentItem(new Item.Settings()));
     public static final Item MIDAS_ELIXIR = item("midas_elixir", new MidasElixirItem(new Item.Settings()));
     public static final Item BINDING_SALT = item("binding_salt", new BindingSaltItem(null, new Item.Settings()));
     public static final Map<EssenceType, Item> CHARGED_BINDING_SALTS = chargedBindingSalts();
@@ -83,6 +85,7 @@ public final class ModItems {
                 entries.add(PHILOSOPHERS_STONE);
                 entries.add(SALT); entries.add(PURIFIED_WATER); entries.add(HERBAL_PASTE);
                 entries.add(FIRE_DUST); entries.add(CAUSTIC_SLIME); entries.add(NAPALM); entries.add(ACID_BOMB);
+                entries.add(FROST_FLASK); entries.add(PURIFYING_FLASK);
                 entries.add(LIGHTNING_IN_A_BOTTLE); entries.add(MIASMA); entries.add(MIDAS_ELIXIR);
                 entries.add(BINDING_SALT);
                 for (EssenceType type : EssenceType.values()) {

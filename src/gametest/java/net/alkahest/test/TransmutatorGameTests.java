@@ -535,4 +535,29 @@ public class TransmutatorGameTests implements FabricGameTest {
         c.assertTrue(core.isEmpty(), "The core is emptied when it is taken apart");
         c.complete();
     }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void newResourceConversionSpendsExactConnectedEssence(TestContext c) {
+        int y = CY + 160;
+        BlockPos pos = tower(c, y);
+        var core = (TransmutatorCoreBlockEntity)c.getWorld().getBlockEntity(pos);
+        installInput(c, core);
+        core.setStack(TransmutatorCoreBlockEntity.INPUT, new ItemStack(Items.REDSTONE, 2));
+        core.wake();
+        c.setBlockState(CX + 1, y, CZ, ModBlocks.ALCHEMY_PIPE);
+        BlockPos pipe = c.getAbsolutePos(new BlockPos(CX + 1, y, CZ));
+        var lux = jar(c, CX + 1, y, CZ - 1, EssenceType.LUX, 10);
+        run(c.getWorld(), pos, 110);
+        net.alkahest.block.entity.AlchemyPipeBlockEntity.pulse(c.getWorld(), pipe);
+        c.assertTrue(lux.contents().total() == 10 && core.getStack(TransmutatorCoreBlockEntity.OUTPUT).isEmpty(), "Missing Potentia prevents payment");
+        var potentia = jar(c, CX + 1, y, CZ + 1, EssenceType.POTENTIA, 10);
+        net.alkahest.block.entity.AlchemyPipeBlockEntity.pulse(c.getWorld(), pipe);
+        c.assertTrue(core.getStack(TransmutatorCoreBlockEntity.OUTPUT).isOf(Items.GLOWSTONE_DUST), "One redstone makes one glowstone dust");
+        c.assertTrue(core.getStack(TransmutatorCoreBlockEntity.OUTPUT).getCount() == 1 && core.getStack(TransmutatorCoreBlockEntity.INPUT).getCount() == 1, "One input and one output per operation");
+        c.assertTrue(lux.contents().total() == 6 && potentia.contents().total() == 7, "Exactly Lux 4 and Potentia 3 are spent");
+        c.assertTrue(core.getStack(TransmutatorCoreBlockEntity.AMULET).get(ModDataComponents.ESSENCE_CHARGE) == 3, "Exactly one amulet charge is spent");
+        c.setBlockState(CX + 1, y, CZ - 1, net.minecraft.block.Blocks.AIR);
+        c.setBlockState(CX + 1, y, CZ + 1, net.minecraft.block.Blocks.AIR);
+        c.complete();
+    }
 }

@@ -44,10 +44,10 @@ public final class PracticalResearchStorage {
         for (int i = 0; i < player.getInventory().size(); i++) observe(player, player.getInventory().getStack(i));
         observe(player, player.currentScreenHandler.getCursorStack());
         dev.emi.trinkets.api.TrinketsApi.getTrinketComponent(player).ifPresent(component -> {
-            for (var step : PracticalResearchPlan.STEPS) {
-                var item = Registries.ITEM.get(net.minecraft.util.Identifier.of(step.itemId()));
-                if (component.isEquipped(item)) observe(player, new ItemStack(item));
-            }
+            if (component.isEquipped(net.alkahest.registry.ModItems.ALCHEMISTS_MONOCLE))
+                observe(player, new ItemStack(net.alkahest.registry.ModItems.ALCHEMISTS_MONOCLE));
+            if (component.isEquipped(net.alkahest.registry.ModItems.ALKAHEST_AMULET))
+                observe(player, new ItemStack(net.alkahest.registry.ModItems.ALKAHEST_AMULET));
         });
         if (completed(player) != before) {
             player.sendMessage(net.minecraft.text.Text.translatable("message.alkahest.practice.completed"), true);

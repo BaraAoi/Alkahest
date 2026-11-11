@@ -712,4 +712,53 @@ public class MatrixGameTests implements FabricGameTest {
         c.assertTrue(core.getStack(MatrixCoreBlockEntity.BASE).getCount() == 1, "The base survives");
         c.complete();
     }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void newSynthesisRecipesHaveDistinctInputsAndTwoPedestalItems(TestContext c) {
+        var recipes = net.alkahest.matrix.MatrixRecipe.all();
+        for (var output : List.of(ModItems.FROST_FLASK, ModItems.PURIFYING_FLASK, Items.ARROW, Items.POWERED_RAIL,
+                Items.SEA_LANTERN, Items.MAGMA_BLOCK, Items.SOUL_LANTERN, Items.RAIL)) {
+            var matching = recipes.stream().filter(r -> r.output().isOf(output)).toList();
+            c.assertTrue(matching.size() == 1, "Exactly one new recipe exists for " + output);
+            var recipe = matching.getFirst();
+            c.assertTrue(recipe.components().size() >= 2, "Every new Matrix recipe uses multiple pedestal ingredients");
+            var given = recipe.components().stream().map(ItemStack::new).toList();
+            c.assertTrue(net.alkahest.matrix.MatrixRecipe.find(new ItemStack(recipe.base()), given) == recipe,
+                "The complete recipe has an unambiguous match");
+            c.assertTrue(net.alkahest.matrix.MatrixRecipe.find(new ItemStack(recipe.base()), given.subList(0, 1)) == null,
+                "A missing ingredient cannot start this recipe");
+        }
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void frostSynthesisWaitsForFullPriceAndConsumesExactlyOnce(TestContext c) {
+        int y = CY + 160;
+        c.setBlockState(CX, y, CZ, ModBlocks.MATRIX_CORE);
+        for (int dx = -1; dx <= 1; dx++) for (int dy = -1; dy <= 1; dy++) for (int dz = -1; dz <= 1; dz++) {
+            if (dx == 0 && dy == 0 && dz == 0) continue;
+            c.setBlockState(CX + dx, y + dy, CZ + dz,
+                dx != 0 && dy != 0 && dz != 0 ? ModBlocks.MATRIX_PILLAR : ModBlocks.ALCHEMICAL_BRICK);
+        }
+        BlockPos pos = c.getAbsolutePos(new BlockPos(CX, y, CZ));
+        var core = (MatrixCoreBlockEntity)c.getWorld().getBlockEntity(pos);
+        core.setAwake(c.getWorld(), pos, true);
+        core.setStack(MatrixCoreBlockEntity.BASE, new ItemStack(Items.SNOWBALL));
+        pedestal(c, 7, y - 1, 3, new ItemStack(Items.GLASS_BOTTLE));
+        pedestal(c, 3, y - 1, 7, new ItemStack(ModItems.CRYSTALS.get(EssenceType.GELUM)));
+        var bottle = (net.alkahest.block.entity.MatrixPedestalBlockEntity)c.getWorld().getBlockEntity(c.getAbsolutePos(new BlockPos(7, y - 1, 3)));
+        var crystal = (net.alkahest.block.entity.MatrixPedestalBlockEntity)c.getWorld().getBlockEntity(c.getAbsolutePos(new BlockPos(3, y - 1, 7)));
+        var gelum = jar(c, 0, y, 0, EssenceType.GELUM, 15);
+        var player = c.createMockPlayer(net.minecraft.world.GameMode.CREATIVE);
+        c.assertTrue(core.startWith(new ItemStack(ModItems.ALKAHEST_AMULET), player), "A focus starts the frost recipe");
+        run(c.getWorld(), pos, MatrixCoreBlockEntity.DURATION + 3);
+        c.assertTrue(core.getStack(MatrixCoreBlockEntity.OUTPUT).isEmpty() && !bottle.isEmpty() && !crystal.isEmpty(), "Missing Aqua preserves the ingredients");
+        var aqua = jar(c, 6, y, 0, EssenceType.AQUA, 10);
+        run(c.getWorld(), pos, 4);
+        c.assertTrue(core.getStack(MatrixCoreBlockEntity.OUTPUT).isOf(ModItems.FROST_FLASK) && core.getStack(MatrixCoreBlockEntity.OUTPUT).getCount() == 2, "Produces two frost flasks");
+        c.assertTrue(bottle.isEmpty() && crystal.isEmpty() && core.getStack(MatrixCoreBlockEntity.BASE).isEmpty(), "Every required item is consumed once");
+        c.assertTrue(gelum.contents().total() == 3 && aqua.contents().total() == 2, "Exactly Gelum 12 and Aqua 8 are paid");
+        c.setBlockState(0, y, 0, Blocks.AIR); c.setBlockState(6, y, 0, Blocks.AIR);
+        c.complete();
+    }
 }

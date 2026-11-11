@@ -3,6 +3,7 @@ package net.alkahest.client.gui;
 import net.alkahest.Alkahest;
 import net.alkahest.essence.EssenceType;
 import net.alkahest.matrix.MatrixRecipe;
+import net.alkahest.transmutation.TransmutationRecipe;
 import net.alkahest.registry.ModBlocks;
 import net.alkahest.registry.ModItems;
 import net.alkahest.research.PracticalResearchPlan;
@@ -23,9 +24,10 @@ import java.util.Map;
 /** An original arcane research map and field notes. Progress remains server-authoritative. */
 public final class JournalScreen extends Screen {
     private static final Identifier BACKGROUND = Alkahest.id("textures/gui/journal_background.png");
-    private static final int GUIDE_PAGES = 10;
+    private static final int GUIDE_PAGES = 11;
     /** The last page of the field notes is not text: it lists every synthesis of the Matrix. */
-    private static final int RECIPES_PAGE = GUIDE_PAGES - 1;
+    private static final int RECIPES_PAGE = 9;
+    private static final int TRANSMUTATION_PAGE = 10;
     private record Node(String key, long parents, long completed, int x, int y, ItemStack icon) { }
     private static Node node(int index, int x, int y) {
         var step = PracticalResearchPlan.STEPS.get(index);
@@ -34,7 +36,11 @@ public final class JournalScreen extends Screen {
     }
     private static final Node[] NODES = {
         node(0, 24, 0), node(1, 100, -40), node(2, 100, 40), node(3, 176, 0),
-        node(4, 252, -40), node(5, 252, 40), node(6, 328, 0), node(7, 404, 0), node(8, 480, 0)
+        node(4, 252, -40), node(5, 252, 40), node(6, 328, 0), node(7, 404, 0), node(8, 480, 0),
+        node(9, 556, -90), node(10, 556, -30), node(11, 556, 30), node(12, 632, 30),
+        node(13, 556, 90), node(14, 632, -60), node(15, 708, -90), node(16, 708, -30),
+        node(17, 784, 0), node(18, 860, 0), node(19, 936, -108), node(20, 936, -72),
+        node(21, 936, -36), node(22, 936, 0), node(23, 936, 36), node(24, 936, 72), node(25, 936, 108)
     };
     private final long researchFlags;
     private boolean guide;
@@ -93,11 +99,9 @@ public final class JournalScreen extends Screen {
         int x = mapX(), y = mapY(), w = mapW(), h = mapH();
         panel(c, x, y, w, h);
         c.enableScissor(x + 2, y + 2, x + w - 2, y + h - 2);
-        link(c, NODES[0], NODES[1]); link(c, NODES[0], NODES[2]);
-        link(c, NODES[1], NODES[3]); link(c, NODES[2], NODES[3]);
-        link(c, NODES[3], NODES[4]); link(c, NODES[3], NODES[5]);
-        link(c, NODES[4], NODES[6]); link(c, NODES[5], NODES[6]);
-        link(c, NODES[6], NODES[7]); link(c, NODES[7], NODES[8]);
+        // Parent bits are the single source of truth for both progression and connections.
+        for (Node child : NODES) for (Node parent : NODES)
+            if ((child.parents() & parent.completed()) != 0) link(c, parent, child);
         for (Node node : NODES) if (!state(node).equals("hidden")) drawNode(c, node, mouseX, mouseY);
         c.disableScissor();
         c.drawCenteredTextWithShadow(textRenderer, Text.translatable("screen.alkahest.journal.map_hint"), left + bookWidth / 2, top + bookHeight - 24, 0xFFD4C4A0);
@@ -158,6 +162,8 @@ public final class JournalScreen extends Screen {
         c.fill(x + 5, y + 5, x + w - 5, y + h - 5, 0xF4E7D4A7);
         if (guidePage == RECIPES_PAGE) {
             renderRecipes(c, x, y, w, h, mouseX, mouseY);
+        } else if (guidePage == TRANSMUTATION_PAGE) {
+            renderTransmutations(c, x, y, w, h, mouseX, mouseY);
         } else {
             c.enableScissor(x + 7, y + 7, x + w - 7, y + h - 7);
             int contentHeight = wrapped(c, Text.translatable("screen.alkahest.journal.page." + guidePage), x + 12, y + 12 - scroll, w - 24, 0xFF30251C);
@@ -194,6 +200,42 @@ public final class JournalScreen extends Screen {
             if (mouseY >= rowY && mouseY < rowY + 16) {
                 c.drawTooltip(textRenderer, describe(recipes.get(i)), mouseX, mouseY);
                 return;
+            }
+        }
+    }
+
+    /** A scrollable index, read directly from the machine's authoritative recipe registry. */
+    private void renderTransmutations(DrawContext c, int x, int y, int w, int h, int mouseX, int mouseY) {
+        c.drawText(textRenderer, Text.translatable("screen.alkahest.journal.transmutations"), x + 12, y + 10, 0xFF4F3520, false);
+        c.fill(x + 12, y + 22, x + w - 12, y + 23, 0xFFB19A6E);
+        var recipes = TransmutationRecipe.all();
+        int top = y + 27, bottom = y + h - 6;
+        maxScroll = Math.max(0, recipes.size() * 19 - Math.max(0, bottom - top));
+        scroll = MathHelper.clamp(scroll, 0, maxScroll);
+        c.enableScissor(x + 7, top, x + w - 7, bottom);
+        for (int i = 0; i < recipes.size(); i++) {
+            int row = top + i * 19 - scroll;
+            if (row + 18 <= top || row >= bottom) continue;
+            var recipe = recipes.get(i);
+            if (i % 2 == 0) c.fill(x + 8, row, x + w - 8, row + 18, 0x1A4F3520);
+            c.drawItem(recipe.input(), x + 12, row + 1);
+            c.drawText(textRenderer, "→", x + 32, row + 5, 0xFF594633, false);
+            c.drawItem(recipe.output(), x + 45, row + 1);
+            String cost = "◆ " + MatrixRecipe.price(recipe.cost());
+            c.drawText(textRenderer, cost, x + w - 12 - textRenderer.getWidth(cost), row + 5, 0xFF7A5A20, false);
+        }
+        c.disableScissor();
+        if (!within(mouseX, mouseY, x + 8, top, x + w - 8, bottom)) return;
+        for (int i = 0; i < recipes.size(); i++) {
+            int row = top + i * 19 - scroll;
+            if (mouseY >= row && mouseY < row + 18) {
+                var recipe = recipes.get(i);
+                c.drawTooltip(textRenderer, List.of(
+                    Text.translatable("screen.alkahest.journal.transmutation_input", recipe.input().getName()),
+                    Text.translatable("screen.alkahest.journal.transmutation_output", recipe.output().getName()),
+                    Text.translatable("screen.alkahest.matrix.index_cost").copy().append(": " + MatrixRecipe.price(recipe.cost()))
+                ), mouseX, mouseY);
+                break;
             }
         }
     }
@@ -269,10 +311,11 @@ public final class JournalScreen extends Screen {
     }
     @Override public boolean mouseDragged(double x, double y, int button, double dx, double dy) {
         if (button == 0 && dragging && !guide && selected == null) {
-            // Keep the farthest node reachable even on a narrow book/GUI scale.
-            double minPanX = Math.min(-300, mapW() - NODES[NODES.length - 1].x() - 36);
+            // Include every node, not just the last, if the layout gains new branches.
+            int farthest = java.util.Arrays.stream(NODES).mapToInt(Node::x).max().orElse(0);
+            double minPanX = Math.min(-300, mapW() - farthest - 36);
             panX = MathHelper.clamp(panX + dx, minPanX, 120);
-            panY = MathHelper.clamp(panY + dy, -70, 70);
+            panY = MathHelper.clamp(panY + dy, -160, 160);
             return true;
         }
         return super.mouseDragged(x, y, button, dx, dy);

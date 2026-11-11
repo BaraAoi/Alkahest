@@ -254,4 +254,50 @@ public class ReagentGameTests implements FabricGameTest {
         });
     }
 
+
+    @GameTest(templateName = EMPTY_STRUCTURE, tickLimit = 80)
+    public void frostFlaskAffectsNearbyButNotTheThrower(TestContext c) {
+        c.setBlockState(2, 1, 2, Blocks.STONE);
+        var owner = c.spawnEntity(EntityType.PIG, 3, 2, 2);
+        var victim = c.spawnEntity(EntityType.PIG, 2, 2, 3);
+        var distant = c.spawnEntity(EntityType.PIG, 7, 2, 2);
+        for (var entity : new net.minecraft.entity.passive.PigEntity[]{owner, victim, distant}) {
+            entity.setAiDisabled(true); entity.setNoGravity(true); entity.setOnFireFor(30);
+        }
+        var projectile = c.spawnEntity(ModEntities.THROWN_REAGENT, 2.5f, 3.5f, 2.5f);
+        projectile.setOwner(owner); projectile.setItem(new ItemStack(ModItems.FROST_FLASK)); projectile.setVelocity(0, -.7, 0);
+        c.runAtTick(10, () -> {
+            c.assertTrue(projectile.isRemoved(), "Frost projectile is consumed on impact");
+            var slow = victim.getStatusEffect(StatusEffects.SLOWNESS);
+            c.assertTrue(slow != null && slow.getAmplifier() == 1 && victim.hasStatusEffect(StatusEffects.WEAKNESS), "Nearby target receives Slowness II and Weakness");
+            c.assertFalse(victim.isOnFire(), "Frost extinguishes nearby targets");
+            c.assertFalse(owner.hasStatusEffect(StatusEffects.SLOWNESS), "Thrower is excluded from the frost effect");
+            c.assertFalse(distant.hasStatusEffect(StatusEffects.SLOWNESS), "The effect has a finite radius");
+            c.complete();
+        });
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE, tickLimit = 80)
+    public void purifyingFlaskCleansesNearbyIncludingOwner(TestContext c) {
+        c.setBlockState(2, 1, 2, Blocks.STONE);
+        var owner = c.spawnEntity(EntityType.PIG, 3, 2, 2);
+        var distant = c.spawnEntity(EntityType.PIG, 7, 2, 2);
+        for (var entity : new net.minecraft.entity.passive.PigEntity[]{owner, distant}) {
+            entity.setAiDisabled(true); entity.setNoGravity(true); entity.setOnFireFor(30);
+            entity.addStatusEffect(new net.minecraft.entity.effect.StatusEffectInstance(StatusEffects.POISON, 200));
+            entity.addStatusEffect(new net.minecraft.entity.effect.StatusEffectInstance(StatusEffects.WITHER, 200));
+            entity.addStatusEffect(new net.minecraft.entity.effect.StatusEffectInstance(StatusEffects.WEAKNESS, 200));
+        }
+        var projectile = c.spawnEntity(ModEntities.THROWN_REAGENT, 2.5f, 3.5f, 2.5f);
+        projectile.setOwner(owner); projectile.setItem(new ItemStack(ModItems.PURIFYING_FLASK)); projectile.setVelocity(0, -.7, 0);
+        c.runAtTick(10, () -> {
+            c.assertTrue(projectile.isRemoved(), "Purifying projectile is consumed on impact");
+            c.assertFalse(owner.isOnFire(), "Cleansing extinguishes the thrower");
+            c.assertFalse(owner.hasStatusEffect(StatusEffects.POISON), "Cleansing removes poison");
+            c.assertFalse(owner.hasStatusEffect(StatusEffects.WITHER), "Cleansing removes wither");
+            c.assertTrue(owner.hasStatusEffect(StatusEffects.WEAKNESS), "Unrelated effects are retained");
+            c.assertTrue(distant.hasStatusEffect(StatusEffects.POISON), "Outside the radius effects remain");
+            c.complete();
+        });
+    }
 }

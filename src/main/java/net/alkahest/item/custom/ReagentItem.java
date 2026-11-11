@@ -38,6 +38,15 @@ public class ReagentItem extends Item {
         return TypedActionResult.success(stack, world.isClient);
     }
 
+    @Override public void appendTooltip(ItemStack stack, TooltipContext context,
+                                        java.util.List<net.minecraft.text.Text> tooltip,
+                                        net.minecraft.item.tooltip.TooltipType type) {
+        if (stack.isOf(ModItems.FROST_FLASK))
+            tooltip.add(net.minecraft.text.Text.translatable("tooltip.alkahest.frost_flask").formatted(net.minecraft.util.Formatting.AQUA));
+        else if (stack.isOf(ModItems.PURIFYING_FLASK))
+            tooltip.add(net.minecraft.text.Text.translatable("tooltip.alkahest.purifying_flask").formatted(net.minecraft.util.Formatting.AQUA));
+    }
+
     private static Item mixture(ItemStack reagent, ItemStack ingredient) {
         if (reagent.isOf(ModItems.FIRE_DUST) && ingredient.isOf(Items.SLIME_BALL)) return ModItems.NAPALM;
         if (reagent.isOf(ModItems.CAUSTIC_SLIME) && ingredient.isOf(Items.GUNPOWDER)) return ModItems.ACID_BOMB;
