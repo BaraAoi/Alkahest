@@ -174,6 +174,12 @@ for name in ('transmutator_chamber', 'transmutator_crown'):
     for ref in ('metal', 'brass', 'quartz', 'gem'):
         check(ref in model['textures'], f'{name} needs visible {ref} materials')
 
+check('core.getStack(TransmutatorCoreBlockEntity.AMULET)' in renderer and 'ModelTransformationMode.FIXED' in renderer,
+      'the real installed amulet must render on the core')
+check('syncAmulet()' in core_be and 'sendToAround' in core_be and 'stacks.clear();\n        Inventories.readNbt' in core_be,
+      'amulet changes must sync and clear omitted empty slots to avoid ghosts')
+check('visibleAmuletUpdatesAndClearsOnClientReplicas' in tests, 'amulet insertion and removal need replication tests')
+
 # --- report ----------------------------------------------------------------------------------
 if failures:
     print('transmutator checks FAILED:')

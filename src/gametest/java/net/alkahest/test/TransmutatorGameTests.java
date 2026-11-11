@@ -263,6 +263,34 @@ public class TransmutatorGameTests implements FabricGameTest {
     }
 
     @GameTest(templateName = EMPTY_STRUCTURE)
+    public void visibleAmuletUpdatesAndClearsOnClientReplicas(TestContext c) {
+        BlockPos pos = tower(c, CY + 32);
+        var source = (TransmutatorCoreBlockEntity)c.getWorld().getBlockEntity(pos);
+        var replica = new TransmutatorCoreBlockEntity(pos, source.getCachedState());
+        var registry = c.getWorld().getRegistryManager();
+        ItemStack amulet = new ItemStack(ModItems.ALKAHEST_AMULET);
+        amulet.set(ModDataComponents.ESSENCE_CHARGE, 17);
+        source.setStack(TransmutatorCoreBlockEntity.AMULET, amulet);
+        replica.readComponentlessNbt(source.toUpdatePacket().getNbt(), registry);
+        c.assertTrue(replica.getStack(TransmutatorCoreBlockEntity.AMULET).isOf(ModItems.ALKAHEST_AMULET)
+            && replica.getStack(TransmutatorCoreBlockEntity.AMULET).get(ModDataComponents.ESSENCE_CHARGE) == 17,
+            "The rendered item and its actual charge reach the client");
+        source.removeStack(TransmutatorCoreBlockEntity.AMULET);
+        replica.readComponentlessNbt(source.toUpdatePacket().getNbt(), registry);
+        c.assertTrue(replica.getStack(TransmutatorCoreBlockEntity.AMULET).isEmpty(), "Taking the amulet clears the old client image");
+        ItemStack replacement = new ItemStack(ModItems.ALKAHEST_AMULET);
+        replacement.set(ModDataComponents.ESSENCE_CHARGE, 0);
+        source.setStack(TransmutatorCoreBlockEntity.AMULET, replacement);
+        replica.readComponentlessNbt(source.toUpdatePacket().getNbt(), registry);
+        c.assertTrue(replica.getStack(TransmutatorCoreBlockEntity.AMULET).get(ModDataComponents.ESSENCE_CHARGE) == 0,
+            "A depleted amulet is still rendered and shows zero charge");
+        source.clear();
+        replica.readComponentlessNbt(source.toUpdatePacket().getNbt(), registry);
+        c.assertTrue(replica.getStack(TransmutatorCoreBlockEntity.AMULET).isEmpty(), "Clearing inventory also removes the client image");
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
     public void redesignedGuiSlotsRemainUsable(TestContext c) {
         BlockPos pos = tower(c, CY + 32);
         var core = (TransmutatorCoreBlockEntity)c.getWorld().getBlockEntity(pos);

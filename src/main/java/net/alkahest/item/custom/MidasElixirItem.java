@@ -30,6 +30,7 @@ public final class MidasElixirItem extends Item {
     @Override public void appendTooltip(ItemStack stack, TooltipContext context, List<Text> tooltip, TooltipType type) {
         tooltip.add(Text.translatable("tooltip.alkahest.midas_elixir.effect").formatted(Formatting.GOLD));
         tooltip.add(Text.translatable("tooltip.alkahest.midas_elixir.scope").formatted(Formatting.GRAY));
+        tooltip.add(Text.translatable("tooltip.alkahest.midas_elixir.distillery").formatted(Formatting.GRAY));
     }
 
     @Override public int getMaxUseTime(ItemStack stack, LivingEntity user) { return 32; }

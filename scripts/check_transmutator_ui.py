@@ -44,6 +44,8 @@ reserved={
     'input label':rect(18,32,43,9),
     'output label':rect(96,32,38,9),
     'amulet label':rect(51,82,76,9),
+    'amulet charge':rect(51,94,76,9),
+    'amulet bar':rect(51,104,76,2),
     'progress track':rect(53,49,45,9),
     'progress percent':rect(54,63,43,9),
     'cost heading':rect(146,32,76,9),
@@ -60,10 +62,12 @@ for name,a in reserved.items():
 for symbol in ('PLAYER_X + col * 18','PLAYER_Y + row * 18','HOTBAR_Y','INPUT_X','AMULET_X','OUTPUT_X'):
     assert symbol in handler and symbol in screen, f'slot geometry must be shared: {symbol}'
 assert 'fit(statusText().getString(), 200)' in screen and 'c.drawTooltip(textRenderer, statusText()' in screen
+assert 'amuletCharge()' in screen and 'ESSENCE_CHARGE' in screen and 'AlkahestAmuletItem.MAX_CHARGE' in screen
 assert 'for (EssenceStack e : handler.requirements())' in screen, 'full cost tooltip must remain available'
 for locale in ('ru_ru','en_us'):
     translations=json.loads(Path(f'src/main/resources/assets/alkahest/lang/{locale}.json').read_text())
-    for field in ('input','output','amulet','cost','progress','amulet_hint','no_recipe','ready','working','no_essence','blocked','unformed','no_amulet','dormant'):
+    for field in ('input','output','amulet','cost','progress','amulet_hint','amulet_charge','no_recipe','ready','working','no_essence','blocked','unformed','no_amulet','dormant'):
         assert translations.get('screen.alkahest.transmutator.'+field), f'{locale} missing {field}'
     assert '%s' in translations['screen.alkahest.transmutator.progress']
+    assert translations['screen.alkahest.transmutator.amulet_charge'].count('%s') == 2
 print(f'Transmutator UI validated: {W}x{H}, {len(slots)} slots, non-overlapping panels and localized tooltips')

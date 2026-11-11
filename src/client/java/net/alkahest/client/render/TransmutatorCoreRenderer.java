@@ -5,6 +5,11 @@ import net.alkahest.block.custom.TransmutatorAssemblyBlock;
 import net.alkahest.block.custom.TransmutatorCoreBlock;
 import net.alkahest.block.entity.TransmutatorCoreBlockEntity;
 import net.alkahest.registry.ModBlocks;
+import net.alkahest.item.custom.AlkahestAmuletItem;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.render.item.ItemRenderer;
+import net.minecraft.client.render.model.json.ModelTransformationMode;
+import net.minecraft.item.ItemStack;
 import net.minecraft.block.BlockState;
 import net.minecraft.client.render.OverlayTexture;
 import net.minecraft.client.render.RenderLayer;
@@ -29,23 +34,39 @@ public final class TransmutatorCoreRenderer implements BlockEntityRenderer<Trans
         World world = core.getWorld();
         if (world == null) return;
         BlockState chamber = world.getBlockState(core.getPos().up());
-        if (!chamber.isOf(ModBlocks.TRANSMUTATOR_CHAMBER) || !chamber.get(TransmutatorAssemblyBlock.AWAKE)
-            || !world.getBlockState(core.getPos().up(2)).isOf(ModBlocks.TRANSMUTATOR_CROWN)) return;
-        boolean working = core.getCachedState().get(TransmutatorCoreBlock.WORKING);
-        float time = (world.getTime() % 240000L) + tickDelta;
-        float speed = working ? 1.1f : .32f;
-        // Request the consumer once and do not switch render layers while writing its quads.
-        VertexConsumer buffer = vertices.getBuffer(RenderLayer.getEntitySolid(METAL));
-        matrices.push();
-        matrices.translate(.5f, 1.5f, .5f);
-        for (int i = 0; i < 2; i++) {
+        boolean tower = chamber.isOf(ModBlocks.TRANSMUTATOR_CHAMBER)
+            && world.getBlockState(core.getPos().up(2)).isOf(ModBlocks.TRANSMUTATOR_CROWN);
+        if (tower && chamber.get(TransmutatorAssemblyBlock.AWAKE)) {
+            boolean working = core.getCachedState().get(TransmutatorCoreBlock.WORKING);
+            float time = (world.getTime() % 240000L) + tickDelta;
+            float speed = working ? 1.1f : .32f;
+            // Request the consumer once and do not switch render layers while writing its quads.
+            VertexConsumer buffer = vertices.getBuffer(RenderLayer.getEntitySolid(METAL));
             matrices.push();
-            matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(time * speed * (i == 0 ? 1f : -.8f)));
-            matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(i == 0 ? 23f : -30f));
-            ring(buffer, matrices.peek(), i == 0 ? .29f : .34f, i == 0 ? .325f : .375f, .014f, light);
+            matrices.translate(.5f, 1.5f, .5f);
+            for (int i = 0; i < 2; i++) {
+                matrices.push();
+                matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(time * speed * (i == 0 ? 1f : -.8f)));
+                matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(i == 0 ? 23f : -30f));
+                ring(buffer, matrices.peek(), i == 0 ? .29f : .34f, i == 0 ? .325f : .375f, .014f, light);
+                matrices.pop();
+            }
             matrices.pop();
         }
-        matrices.pop();
+        // Mounted on the north/front face of the core, not an invented decorative item.
+        // Render after the rings: switching render layers can invalidate an earlier consumer.
+        ItemStack amulet = core.getStack(TransmutatorCoreBlockEntity.AMULET);
+        if (amulet.getItem() instanceof AlkahestAmuletItem) {
+            matrices.push();
+            matrices.translate(.5f, .52f, -.025f);
+            matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(180f));
+            matrices.scale(.42f, .42f, .42f);
+            ItemRenderer renderer = MinecraftClient.getInstance().getItemRenderer();
+            var model = renderer.getModel(amulet, world, null, 0);
+            renderer.renderItem(amulet, ModelTransformationMode.FIXED, false, matrices, vertices,
+                light, OverlayTexture.DEFAULT_UV, model);
+            matrices.pop();
+        }
     }
 
     @Override public boolean rendersOutsideBoundingBox(TransmutatorCoreBlockEntity core) { return true; }

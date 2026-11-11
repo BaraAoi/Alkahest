@@ -2,6 +2,9 @@ package net.alkahest.client.gui;
 
 import net.alkahest.Alkahest;
 import net.alkahest.essence.EssenceStack;
+import net.alkahest.item.custom.AlkahestAmuletItem;
+import net.alkahest.registry.ModDataComponents;
+import net.minecraft.item.ItemStack;
 import net.alkahest.screen.TransmutatorScreenHandler;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
@@ -41,6 +44,12 @@ public final class TransmutatorScreen extends HandledScreen<TransmutatorScreenHa
         return (int)Math.max(0, Math.min(100, (long)handler.progress() * 100 / handler.maxProgress()));
     }
 
+    private int amuletCharge() {
+        ItemStack stack = handler.getSlot(1).getStack();
+        return stack.getItem() instanceof AlkahestAmuletItem
+            ? Math.max(0, stack.getOrDefault(ModDataComponents.ESSENCE_CHARGE, 0)) : -1;
+    }
+
     /** Guard translated/custom names against crossing a panel edge. Hover shows the full text. */
     private String fit(String text, int maxWidth) {
         if (textRenderer.getWidth(text) <= maxWidth) return text;
@@ -73,6 +82,13 @@ public final class TransmutatorScreen extends HandledScreen<TransmutatorScreenHa
             c.fill(bx + 1, by + 1, bx + 1 + fill, by + TRACK_HEIGHT - 1, 0xFFB6843F);
             c.fill(bx + 1, by + 1, bx + 1 + fill, by + 3, 0xFFFFD68A);
         }
+        // Separate from the operation progress: the installed amulet's actual Ordo charge.
+        c.fill(x + 51, y + 104, x + 127, y + 106, 0xFF35413C);
+        int charge = amuletCharge();
+        if (charge > 0) {
+            int length = (int)(76L * Math.min(charge, AlkahestAmuletItem.MAX_CHARGE) / AlkahestAmuletItem.MAX_CHARGE);
+            c.fill(x + 51, y + 104, x + 51 + length, y + 106, 0xFFE2BF72);
+        }
     }
 
     @Override protected void drawForeground(DrawContext c, int mouseX, int mouseY) {
@@ -81,6 +97,9 @@ public final class TransmutatorScreen extends HandledScreen<TransmutatorScreenHa
         c.drawTextWithShadow(textRenderer, fit(Text.translatable("screen.alkahest.transmutator.input").getString(), 43), 18, 32, 0xFFD1C4A8);
         c.drawTextWithShadow(textRenderer, fit(Text.translatable("screen.alkahest.transmutator.output").getString(), 38), 96, 32, 0xFFD1C4A8);
         c.drawTextWithShadow(textRenderer, fit(Text.translatable("screen.alkahest.transmutator.amulet").getString(), 76), 51, 82, 0xFFCFBD9B);
+        int charge = amuletCharge();
+        String chargeText = charge < 0 ? "—" : charge + " / " + AlkahestAmuletItem.MAX_CHARGE;
+        c.drawTextWithShadow(textRenderer, fit(chargeText, 76), 51, 94, charge == 0 ? 0xFFFFAB89 : 0xFFE9D5A8);
         c.drawCenteredTextWithShadow(textRenderer, percent() + "%", 75, 63, 0xFFF1D49C);
         c.drawTextWithShadow(textRenderer, fit(Text.translatable("screen.alkahest.transmutator.cost").getString(), 76), COST_X, 32, 0xFFF2D5A0);
         int statusColor = switch (handler.status()) {
@@ -122,6 +141,8 @@ public final class TransmutatorScreen extends HandledScreen<TransmutatorScreenHa
             lines.add(Text.translatable("screen.alkahest.transmutator.cost"));
             for (EssenceStack e : handler.requirements()) lines.add(Text.literal(e.type().displayName() + " × " + e.amount()));
             c.drawTooltip(textRenderer, lines, mouseX, mouseY);
+        } else if (inside(mouseX, mouseY, 51, 94, 76, 12) && amuletCharge() >= 0) {
+            c.drawTooltip(textRenderer, Text.translatable("screen.alkahest.transmutator.amulet_charge", amuletCharge(), AlkahestAmuletItem.MAX_CHARGE), mouseX, mouseY);
         } else if (!handler.getSlot(1).hasStack() && inside(mouseX, mouseY, TransmutatorScreenHandler.AMULET_X, TransmutatorScreenHandler.AMULET_Y, 16, 16)) {
             c.drawTooltip(textRenderer, Text.translatable("screen.alkahest.transmutator.amulet_hint"), mouseX, mouseY);
         }

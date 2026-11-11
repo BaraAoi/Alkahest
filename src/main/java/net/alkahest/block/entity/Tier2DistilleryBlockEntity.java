@@ -1,6 +1,7 @@
 package net.alkahest.block.entity;
 
 import net.alkahest.block.custom.Tier2DistilleryBlock;
+import net.alkahest.effect.MidasTouchEffect;
 import net.alkahest.essence.EssenceStack;
 import net.alkahest.essence.EssenceType;
 import net.alkahest.essence.ItemEssenceMap;
@@ -144,12 +145,12 @@ public class Tier2DistilleryBlockEntity extends BlockEntity implements Inventory
     }
 
     /** All essences of the item, including composites, with a stable-tier stability roll. */
-    public static List<EssenceStack> outputs(ItemStack input, net.minecraft.util.math.random.Random random) {
+    public static List<EssenceStack> outputs(ItemStack input, net.minecraft.util.math.random.Random random, boolean midas) {
         List<EssenceStack> result = new ArrayList<>();
         for (EssenceStack essence : ItemEssenceMap.get(input)) {
             if (essence.type() == EssenceType.VACUUM || essence.amount() <= 0) continue;
             int total = Math.max(1, Math.min(8, essence.amount()));
-            result.add(new EssenceStack(essence.type(), total, 0.55f + random.nextFloat() * 0.15f));
+            result.add(new EssenceStack(essence.type(), total, MidasTouchEffect.outputStability(0.55f + random.nextFloat() * 0.15f, midas)));
         }
         return result;
     }
@@ -161,6 +162,11 @@ public class Tier2DistilleryBlockEntity extends BlockEntity implements Inventory
     }
 
     public static void tick(World world, BlockPos pos, Tier2DistilleryBlockEntity self) {
+        tickWithMidas(world, pos, self, MidasTouchEffect.nearby(world, pos), world.getTime());
+    }
+
+    /** Shared by the real ticker and deterministic server GameTests. */
+    static void tickWithMidas(World world, BlockPos pos, Tier2DistilleryBlockEntity self, boolean midas, long time) {
         if (world.isClient) return;
         if (!self.deposit()) { setWorking(world, pos, false); return; }
         ItemStack input = self.stacks.get(0);
@@ -171,8 +177,9 @@ public class Tier2DistilleryBlockEntity extends BlockEntity implements Inventory
         }
         if (self.bellows().isEmpty()) { setWorking(world, pos, false); return; }
         setWorking(world, pos, true);
-        if (++self.progress >= DURATION) {
-            self.pending.addAll(outputs(input, world.random));
+        self.progress += MidasTouchEffect.progressStep(midas, time);
+        if (self.progress >= DURATION) {
+            self.pending.addAll(outputs(input, world.random, midas));
             input.decrement(1);
             if (input.isEmpty()) self.stacks.set(0, ItemStack.EMPTY);
             self.progress = 0;

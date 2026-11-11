@@ -1,6 +1,7 @@
 package net.alkahest.block.entity;
 
 import net.alkahest.block.custom.DistilleryBlock;
+import net.alkahest.effect.MidasTouchEffect;
 import net.alkahest.essence.EssenceStack;
 import net.alkahest.essence.EssenceType;
 import net.alkahest.essence.ItemEssenceMap;
@@ -224,20 +225,26 @@ public class DistilleryBlockEntity extends BlockEntity implements SidedInventory
     }
 
     public static void tick(World world, BlockPos pos, DistilleryBlockEntity self) {
+        tickWithMidas(world, pos, self, MidasTouchEffect.nearby(world, pos), world.getTime());
+    }
+
+    /** Shared by the real ticker and deterministic server GameTests. */
+    static void tickWithMidas(World world, BlockPos pos, DistilleryBlockEntity self, boolean midas, long time) {
         if (!self.depositPending()) { setWorking(world, pos, false); return; }
         ItemStack input = self.stacks.get(0);
         if (input.isEmpty() || !self.canProcess(input)) { self.cancelProgress(); setWorking(world, pos, false); return; }
         setWorking(world, pos, true);
         boolean alkahestMode = self.hasAlkahest();
         int targetTicks = alkahestMode ? ALKAHEST_DURATION : RAW_DURATION;
-        if (++self.progress >= targetTicks) {
+        self.progress += MidasTouchEffect.progressStep(midas, time);
+        if (self.progress >= targetTicks) {
             if (alkahestMode) {
                 List<ItemStack> outputs = new ArrayList<>();
                 for (EssenceStack es : ItemEssenceMap.get(input)) {
                     Item crystalItem = ModItems.CRYSTALS.get(es.type());
                     if (crystalItem == null) continue;
                     ItemStack out = new ItemStack(crystalItem, Math.max(1, Math.min(8, es.amount())));
-                    out.set(ModDataComponents.ESSENCE_STABILITY, 0.45f + world.random.nextFloat() * 0.15f);
+                    out.set(ModDataComponents.ESSENCE_STABILITY, MidasTouchEffect.outputStability(0.45f + world.random.nextFloat() * 0.15f, midas));
                     outputs.add(out);
                 }
                 self.stacks.set(CATALYST, AlkahestVialItem.consumeCharge(self.stacks.get(CATALYST)));
@@ -254,7 +261,7 @@ public class DistilleryBlockEntity extends BlockEntity implements SidedInventory
                 else {
                     EssenceType type = primaries.get(world.random.nextInt(primaries.size()));
                     result = new ItemStack(ModItems.CRYSTALS.get(type), 1 + world.random.nextInt(3));
-                    result.set(ModDataComponents.ESSENCE_STABILITY, 0.15f + world.random.nextFloat() * 0.15f);
+                    result.set(ModDataComponents.ESSENCE_STABILITY, MidasTouchEffect.outputStability(0.15f + world.random.nextFloat() * 0.15f, midas));
                 }
                 self.stacks.set(PENDING, result);
             }

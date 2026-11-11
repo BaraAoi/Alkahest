@@ -223,6 +223,7 @@ public class TransmutatorCoreBlockEntity extends BlockEntity implements Inventor
             Math.max(0, amulet.getOrDefault(ModDataComponents.ESSENCE_CHARGE, 0) - 1));
         progress = 0;
         markDirty();
+        syncAmulet();
         playFinish(world, pos);
     }
 
@@ -349,20 +350,31 @@ public class TransmutatorCoreBlockEntity extends BlockEntity implements Inventor
     @Override public ItemStack getStack(int slot) { return stacks.get(slot); }
     @Override public ItemStack removeStack(int slot, int amount) {
         ItemStack removed = Inventories.splitStack(stacks, slot, amount);
-        if (!removed.isEmpty()) { if (slot != OUTPUT) progress = 0; markDirty(); }
+        if (!removed.isEmpty()) { if (slot != OUTPUT) progress = 0; markDirty(); if (slot == AMULET) syncAmulet(); }
         return removed;
     }
     @Override public ItemStack removeStack(int slot) {
         ItemStack removed = Inventories.removeStack(stacks, slot);
-        if (!removed.isEmpty()) { if (slot != OUTPUT) progress = 0; markDirty(); }
+        if (!removed.isEmpty()) { if (slot != OUTPUT) progress = 0; markDirty(); if (slot == AMULET) syncAmulet(); }
         return removed;
     }
     @Override public void setStack(int slot, ItemStack stack) {
         stacks.set(slot, stack);
         if (slot != OUTPUT) progress = 0;
         markDirty();
+        if (slot == AMULET) syncAmulet();
     }
-    @Override public void clear() { stacks.clear(); progress = 0; markDirty(); }
+    @Override public void clear() { stacks.clear(); progress = 0; markDirty(); syncAmulet(); }
+
+    /** Tell nearby clients when the visible amulet is inserted, removed or charged. */
+    private void syncAmulet() {
+        if (!(world instanceof ServerWorld server)) return;
+        BlockState state = world.getBlockState(pos);
+        server.updateListeners(pos, state, state, Block.NOTIFY_ALL);
+        var packet = toUpdatePacket();
+        if (packet != null) server.getServer().getPlayerManager().sendToAround(null,
+            pos.getX() + .5, pos.getY() + .5, pos.getZ() + .5, 96.0, server.getRegistryKey(), packet);
+    }
     @Override public boolean canPlayerUse(PlayerEntity player) { return Inventory.canPlayerUse(this, player); }
     @Override public boolean isValid(int slot, ItemStack stack) {
         return switch (slot) {

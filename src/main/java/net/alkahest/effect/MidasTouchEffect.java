@@ -7,7 +7,7 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 
-/** Early Midas effect: nearby Matrices run 20% faster, without stacking per player. */
+/** Nearby supported mechanisms receive one non-stacking Midas bonus. */
 public final class MidasTouchEffect extends StatusEffect {
     public static final int RADIUS = 8;
     public static final int DURATION = 3600;
@@ -18,7 +18,7 @@ public final class MidasTouchEffect extends StatusEffect {
         return nearby(world.getPlayers(), pos);
     }
 
-    /** Shared with tests; use a sphere around the centre of the Matrix core. */
+    /** Shared with tests; use a sphere around the centre of the mechanism. */
     public static boolean nearby(Iterable<? extends PlayerEntity> players, BlockPos pos) {
         for (PlayerEntity player : players) {
             if (player.isAlive() && !player.isSpectator() && player.hasStatusEffect(ModEffects.MIDAS_TOUCH)
@@ -26,6 +26,11 @@ public final class MidasTouchEffect extends StatusEffect {
                 return true;
         }
         return false;
+    }
+
+    /** Flat +0.20 output stability while boosted, bounded by the usual 100% maximum. */
+    public static float outputStability(float base, boolean nearby) {
+        return nearby ? Math.min(1.0f, base + 0.20f) : base;
     }
 
     /** One extra progress tick per five world ticks = 20% more work, never stacked. */
