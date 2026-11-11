@@ -6,6 +6,8 @@ break by hand: the platform is a ring of eight pillars, every essence used by a 
 and the game tests are registered.
 """
 import json
+from amulet_geometry import first_near_coplanar, separate_faces
+from copy import deepcopy
 import re
 import struct
 from pathlib import Path
@@ -184,6 +186,17 @@ check('visibleAmuletUpdatesAndClearsOnClientReplicas' in tests, 'amulet insertio
 # dimensional focus is used in the player's trinket renderer (the cord is separate).
 amulet = load(A / 'models/item/alkahest_amulet.json')
 check(len(amulet.get('elements', [])) >= 10, 'amulet must have an actual layered 3D model')
+check(first_near_coplanar(amulet['elements']) is None, 'amulet layers must not have coplanar overlapping faces (z-fighting)')
+# Verify the guard itself catches both identical and opposing face orientations.
+a = {'from': [0, 0, 0], 'to': [2, 2, 2]}
+b = {'from': [1, 1, 0], 'to': [3, 3, 2]}
+c = {'from': [1, 1, 2], 'to': [3, 3, 4]}
+check(first_near_coplanar([a, b]) is not None and first_near_coplanar([a, c]) is not None,
+      'z-fighting guard must detect overlapping faces in both orientations')
+check(first_near_coplanar([a, {'from':[3,3,3], 'to':[4,4,4]}]) is None, 'separate geometry must remain valid')
+synthetic = deepcopy([a, b, c])
+separate_faces(synthetic)
+check(first_near_coplanar(synthetic) is None, 'generator must resolve conflicting faces deterministically')
 for el in amulet['elements']:
     check(all(0 <= n <= 16 for n in el['from'] + el['to']), 'amulet cuboids must fit their item model')
     check(all(a < b for a, b in zip(el['from'], el['to'])), 'amulet pieces must have volume')

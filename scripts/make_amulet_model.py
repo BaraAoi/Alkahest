@@ -2,6 +2,7 @@
 """Generate a faceted, solid 3D Alkahest focus using only Python's standard library."""
 import json, struct, zlib
 from pathlib import Path
+from amulet_geometry import separate_faces
 A = Path('src/main/resources/assets/alkahest')
 
 def png(path, colors):
@@ -43,6 +44,8 @@ parts=[
     cuboid([7,12,6.5],[9,14,9.5],'gold'),
     cuboid([7,2,6.5],[9,4,9.5],'gold'),
 ]
+# Remove coplanar overlapping faces before writing the same design.
+separate_faces(parts)
 model={'parent':'minecraft:block/block','textures':{'particle':'alkahest:item/amulet_gold_3d','gold':'alkahest:item/amulet_gold_3d','gem':'alkahest:item/amulet_alka_3d','dark':'alkahest:item/amulet_dark_3d'},'elements':parts,
        'display':{'gui':{'rotation':[20,35,0],'scale':[.9,.9,.9]},'ground':{'translation':[0,2,0],'scale':[.5,.5,.5]},'thirdperson_righthand':{'rotation':[0,90,0],'scale':[.5,.5,.5]},'firstperson_righthand':{'rotation':[0,-45,0],'scale':[.65,.65,.65]},'firstperson_lefthand':{'rotation':[0,45,0],'scale':[.65,.65,.65]}}}
 (A/'models/item/alkahest_amulet.json').write_text(json.dumps(model,indent=2)+'\n')
