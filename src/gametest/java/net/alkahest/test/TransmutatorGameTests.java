@@ -219,7 +219,7 @@ public class TransmutatorGameTests implements FabricGameTest {
         var pillar = core.pillars().stream().filter(p -> p.stored(EssenceType.METALLUM) > 0).findFirst().orElseThrow();
         BlockPos pillarPos = pillar.getPos();
         int reserved = pillar.stored(EssenceType.METALLUM);
-        pillar.dropBufferedEssence(c.getWorld(), pillarPos);
+        c.getWorld().setBlockState(pillarPos, net.minecraft.block.Blocks.AIR.getDefaultState());
         var items = c.getWorld().getEntitiesByClass(net.minecraft.entity.ItemEntity.class,
             new net.minecraft.util.math.Box(pillarPos).expand(2), e -> e.getStack().isOf(ModBlocks.JAR.asItem()));
         int recovered = 0;
@@ -227,6 +227,38 @@ public class TransmutatorGameTests implements FabricGameTest {
             if (entry.type() == EssenceType.METALLUM) recovered += entry.amount();
         c.assertTrue(reserved == recovered && metal.contents().total() + recovered == 10, "Upgrading a legacy pillar returns every buffered unit in jars");
         c.assertTrue(pillar.buffer().total() == 0, "Recovered buffer is cleared and cannot duplicate");
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void chamberAndCrownHaveWorkingMultiIngredientRecipes(TestContext c) {
+        for (int which = 0; which < 2; which++) {
+            ItemStack other = which == 0 ? new ItemStack(Items.GLASS) : new ItemStack(Items.AMETHYST_SHARD);
+            ItemStack crystal = new ItemStack(ModItems.CRYSTALS.get(which == 0 ? EssenceType.AQUA : EssenceType.ORDO));
+            var input = net.minecraft.recipe.input.CraftingRecipeInput.create(2, 2, List.of(
+                new ItemStack(ModBlocks.TRANSMUTATOR_PILLAR), other, new ItemStack(Items.GOLD_INGOT), crystal));
+            var found = c.getWorld().getServer().getRecipeManager().getFirstMatch(net.minecraft.recipe.RecipeType.CRAFTING, input, c.getWorld());
+            c.assertTrue(found.isPresent(), "The tower component crafting recipe is registered");
+            ItemStack result = found.get().value().craft(input, c.getWorld().getRegistryManager());
+            c.assertTrue(result.isOf((which == 0 ? ModBlocks.TRANSMUTATOR_CHAMBER : ModBlocks.TRANSMUTATOR_CROWN).asItem()),
+                "The component recipe makes the correct block");
+        }
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void pipeCanBePlacedOnTowerCore(TestContext c) {
+        int y = CY + 112;
+        BlockPos pos = tower(c, y);
+        var player = c.createMockPlayer(net.minecraft.world.GameMode.SURVIVAL);
+        player.setPosition(pos.getX() + 3, pos.getY(), pos.getZ());
+        ItemStack pipes = new ItemStack(ModBlocks.ALCHEMY_PIPE, 4);
+        player.setStackInHand(net.minecraft.util.Hand.MAIN_HAND, pipes);
+        var hit = new net.minecraft.util.hit.BlockHitResult(net.minecraft.util.math.Vec3d.ofCenter(pos).add(.5, 0, 0),
+            net.minecraft.util.math.Direction.EAST, pos, false);
+        c.getWorld().getBlockState(pos).onUseWithItem(pipes, c.getWorld(), player, net.minecraft.util.Hand.MAIN_HAND, hit);
+        c.assertTrue(c.getWorld().getBlockState(pos.east()).isOf(ModBlocks.ALCHEMY_PIPE), "A normal pipe click places the segment next to the core");
+        c.assertTrue(c.getWorld().getBlockState(pos.east()).get(net.alkahest.block.custom.AlchemyPipeBlock.WEST), "The pipe visually connects to the core");
         c.complete();
     }
 
