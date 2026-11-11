@@ -440,7 +440,7 @@ public class MatrixGameTests implements FabricGameTest {
     }
 
     @GameTest(templateName = EMPTY_STRUCTURE)
-    public void midasElixirRecipeUsesSpecifiedIngredients(TestContext c) {
+    public void midasElixirRecipeRequiresEveryIngredient(TestContext c) {
         BlockPos pos = build(c);
         wake(c);
         var core = core(c);
@@ -448,20 +448,62 @@ public class MatrixGameTests implements FabricGameTest {
         pedestal(c, 7, CY - 1, 7, new ItemStack(ModItems.PURIFIED_WATER));
         BlockPos pedestalPos = c.getAbsolutePos(new BlockPos(7, CY - 1, 7));
         var water = (net.alkahest.block.entity.MatrixPedestalBlockEntity) c.getWorld().getBlockEntity(pedestalPos);
+        var player = c.createMockPlayer(net.minecraft.world.GameMode.CREATIVE);
+        c.assertFalse(core.startWith(new ItemStack(ModItems.PHILOSOPHERS_STONE), player), "The old water-only recipe no longer starts");
+        pedestal(c, 7, CY - 1, 3, new ItemStack(Items.GOLD_INGOT));
+        c.assertFalse(core.startWith(new ItemStack(ModItems.PHILOSOPHERS_STONE), player), "A crystal is also required");
+        pedestal(c, 3, CY - 1, 7, new ItemStack(ModItems.CRYSTALS.get(EssenceType.ORDO)));
+        var gold = (net.alkahest.block.entity.MatrixPedestalBlockEntity) c.getWorld().getBlockEntity(c.getAbsolutePos(new BlockPos(7, CY - 1, 3)));
+        var crystal = (net.alkahest.block.entity.MatrixPedestalBlockEntity) c.getWorld().getBlockEntity(c.getAbsolutePos(new BlockPos(3, CY - 1, 7)));
         var ordo = jar(c, 0, CY, 0, EssenceType.ORDO, 20);
         var lux = jar(c, 6, CY, 0, EssenceType.LUX, 12);
         var metallum = jar(c, 0, CY, 6, EssenceType.METALLUM, 7);
-        c.assertTrue(core.recipe() != null && core.recipe().output().isOf(ModItems.MIDAS_ELIXIR), "Golden apple and purified water select the elixir");
+        c.assertTrue(core.recipe() != null && core.recipe().output().isOf(ModItems.MIDAS_ELIXIR), "Golden apple and all three components select the elixir");
+        start(c);
+        run(c.getWorld(), pos, 20);
+        int buffered = core.stored(EssenceType.ORDO);
+        crystal.takeOne();
+        run(c.getWorld(), pos, 1);
+        c.assertFalse(core.started(), "Removing one component cancels synthesis");
+        c.assertTrue(core.stored(EssenceType.ORDO) == buffered && !water.isEmpty() && !gold.isEmpty()
+            && core.getStack(MatrixCoreBlockEntity.BASE).isOf(Items.GOLDEN_APPLE), "Cancellation preserves the base, remaining ingredients and reserved essence");
+        crystal.setHeld(new ItemStack(ModItems.CRYSTALS.get(EssenceType.ORDO)));
         start(c);
         run(c.getWorld(), pos, MatrixCoreBlockEntity.DURATION + 4);
         c.assertTrue(core.getStack(MatrixCoreBlockEntity.OUTPUT).isOf(ModItems.MIDAS_ELIXIR), "The Matrix produces a Midas elixir");
-        c.assertTrue(water.isEmpty() && core.getStack(MatrixCoreBlockEntity.BASE).isEmpty(), "Both ingredients are consumed");
+        c.assertTrue(water.isEmpty() && gold.isEmpty() && crystal.isEmpty() && core.getStack(MatrixCoreBlockEntity.BASE).isEmpty(), "All four ingredients are consumed");
         c.assertTrue(ordo.contents().total() == 5 && lux.contents().total() == 2 && metallum.contents().total() == 2,
             "The exact price is Ordo 15, Lux 10, Metallum 5");
         // GameTest structures share a world; do not leave filled jars near a neighbouring test.
         c.setBlockState(0, CY, 0, Blocks.AIR);
         c.setBlockState(6, CY, 0, Blocks.AIR);
         c.setBlockState(0, CY, 6, Blocks.AIR);
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void napalmMatrixRecipeNeedsTwoPartsAndPaysPrice(TestContext c) {
+        BlockPos pos = build(c);
+        wake(c);
+        var core = core(c);
+        core.setStack(MatrixCoreBlockEntity.BASE, new ItemStack(ModItems.FIRE_DUST));
+        pedestal(c, 7, CY - 1, 3, new ItemStack(Items.SLIME_BALL));
+        var player = c.createMockPlayer(net.minecraft.world.GameMode.CREATIVE);
+        c.assertFalse(core.startWith(new ItemStack(ModItems.PHILOSOPHERS_STONE), player), "Both parts are required");
+        pedestal(c, 3, CY - 1, 7, new ItemStack(Items.BLAZE_POWDER));
+        var slime = (net.alkahest.block.entity.MatrixPedestalBlockEntity) c.getWorld().getBlockEntity(c.getAbsolutePos(new BlockPos(7, CY - 1, 3)));
+        var blaze = (net.alkahest.block.entity.MatrixPedestalBlockEntity) c.getWorld().getBlockEntity(c.getAbsolutePos(new BlockPos(3, CY - 1, 7)));
+        var ignis = jar(c, 0, CY, 0, EssenceType.IGNIS, 15);
+        var potentia = jar(c, 6, CY, 0, EssenceType.POTENTIA, 10);
+        c.assertTrue(core.recipe() != null && core.recipe().output().isOf(ModItems.NAPALM), "Both parts select napalm");
+        start(c);
+        run(c.getWorld(), pos, MatrixCoreBlockEntity.DURATION + 4);
+        ItemStack output = core.getStack(MatrixCoreBlockEntity.OUTPUT);
+        c.assertTrue(output.isOf(ModItems.NAPALM) && output.getCount() == 3, "Synthesis yields three napalm");
+        c.assertTrue(core.getStack(MatrixCoreBlockEntity.BASE).isEmpty() && slime.isEmpty() && blaze.isEmpty(), "All ingredients are consumed");
+        c.assertTrue(ignis.contents().total() == 3 && potentia.contents().total() == 2, "The exact cost is Ignis 12 and Potentia 8");
+        c.setBlockState(0, CY, 0, Blocks.AIR);
+        c.setBlockState(6, CY, 0, Blocks.AIR);
         c.complete();
     }
 

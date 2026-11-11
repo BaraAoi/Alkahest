@@ -361,7 +361,7 @@
   "screen.alkahest.monocle.matrix_choose_recipe": "Arrange the components of one recipe from the journal",
   "screen.alkahest.matrix.needs_start": "Use an amulet or philosopher’s stone to start",
   "tooltip.alkahest.midas_elixir.effect": "Midas Touch for 3 minutes",
-  "tooltip.alkahest.midas_elixir.scope": "A Matrix within 8 blocks works 20% faster",
+  "tooltip.alkahest.midas_elixir.scope": "A Matrix or Transmutator within 8 blocks works 20% faster",
   "item.alkahest.midas_elixir": "Midas Elixir",
   "effect.alkahest.midas_touch": "Midas Touch",
   "item.alkahest.philosophers_stone": "Philosopher’s Stone (prototype)",

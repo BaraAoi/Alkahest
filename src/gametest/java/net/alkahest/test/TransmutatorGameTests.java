@@ -59,6 +59,28 @@ public class TransmutatorGameTests implements FabricGameTest {
         for (int i = 0; i < ticks; i++) TransmutatorCoreBlockEntity.tick(world, corePos, core);
     }
 
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void midasSpeedCrossesEveryTransmutatorPrefillBoundary(TestContext c) {
+        for (int phase = 0; phase < 5; phase++) {
+            int progress = 0, ticks = 0, requests = 0;
+            while (progress < TransmutatorCoreBlockEntity.DURATION) {
+                int before = progress;
+                progress = Math.min(TransmutatorCoreBlockEntity.DURATION, before +
+                    net.alkahest.effect.MidasTouchEffect.progressStep(true, ticks + phase));
+                if (before / 10 != progress / 10) requests++;
+                ticks++;
+            }
+            c.assertTrue(ticks >= 83 && ticks <= 84, "The 100 progress ticks finish at Midas speed for every phase");
+            c.assertTrue(requests == 10, "Every ten-progress essence request occurs at boosted speed");
+        }
+        BlockPos pos = build(c);
+        var core = (TransmutatorCoreBlockEntity) c.getWorld().getBlockEntity(pos);
+        installInput(c, core);
+        TransmutatorCoreBlockEntity.tick(c.getWorld(), pos, core);
+        c.assertTrue(core.progress() == 1, "Without the effect the machine advances normally");
+        c.complete();
+    }
+
     /** One core alone is not a platform; the eight pillars make it one. */
     @GameTest(templateName = EMPTY_STRUCTURE)
     public void platformNeedsAllEightPillars(TestContext c) {

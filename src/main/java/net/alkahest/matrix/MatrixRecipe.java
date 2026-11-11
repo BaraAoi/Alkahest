@@ -40,8 +40,12 @@ public record MatrixRecipe(Item base, List<Item> components, ItemStack output,
         // The specification's alternative; the lightning-rod recipe stays available as well.
         synthesis(Items.GLASS_BOTTLE, List.of(ModItems.CRYSTALS.get(EssenceType.IGNIS), ModItems.CRYSTALS.get(EssenceType.AER)),
             new ItemStack(ModItems.LIGHTNING_IN_A_BOTTLE), EssenceType.POTENTIA, 15, EssenceType.AER, 10),
-        synthesis(Items.GOLDEN_APPLE, List.of(ModItems.PURIFIED_WATER), new ItemStack(ModItems.MIDAS_ELIXIR),
-            EssenceType.ORDO, 15, EssenceType.LUX, 10, EssenceType.METALLUM, 5)
+        // The player requested more involved Matrix syntheses than the specification's original two items.
+        synthesis(Items.GOLDEN_APPLE, List.of(ModItems.PURIFIED_WATER, Items.GOLD_INGOT, ModItems.CRYSTALS.get(EssenceType.ORDO)),
+            new ItemStack(ModItems.MIDAS_ELIXIR), EssenceType.ORDO, 15, EssenceType.LUX, 10, EssenceType.METALLUM, 5),
+        // A higher-volume alternative to the early inventory mixture, not a replacement for it.
+        synthesis(ModItems.FIRE_DUST, List.of(Items.SLIME_BALL, Items.BLAZE_POWDER), new ItemStack(ModItems.NAPALM, 3),
+            EssenceType.IGNIS, 12, EssenceType.POTENTIA, 8)
     );
 
     private static MatrixRecipe synthesis(Item base, List<Item> components, ItemStack output, Object... essence) {

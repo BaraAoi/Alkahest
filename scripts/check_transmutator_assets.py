@@ -126,6 +126,8 @@ tests = (GAMETEST / 'java/net/alkahest/test/TransmutatorGameTests.java').read_te
 test_count = len(re.findall(r'@GameTest', tests))
 check(test_count >= 7, f'expected at least seven transmutator game tests, found {test_count}')
 
+check('MidasTouchEffect.progressStep' in core_be and 'before / 10 != self.progress / 10' in core_be, 'Midas speed must not skip essence prefill boundaries')
+
 # --- report ----------------------------------------------------------------------------------
 if failures:
     print('transmutator checks FAILED:')

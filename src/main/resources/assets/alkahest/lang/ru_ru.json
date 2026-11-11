@@ -361,7 +361,7 @@
   "screen.alkahest.monocle.matrix_choose_recipe": "Разложите компоненты одного рецепта из журнала",
   "screen.alkahest.matrix.needs_start": "ПКМ амулетом или философским камнем для запуска",
   "tooltip.alkahest.midas_elixir.effect": "Касание Мидаса на 3 минуты",
-  "tooltip.alkahest.midas_elixir.scope": "Матрица в 8 блоках работает на 20% быстрее",
+  "tooltip.alkahest.midas_elixir.scope": "Матрица и Трансмутатор в 8 блоках работают на 20% быстрее",
   "item.alkahest.midas_elixir": "Эликсир Мидаса",
   "effect.alkahest.midas_touch": "Касание Мидаса",
   "item.alkahest.philosophers_stone": "Философский камень (прототип)",

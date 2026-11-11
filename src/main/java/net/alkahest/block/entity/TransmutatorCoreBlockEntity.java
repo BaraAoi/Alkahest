@@ -1,5 +1,6 @@
 package net.alkahest.block.entity;
 
+import net.alkahest.effect.MidasTouchEffect;
 import net.alkahest.block.custom.TransmutatorCoreBlock;
 import net.alkahest.block.custom.TransmutatorPillarBlock;
 import net.alkahest.essence.EssenceStack;
@@ -127,9 +128,11 @@ public class TransmutatorCoreBlockEntity extends BlockEntity implements Inventor
             return;
         }
         if (self.progress < DURATION) {
-            self.progress++;
-            // Essence trickles in from the jars while the op runs, one visible stream at a time.
-            if (self.progress % 10 == 0) self.prefill(world, recipe.cost());
+            int before = self.progress;
+            self.progress = Math.min(DURATION, before + MidasTouchEffect.progressStep(
+                MidasTouchEffect.nearby(world, pos), world.getTime()));
+            // A boosted step can cross a multiple of ten without landing on it.
+            if (before / 10 != self.progress / 10) self.prefill(world, recipe.cost());
             setWorking(world, pos, true);
             self.markDirty();
             return;
