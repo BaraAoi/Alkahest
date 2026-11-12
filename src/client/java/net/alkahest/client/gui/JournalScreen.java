@@ -255,25 +255,26 @@ public final class JournalScreen extends Screen {
             return;
         }
         var recipe = net.alkahest.recipe.CauldronEssenceRecipes.all().stream().filter(r -> r.result() == node.icon().getItem()).findFirst();
-        if (recipe.isPresent()) {
-            var brew = recipe.get();
-            c.drawText(textRenderer, Text.translatable("screen.alkahest.journal.cauldron_diagram"), x, y, 0xFF4F3520, false);
-            diagramItem(c, mouseX, mouseY, new ItemStack(ModBlocks.ALCHEMY_CAULDRON), x + 35, y + 35);
-            diagramItem(c, mouseX, mouseY, new ItemStack(brew.catalyst()), x, y + 35);
-            c.drawText(textRenderer, "→", x + 19, y + 39, 0xFF594633, false);
-            c.drawText(textRenderer, "→", x + 55, y + 39, 0xFF594633, false);
-            diagramItem(c, mouseX, mouseY, new ItemStack(brew.result(), brew.count()), x + 70, y + 35);
-            if (brew.count() > 1) c.drawText(textRenderer, Integer.toString(brew.count()), x + 79, y + 45, 0xFF30251C, false);
-            c.drawText(textRenderer, "↑", x + 36, y + 54, 0xFF594633, false);
-            int i = 0;
-            for (EssenceType type : EssenceType.values()) if (brew.cost().containsKey(type)) {
-                int sx = x + (i % 4) * 22, sy = y + 65 + (i / 4) * 23;
-                diagramItem(c, mouseX, mouseY, new ItemStack(ModItems.CRYSTALS.get(type)), sx, sy);
-                c.drawText(textRenderer, Integer.toString(brew.cost().get(type)), sx + 10, sy + 10, 0xFF30251C, false);
-                i++;
-            }
-            wrapped(c, Text.translatable("screen.alkahest.journal.cauldron_hint"), x, y + 90, Math.max(20, width), 0xFF594633);
+        recipe.ifPresent(brew -> renderCauldronDiagram(c, brew, x, y, width, mouseX, mouseY));
+    }
+    private void renderCauldronDiagram(DrawContext c, net.alkahest.recipe.CauldronEssenceRecipes.Recipe brew,
+            int x, int y, int width, int mouseX, int mouseY) {
+        c.drawText(textRenderer, Text.translatable("screen.alkahest.journal.cauldron_diagram"), x, y, 0xFF4F3520, false);
+        diagramItem(c, mouseX, mouseY, new ItemStack(ModBlocks.ALCHEMY_CAULDRON), x + 35, y + 35);
+        diagramItem(c, mouseX, mouseY, new ItemStack(brew.catalyst()), x, y + 35);
+        c.drawText(textRenderer, "→", x + 19, y + 39, 0xFF594633, false);
+        c.drawText(textRenderer, "→", x + 55, y + 39, 0xFF594633, false);
+        diagramItem(c, mouseX, mouseY, new ItemStack(brew.result(), brew.count()), x + 70, y + 35);
+        if (brew.count() > 1) c.drawText(textRenderer, Integer.toString(brew.count()), x + 79, y + 45, 0xFF30251C, false);
+        c.drawText(textRenderer, "↑", x + 36, y + 54, 0xFF594633, false);
+        int i = 0;
+        for (EssenceType type : EssenceType.values()) if (brew.cost().containsKey(type)) {
+            int sx = x + (i % 4) * 22, sy = y + 65 + (i / 4) * 23;
+            diagramItem(c, mouseX, mouseY, new ItemStack(ModItems.CRYSTALS.get(type)), sx, sy);
+            c.drawText(textRenderer, Integer.toString(brew.cost().get(type)), sx + 10, sy + 10, 0xFF30251C, false);
+            i++;
         }
+        wrapped(c, Text.translatable("screen.alkahest.journal.cauldron_hint"), x, y + 90, Math.max(20, width), 0xFF594633);
     }
     private int guidePageCount(int chapter) {
         int h = mapH();
@@ -332,8 +333,7 @@ public final class JournalScreen extends Screen {
             c.getMatrices().push();
             c.getMatrices().translate(originX, originY, 0);
             c.getMatrices().scale(scale, scale, 1);
-            Node preview = new Node("cauldron_index", 0, 0, 0, 0, new ItemStack(brew.result()));
-            renderDiagram(c, preview, 0, 0, 0, Math.max(20, (int)((half - 20) / scale)),
+            renderCauldronDiagram(c, brew, 0, 0, Math.max(20, (int)((half - 20) / scale)),
                 (int)((mouseX - originX) / scale), (int)((mouseY - originY) / scale));
             c.getMatrices().pop();
             c.disableScissor();

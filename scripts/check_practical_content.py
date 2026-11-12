@@ -78,4 +78,4 @@ subprocess.run(['python3', 'scripts/generate_journal_recipes.py', '--check'], ch
 # All cauldron recipes must be illustrated in the notes, not a manually maintained subset.
 assert 'CAULDRON_PAGE = 3' in journal and 'renderCauldronIndex(c, x, y, w, h, mouseX, mouseY)' in journal
 assert 'BookPagination.pages(net.alkahest.recipe.CauldronEssenceRecipes.all().size(), 2)' in journal
-assert 'Node preview = new Node("cauldron_index"' in journal
+assert 'renderCauldronDiagram(c, brew, 0, 0,' in journal
