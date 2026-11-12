@@ -279,7 +279,7 @@
   "screen.alkahest.practice.completed": "Completed! The item was obtained.",
   "screen.alkahest.practice.free_recipes": "Crafting is always available. Tasks reveal the next journal entries.",
   "screen.alkahest.practice.pipe.title": "Essence Flow",
-  "screen.alkahest.practice.pipe.recipe": "Connect bellows to a jar or receiver. Pipes route automatically. Use a wand or amulet to cycle the segment output; sneak-use it to cycle filters. A crystal selects its filter, and the same crystal clears it. Sneak-use an empty hand to cycle the valve. Sneak-use a jar to toggle it as a stabilizer input source. Mining preserves settings; no charges are spent.",
+  "screen.alkahest.practice.pipe.recipe": "Connect bellows to a jar or receiver. Pipes route automatically. Use a wand or amulet to cycle the segment output; sneak-use it to cycle filters. A crystal selects its filter, and the same crystal clears it. Sneak-use an empty hand to cycle the valve. Sneak-use an empty hand on a jar to toggle it as a stabilizer input source. Mining preserves settings; no charges are spent.",
   "screen.alkahest.practice.charger.title": "Essence Charger",
   "screen.alkahest.practice.charger.recipe": "Place the charger on a jar. While you are nearby it recharges compatible wands and the amulet from the jar. An Ordo jar also charges an amulet inside an awakened Transmutator; players are served first.",
   "screen.alkahest.practice.tier2.title": "Tier II Distillery and Bellows",
