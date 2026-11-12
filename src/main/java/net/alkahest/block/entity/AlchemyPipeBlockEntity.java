@@ -288,10 +288,9 @@ public class AlchemyPipeBlockEntity extends BlockEntity {
         private final List<BlockEntity> ports;
         private final Set<BlockPos> pipeSet;
         // Per-pulse only: no world, topology or filter state is cached across ticks.
-        private final Map<RouteKey, RouteTree> routes = new HashMap<>();
+        private final Map<RouteKey, PipeRouteTree> routes = new HashMap<>();
 
         private record RouteKey(BlockPos source, EssenceType type) { }
-        private record RouteTree(Map<BlockPos, BlockPos> previous, Map<BlockPos, Integer> distance) { }
 
         private Network(List<BlockPos> pipes, List<BlockEntity> ports) {
             this.pipes = pipes;
@@ -340,52 +339,10 @@ public class AlchemyPipeBlockEntity extends BlockEntity {
          */
         private List<BlockPos> route(World world, BlockEntity from, BlockEntity to, EssenceType type) {
             if (type == EssenceType.VACUUM) return List.of();
-            RouteTree tree = routes.computeIfAbsent(new RouteKey(from.getPos(), type), key -> buildRouteTree(world, key));
-            BlockPos end = null;
-            int best = Integer.MAX_VALUE;
-            for (Direction direction : Direction.values()) {
-                BlockPos candidate = to.getPos().offset(direction);
-                Integer distance = tree.distance().get(candidate);
-                if (distance != null && distance < best) {
-                    best = distance;
-                    end = candidate;
-                }
-            }
-            if (end == null) return List.of();
-            List<BlockPos> path = new ArrayList<>();
-            while (true) {
-                path.add(end);
-                BlockPos parent = tree.previous().get(end);
-                if (parent.equals(end)) return path;
-                end = parent;
-            }
-        }
-
-        /** A single breadth-first search serves all targets for this source and type. */
-        private RouteTree buildRouteTree(World world, RouteKey key) {
-            Map<BlockPos, BlockPos> previous = new HashMap<>();
-            Map<BlockPos, Integer> distance = new HashMap<>();
-            Deque<BlockPos> queue = new ArrayDeque<>();
-            for (Direction direction : Direction.values()) {
-                BlockPos start = key.source().offset(direction);
-                if (allows(world, start, key.type()) && !previous.containsKey(start)) {
-                    previous.put(start, start);
-                    distance.put(start, 0);
-                    queue.add(start);
-                }
-            }
-            while (!queue.isEmpty()) {
-                BlockPos pos = queue.remove();
-                for (Direction direction : Direction.values()) {
-                    BlockPos next = pos.offset(direction);
-                    if (!previous.containsKey(next) && allows(world, next, key.type())) {
-                        previous.put(next, pos);
-                        distance.put(next, distance.get(pos) + 1);
-                        queue.add(next);
-                    }
-                }
-            }
-            return new RouteTree(previous, distance);
+            RouteKey key = new RouteKey(from.getPos(), type);
+            PipeRouteTree tree = routes.computeIfAbsent(key,
+                ignored -> PipeRouteTree.build(key.source(), pos -> allows(world, pos, key.type())));
+            return tree.routeTo(to.getPos());
         }
 
         private boolean allows(World world, BlockPos pos, EssenceType type) {
