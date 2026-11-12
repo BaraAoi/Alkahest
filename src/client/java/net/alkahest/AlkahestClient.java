@@ -42,14 +42,23 @@ public final class AlkahestClient implements ClientModInitializer {
             net.alkahest.client.gui.TransmutatorScreen::new);
         net.minecraft.client.render.block.entity.BlockEntityRendererFactories.register(
             net.alkahest.registry.ModBlockEntities.TRANSMUTATOR_CORE, net.alkahest.client.render.TransmutatorCoreRenderer::new);
-        net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback.EVENT.register((context, tickCounter) ->
-            net.alkahest.client.gui.MonocleHud.render(context));
+        net.alkahest.client.gui.AtmosphereHud.register();
+        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(
+            net.alkahest.client.gui.AtmosphereHud::tick);
+        net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback.EVENT.register((context, tickCounter) -> {
+            net.alkahest.client.gui.MonocleHud.render(context);
+            net.alkahest.client.gui.AtmosphereHud.render(context);
+        });
+        ClientPlayNetworking.registerGlobalReceiver(net.alkahest.network.AtmospherePayload.ID, (payload, context) ->
+            context.client().execute(() -> net.alkahest.client.gui.AtmosphereHud.receive(payload.data())));
         ClientPlayNetworking.registerGlobalReceiver(OpenJournalPayload.ID, (payload, context) ->
             context.client().execute(() -> context.client().setScreen(new JournalScreen(payload.flags()))));
         ClientPlayNetworking.registerGlobalReceiver(net.alkahest.network.EssenceMapPayload.ID, (payload, context) ->
             context.client().execute(() -> net.alkahest.essence.RecipeEssenceService.receive(payload.chunk())));
-        net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register((handler, client) ->
-            net.alkahest.essence.RecipeEssenceService.clearClient());
+        net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
+            net.alkahest.essence.RecipeEssenceService.clearClient();
+            net.alkahest.client.gui.AtmosphereHud.clear();
+        });
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.NAPALM_FLAME, RenderLayer.getCutout());
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.ALCHEMICAL_MOSS, RenderLayer.getCutout());
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.JAR, RenderLayer.getCutout());

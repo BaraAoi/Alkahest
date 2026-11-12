@@ -1,4 +1,11 @@
 {
+  "key.categories.alkahest": "Alkahest",
+  "key.alkahest.atmosphere": "Показать атмосферу эссенций",
+  "screen.alkahest.atmosphere.title": "Атмосфера эссенций",
+  "screen.alkahest.atmosphere.waiting": "Ожидание данных области…",
+  "screen.alkahest.atmosphere.cell": "Область от %s, %s, %s",
+  "screen.alkahest.atmosphere.value": "%s: %s (фон %s)",
+  "screen.alkahest.atmosphere.chance": "Расчётный шанс: %s%% / мин",
   "screen.alkahest.monocle.cauldron_evaporation": "Испарение примерно через %s с",
   "message.alkahest.air_header": "Атмосфера области от %s, %s, %s (16×16×16):",
   "message.alkahest.air_value": "%s: %s (естественный фон: %s)",

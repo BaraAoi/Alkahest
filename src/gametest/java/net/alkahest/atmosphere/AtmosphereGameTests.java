@@ -60,6 +60,22 @@ public class AtmosphereGameTests implements FabricGameTest {
     }
 
     @GameTest(templateName = EMPTY_STRUCTURE)
+    public void telemetryUsesTheActualServerCellAndValues(TestContext c) {
+        var w = c.getWorld(); BlockPos pos = c.getAbsolutePos(new BlockPos(3, 3, 3));
+        var state = AtmosphereState.of(w);
+        state.add(w, pos, EssenceType.IGNIS, 9);
+        var values = state.levels(w, pos);
+        var packet = AtmosphereEvents.reading(w, pos);
+        var decoded = AtmosphereReading.decode(packet.encode()).orElseThrow();
+        c.assertTrue(decoded.dimension().equals(w.getRegistryKey().getValue().toString()), "Dimension is server-authoritative");
+        c.assertTrue(decoded.matches(decoded.dimension(), pos), "Cell corresponds to the actual player location");
+        c.assertTrue(Math.abs(decoded.levels().get(0) - values.get(EssenceType.IGNIS)) < 1e-8, "Displayed Ignis matches the real server atmosphere");
+        c.assertTrue(Math.abs(decoded.chance() - AtmosphereMath.spawnChance(values)) < 1e-8, "Displayed chance matches the server calculation");
+        state.spend(w, pos, EssenceType.IGNIS, 9);
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
     public void idleCauldronGraduallyEvaporatesAndPersists(TestContext c) {
         var w = c.getWorld(); c.setBlockState(3, 1, 3, Blocks.MAGMA_BLOCK);
         c.setBlockState(3, 2, 3, ModBlocks.ALCHEMY_CAULDRON);

@@ -87,6 +87,8 @@ public final class AtmosphereState extends PersistentState {
                 + (cell == null ? 0 : AtmosphereMath.decay(cell.excess.getOrDefault(type, 0.0), elapsed))));
         return result;
     }
+    /** Whether a real block scan exists, rather than the temporary neutral fallback. */
+    public boolean hasBaseline(BlockPos pos) { return baselines.containsKey(cellOrigin(pos).asLong()); }
     public Map<EssenceType, Double> baseline(ServerWorld world, BlockPos pos) {
         BlockPos origin = cellOrigin(pos); long key = origin.asLong(), now = world.getTime();
         Baseline cached = baselines.get(key);

@@ -49,7 +49,37 @@ public final class AtmosphereEvents {
     public static void emit(World world, BlockPos pos, Map<EssenceType, ? extends Number> amounts, double factor) {
         if (world instanceof ServerWorld server) AtmosphereState.of(server).add(server, pos, amounts, factor);
     }
+    /** Stagger telemetry per player; no client controls what area the server scans. */
+    public static boolean telemetryDue(long time, java.util.UUID playerId, boolean equipped, boolean receiverAvailable) {
+        return equipped && receiverAvailable && Math.floorMod(time + playerId.hashCode(), 40) == 0;
+    }
+    public static AtmosphereReading reading(ServerWorld world, BlockPos pos) {
+        AtmosphereState state = AtmosphereState.of(world);
+        return AtmosphereReading.create(world.getRegistryKey().getValue().toString(), pos,
+            state.levels(world, pos), state.baseline(world, pos));
+    }
     private static void tick(ServerWorld world) {
+        for (ServerPlayerEntity player : world.getServer().getPlayerManager().getPlayerList()) {
+            if (player.getServerWorld() != world || Math.floorMod(world.getTime() + player.getUuid().hashCode(), 40) != 0) continue;
+            BlockPos playerPos = player.getBlockPos();
+            BlockPos origin = AtmosphereState.cellOrigin(playerPos);
+            if (playerPos.getY() < world.getBottomY() || playerPos.getY() >= world.getTopY()
+                    || origin.getY() < -2048 || origin.getY() > 2047 || !world.isChunkLoaded(playerPos)) continue;
+            boolean equipped = dev.emi.trinkets.api.TrinketsApi.getTrinketComponent(player)
+                .map(component -> component.isEquipped(net.alkahest.registry.ModItems.ALCHEMISTS_MONOCLE)).orElse(false);
+            if (telemetryDue(world.getTime(), player.getUuid(), equipped,
+                    net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.canSend(player, net.alkahest.network.AtmospherePayload.ID))) {
+                try {
+                    AtmosphereReading sample = reading(world, playerPos);
+                    // Do not label a temporary neutral fallback as a measured baseline.
+                    if (AtmosphereState.of(world).hasBaseline(playerPos))
+                        net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(player,
+                            new net.alkahest.network.AtmospherePayload(sample.encode()));
+                } catch (IllegalArgumentException ignored) {
+                    // Nonstandard dimensions/coordinates cannot be represented by this bounded HUD.
+                }
+            }
+        }
         if (world.getDifficulty() == Difficulty.PEACEFUL
                 || !world.getGameRules().getBoolean(GameRules.DO_MOB_SPAWNING)) return;
         Set<Long> visited = new HashSet<>();
