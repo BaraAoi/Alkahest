@@ -77,40 +77,45 @@ public class CauldronGameTests implements FabricGameTest {
             context.assertTrue(!droppedUnknown.isRemoved(), "Unmapped test item dropped into water does not brew or vanish");
             droppedUnknown.discard();
             context.assertTrue(context.getWorld().getBlockState(pos).get(AlchemyCauldronBlock.FILLED), "Dissolving does not consume water");
-            context.assertTrue(cauldron.essences().getOrDefault(EssenceType.IGNIS, 0) == 7, "3 + 4 = 7 Ignis after dissolving gunpowder");
-            context.assertTrue(cauldron.essences().getOrDefault(EssenceType.PERDITIO, 0) == 5, "5 Perditio added from dissolved gunpowder");
+            int ignis = cauldron.essences().getOrDefault(EssenceType.IGNIS, 0);
+            int perditio = cauldron.essences().getOrDefault(EssenceType.PERDITIO, 0);
+            context.assertTrue(ignis >= 4 && ignis <= 7 && perditio > 0 && perditio <= 5,
+                "Dropped gunpowder adds its essences; some can evaporate while the item falls");
 
-            // Right-clicking with gunpowder triggers the catalyst and brews 2 fire dust!
+            // Top up any evaporated recipe cost before testing the catalyst transaction.
+            for (EssenceType type : new EssenceType[]{EssenceType.IGNIS, EssenceType.POTENTIA}) {
+                while (cauldron.essences().getOrDefault(type, 0) < 3)
+                    context.assertTrue(cauldron.dissolveOne(new ItemStack(ModItems.CRYSTALS.get(type))), "Top up the recipe");
+            }
+            var beforeBrew = cauldron.essences();
             player.setStackInHand(Hand.MAIN_HAND, new ItemStack(Items.GUNPOWDER));
             context.assertTrue(cauldron.useItem(player, Hand.MAIN_HAND), "Right-clicking gunpowder must trigger catalyst");
             context.assertTrue(player.getInventory().contains(new ItemStack(ModItems.FIRE_DUST)), "Fire dust delivered to player");
             context.assertFalse(context.getWorld().getBlockState(pos).get(AlchemyCauldronBlock.FILLED), "Brewing consumes water");
-            context.assertTrue(cauldron.essences().getOrDefault(EssenceType.IGNIS, 0) == 4, "4 surplus Ignis remain");
-            context.assertTrue(cauldron.essences().getOrDefault(EssenceType.PERDITIO, 0) == 5, "5 surplus Perditio remain");
+            context.assertTrue(cauldron.essences().getOrDefault(EssenceType.IGNIS, 0) == beforeBrew.get(EssenceType.IGNIS)-3, "Exactly the Ignis cost is consumed");
+            context.assertTrue(cauldron.essences().getOrDefault(EssenceType.PERDITIO, 0) == beforeBrew.get(EssenceType.PERDITIO), "Unrelated residue remains");
 
-            // Refill with Aqua wand (1 charge) and precipitate residue with dropped crystallization dust.
             ItemStack aquaWand = new ItemStack(ModItems.WANDS.get(EssenceType.AQUA));
             player.setStackInHand(Hand.MAIN_HAND, aquaWand);
             context.assertTrue(cauldron.useItem(player, Hand.MAIN_HAND), "Aqua wand must refill dry cauldron");
             context.assertTrue(aquaWand.getOrDefault(ModDataComponents.ESSENCE_CHARGE, 0) == 99, "Aqua wand spends 1 charge");
-
+            int expected = cauldron.essences().values().stream().mapToInt(Integer::intValue).sum();
             Box area = new Box(pos).expand(2.5);
-            ItemEntity powder = item(context, 3.5, 4.0, 3.5, new ItemStack(ModItems.CRYSTALLIZATION_POWDER, 2));
-            context.runAtTick(80, () -> {
-                context.assertTrue(cauldron.essences().isEmpty(), "Crystallization powder clears all surplus");
-                context.assertTrue(!powder.isRemoved() && powder.getStack().getCount() == 1, "Only one powder consumed");
-                var crystals = context.getWorld().getEntitiesByClass(ItemEntity.class, area,
-                    e -> e.isAlive() && ModItems.CRYSTALS.containsValue(e.getStack().getItem()));
-                int total = 0;
-                for (ItemEntity entity : crystals) {
-                    Float stability = entity.getStack().get(ModDataComponents.ESSENCE_STABILITY);
-                    context.assertTrue(stability != null && Math.abs(stability - CauldronBlockEntity.RESIDUE_STABILITY) < 0.0001f,
-                        "Precipitated crystals must have 5% stability: " + stability);
-                    total += entity.getStack().getCount();
-                }
-                context.assertTrue(total == 9, "Expected 4 Ignis + 5 Perditio = 9 crystals, got " + total);
-                context.complete();
-            });
+            ItemEntity powder = item(context, 3.5, 2.8, 3.5, new ItemStack(ModItems.CRYSTALLIZATION_POWDER, 2));
+            CauldronBlockEntity.tick(context.getWorld(), pos, cauldron);
+            context.assertTrue(cauldron.essences().isEmpty(), "Crystallization powder clears all surplus");
+            context.assertTrue(!powder.isRemoved() && powder.getStack().getCount() == 1, "Only one powder consumed");
+            var crystals = context.getWorld().getEntitiesByClass(ItemEntity.class, area,
+                e -> e.isAlive() && ModItems.CRYSTALS.containsValue(e.getStack().getItem()));
+            int total = 0;
+            for (ItemEntity entity : crystals) {
+                Float stability = entity.getStack().get(ModDataComponents.ESSENCE_STABILITY);
+                context.assertTrue(stability != null && Math.abs(stability - CauldronBlockEntity.RESIDUE_STABILITY) < 0.0001f,
+                    "Precipitated crystals must have 5% stability: " + stability);
+                total += entity.getStack().getCount();
+            }
+            context.assertTrue(total == expected, "Crystallization returns all residue present at that instant");
+            context.complete();
         });
     }
 
@@ -165,7 +170,10 @@ public class CauldronGameTests implements FabricGameTest {
         Inventories.writeNbt(oldNbt, oldSlots, registry);
         cauldron.readComponentlessNbt(oldNbt, registry);
 
-        ItemEntity many = item(context, 3.5, 4.0, 3.5, new ItemStack(Items.DIAMOND, 20));
+        ItemStack diamond = new ItemStack(Items.DIAMOND);
+        for (int i = 0; i < 17; i++) context.assertTrue(cauldron.dissolveOne(diamond), "Diamond fits below the per-type cap");
+        context.assertTrue(cauldron.essences().getOrDefault(EssenceType.TERRA, 0) == 255 && !cauldron.dissolveOne(diamond),
+            "18th diamond is rejected atomically at the 256 cap");
         ItemEntity outside = item(context, 4.3, 2.5, 3.5, new ItemStack(Items.COAL));
         outside.setNoGravity(true);
 
@@ -176,8 +184,7 @@ public class CauldronGameTests implements FabricGameTest {
             context.assertTrue(ejected.size() == 1 && ejected.getFirst().getStack().getName().getString().equals("Legacy catalyst"),
                 "Items from old <= 0.1.24 cauldron saves must be safely ejected");
             context.assertFalse(cauldron.createNbt(registry).contains("Items"), "Ejected legacy slots must be cleaned from NBT");
-            context.assertTrue(cauldron.essences().getOrDefault(EssenceType.TERRA, 0) == 255, "17 diamonds dissolve up to 255 Terra");
-            context.assertTrue(!many.isRemoved() && many.getStack().getCount() == 3, "Excess above 256 cap remains in world");
+            context.assertTrue(cauldron.essences().getOrDefault(EssenceType.TERRA, 0) < 255, "The large stock evaporates while waiting");
             context.assertTrue(!outside.isRemoved() && outside.getStack().getCount() == 1, "Outside items are ignored");
             context.complete();
         });
