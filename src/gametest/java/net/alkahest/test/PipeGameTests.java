@@ -429,7 +429,7 @@ public class PipeGameTests implements FabricGameTest {
     }
 
     /** Exhaust every filter arrangement of a 3x3 loop against an independent bitset flood fill. */
-    @GameTest(templateName=EMPTY_STRUCTURE, timeoutTicks=200)
+    @GameTest(templateName=EMPTY_STRUCTURE)
     public void everyThreeByThreeFilterLayoutMatchesConnectivity(TestContext c) {
         c.setBlockState(1,2,3,ModBlocks.DISTILLERY_BELLOWS);
         c.setBlockState(5,2,3,ModBlocks.JAR);
