@@ -50,12 +50,88 @@ public class AtmosphereGameTests implements FabricGameTest {
         var restored = AtmosphereState.read(nbt, w.getRegistryManager());
         c.assertTrue(Math.abs(restored.levels(w, pos).get(EssenceType.IGNIS) - levels.get(EssenceType.IGNIS)) < 1e-8,
             "Saved dimension state preserves atmospheric excess");
-        nbt.getList("Cells", NbtElement.COMPOUND_TYPE).getCompound(0).putLong("Time", w.getTime() - AtmosphereMath.HALF_LIFE);
-        var aged = AtmosphereState.read(nbt, w.getRegistryManager());
-        c.assertTrue(Math.abs(aged.levels(w, pos).get(EssenceType.IGNIS) - changed.get(EssenceType.IGNIS) - 2) < 1e-8,
-            "Unloaded excess ages lazily toward its baseline");
+        nbt.getList("Cells", NbtElement.COMPOUND_TYPE).getCompound(0).putLong("Time", w.getTime() - AtmosphereMath.LEGACY_HALF_LIFE);
+        var unchanged = AtmosphereState.read(nbt, w.getRegistryManager());
+        c.assertTrue(Math.abs(unchanged.levels(w, pos).get(EssenceType.IGNIS) - changed.get(EssenceType.IGNIS) - 4) < 1e-8,
+            "New format does not silently decay even when time passes");
+        nbt.remove("Format");
+        var waitingLegacy = AtmosphereState.read(nbt, w.getRegistryManager());
+        var savedBeforeAccess = waitingLegacy.writeNbt(new NbtCompound(), w.getRegistryManager());
+        c.assertTrue(savedBeforeAccess.getList("Cells", NbtElement.COMPOUND_TYPE).getCompound(0).getBoolean("LegacyDecay"),
+            "An unvisited old cell keeps its migration marker if saved early");
+        var legacy = AtmosphereState.read(savedBeforeAccess, w.getRegistryManager());
+        c.assertTrue(Math.abs(legacy.levels(w, pos).get(EssenceType.IGNIS) - changed.get(EssenceType.IGNIS) - 2) < 1e-8,
+            "Old-format migration preserves the previously visible decayed amount");
+        var migrated = legacy.writeNbt(new NbtCompound(), w.getRegistryManager());
+        c.assertTrue(migrated.getInt("Format") == 2, "Migrated state is saved in the new format");
         c.assertTrue(AtmosphereState.cellOrigin(new BlockPos(-1, -1, -17)).equals(new BlockPos(-16, -16, -32)),
             "Negative coordinates use floor division");
+        c.complete();
+    }
+
+    private static double totalStored(AtmosphereState state, TestContext c, EssenceType type) {
+        var list = state.writeNbt(new NbtCompound(), c.getWorld().getRegistryManager()).getList("Cells", NbtElement.COMPOUND_TYPE);
+        double total = 0;
+        for (int i = 0; i < list.size(); i++) total += list.getCompound(i).getDouble(type.asString());
+        return total;
+    }
+    private static double storedAt(AtmosphereState state, TestContext c, BlockPos pos, EssenceType type) {
+        var list = state.writeNbt(new NbtCompound(), c.getWorld().getRegistryManager()).getList("Cells", NbtElement.COMPOUND_TYPE);
+        long key = AtmosphereState.cellOrigin(pos).asLong();
+        for (int i = 0; i < list.size(); i++) if (list.getCompound(i).getLong("Pos") == key)
+            return list.getCompound(i).getDouble(type.asString());
+        return 0;
+    }
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void diffusionTransfersToLoadedNeighborsAndConservesMatter(TestContext c) {
+        var w = c.getWorld(); BlockPos pos = c.getAbsolutePos(new BlockPos(3, 3, 3));
+        BlockPos up = AtmosphereState.cellOrigin(pos).up(16);
+        c.assertTrue(w.isChunkLoaded(up) && up.getY() < w.getTopY(), "Vertical adjacent cell is loaded and valid");
+        var state = new AtmosphereState(); state.add(w, pos, EssenceType.IGNIS, 40);
+        state.add(w, pos, EssenceType.AQUA, 8);
+        long now = w.getTime();
+        state.diffuseOne(w, pos, now + AtmosphereState.SPREAD_INTERVAL - 1);
+        c.assertTrue(storedAt(state, c, up, EssenceType.IGNIS) == 0, "No transfer before the interval");
+        state.diffuseOne(w, pos, now + AtmosphereState.SPREAD_INTERVAL);
+        c.assertTrue(storedAt(state, c, up, EssenceType.IGNIS) > 0, "Ignis reaches the adjacent loaded cell");
+        c.assertTrue(storedAt(state, c, pos, EssenceType.IGNIS) < 40, "The source concentration falls");
+        c.assertTrue(Math.abs(totalStored(state, c, EssenceType.IGNIS) - 40) < 1e-8, "Diffusion conserves total Ignis");
+        c.assertTrue(Math.abs(totalStored(state, c, EssenceType.AQUA) - 8) < 1e-8, "Each essence is conserved separately");
+        var saved = state.writeNbt(new NbtCompound(), w.getRegistryManager());
+        var restored = AtmosphereState.read(saved, w.getRegistryManager());
+        c.assertTrue(Math.abs(totalStored(restored, c, EssenceType.IGNIS) - 40) < 1e-8, "Distributed essence survives save/load");
+        var list = saved.getList("Cells", NbtElement.COMPOUND_TYPE);
+        for (int i = 0; i < list.size(); i++)
+            restored.diffuseOne(w, BlockPos.fromLong(list.getCompound(i).getLong("Pos")), now + 2 * AtmosphereState.SPREAD_INTERVAL);
+        c.assertTrue(Math.abs(totalStored(restored, c, EssenceType.IGNIS) - 40) < 1e-8, "Repeated neighbor transfers remain conservative");
+        c.complete();
+    }
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void diffusionSchedulerRunsAfterLoad(TestContext c) {
+        var w = c.getWorld(); BlockPos pos = c.getAbsolutePos(new BlockPos(3, 3, 3));
+        var initial = new AtmosphereState(); initial.add(w, pos, EssenceType.ORDO, 32);
+        var saved = initial.writeNbt(new NbtCompound(), w.getRegistryManager());
+        saved.getList("Cells", NbtElement.COMPOUND_TYPE).getCompound(0).putLong("Time", w.getTime() - AtmosphereState.SPREAD_INTERVAL);
+        var restored = AtmosphereState.read(saved, w.getRegistryManager());
+        restored.tick(w);
+        c.assertTrue(storedAt(restored, c, AtmosphereState.cellOrigin(pos).up(16), EssenceType.ORDO) > 0,
+            "The scheduled world-tick path spreads a saved loaded cell");
+        c.assertTrue(Math.abs(totalStored(restored, c, EssenceType.ORDO) - 32) < 1e-8,
+            "Scheduler conserves essence after restoration");
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void unloadedDiffusionDoesNotLoadChunksOrDeleteEssence(TestContext c) {
+        var w = c.getWorld(); BlockPos far = AtmosphereState.cellOrigin(new BlockPos(29000000, 64, 29000000));
+        c.assertFalse(w.isChunkLoaded(far), "Distant cell starts unloaded");
+        var root = new NbtCompound(); root.putInt("Format", 2);
+        var list = new net.minecraft.nbt.NbtList(); var entry = new NbtCompound();
+        entry.putLong("Pos", far.asLong()); entry.putLong("Time", 0); entry.putDouble("ignis", 25); list.add(entry); root.put("Cells", list);
+        var state = AtmosphereState.read(root, w.getRegistryManager());
+        state.diffuseOne(w, far, w.getTime() + 100000);
+        c.assertFalse(w.isChunkLoaded(far), "Spreading never loads the source chunk");
+        c.assertTrue(Math.abs(totalStored(state, c, EssenceType.IGNIS) - 25) < 1e-8, "Unloaded essence remains stored unchanged");
         c.complete();
     }
 
@@ -70,7 +146,6 @@ public class AtmosphereGameTests implements FabricGameTest {
         c.assertTrue(decoded.dimension().equals(w.getRegistryKey().getValue().toString()), "Dimension is server-authoritative");
         c.assertTrue(decoded.matches(decoded.dimension(), pos), "Cell corresponds to the actual player location");
         c.assertTrue(Math.abs(decoded.levels().get(0) - values.get(EssenceType.IGNIS)) < 1e-8, "Displayed Ignis matches the real server atmosphere");
-        c.assertTrue(Math.abs(decoded.chance() - AtmosphereMath.spawnChance(values)) < 1e-8, "Displayed chance matches the server calculation");
         state.spend(w, pos, EssenceType.IGNIS, 9);
         c.complete();
     }

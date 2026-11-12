@@ -49,6 +49,8 @@ jobs:
         run: python3 scripts/check_transmutator_ui.py
       - name: Check the matrix assets
         run: python3 scripts/check_matrix_assets.py
+      - name: Check atmosphere HUD
+        run: python3 scripts/check_atmosphere_hud.py
       - name: Check laboratory assets
         run: python3 scripts/check_lab_assets.py
       - name: Check practical research and new content

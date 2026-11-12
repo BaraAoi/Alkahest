@@ -9,8 +9,8 @@ import java.util.Map;
 public final class AtmosphereMath {
     public static final List<EssenceType> PRIMALS = List.of(EssenceType.IGNIS, EssenceType.AQUA,
         EssenceType.TERRA, EssenceType.AER, EssenceType.ORDO, EssenceType.PERDITIO);
-    public static final double MAX_EXCESS = 80, MAX_LEVEL = 100;
-    public static final long HALF_LIFE = 12000; // 10 minutes at 20 TPS
+    public static final double LEGACY_MAX_EXCESS = 80, MAX_LEVEL = 100;
+    public static final long LEGACY_HALF_LIFE = 12000; // only for importing pre-diffusion saves
     public static final double SPAWN_THRESHOLD = 25;
 
     /** Split composite essence equally at every branch, conserving the input amount. */
@@ -27,9 +27,10 @@ public final class AtmosphereMath {
         input.forEach((type, amount) -> split(type, amount.doubleValue(), result));
         return result;
     }
-    public static double decay(double value, long elapsed) {
+    /** One-time conversion of the old lazy-decay format to its visible value at upgrade. */
+    public static double legacyDecay(double value, long elapsed) {
         if (!Double.isFinite(value) || value <= 0) return 0;
-        return Math.min(MAX_EXCESS, value) * Math.pow(0.5, Math.max(0, elapsed) / (double) HALF_LIFE);
+        return Math.min(LEGACY_MAX_EXCESS, value) * Math.pow(0.5, Math.max(0, elapsed) / (double) LEGACY_HALF_LIFE);
     }
     /** Weighted recipe-specific overload slows synthesis but never blocks it or destroys inputs. */
     public static int stability(Map<EssenceType, ? extends Number> cost, Map<EssenceType, Double> levels) {
@@ -42,11 +43,11 @@ public final class AtmosphereMath {
         if (weight == 0) return 100;
         return (int) Math.round(Math.max(50, Math.min(100, 100 - overload / weight)));
     }
-    /** One roll per active cell per minute, summed chance capped at 8%. */
+    /** One roll per active cell per minute, summed chance capped at 12%. */
     public static double spawnChance(Map<EssenceType, Double> levels) {
         double excess = 0;
         for (EssenceType type : PRIMALS) excess += Math.max(0, Math.min(MAX_LEVEL, levels.getOrDefault(type, 0.0)) - SPAWN_THRESHOLD);
-        return Math.min(0.08, excess * 0.001);
+        return Math.min(0.12, excess * 0.001);
     }
     private AtmosphereMath() { }
 }

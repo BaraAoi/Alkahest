@@ -38,8 +38,6 @@ public final class AtmosphereEvents {
                         String.format(java.util.Locale.ROOT, "%.1f", base.get(type)))
                         .styled(style -> style.withColor(type.color())), false);
                 }
-                player.sendMessage(Text.translatable("message.alkahest.air_chance",
-                    String.format(java.util.Locale.ROOT, "%.1f", AtmosphereMath.spawnChance(levels) * 100)), false);
                 return 1;
             })));
     }
@@ -59,6 +57,7 @@ public final class AtmosphereEvents {
             state.levels(world, pos), state.baseline(world, pos));
     }
     private static void tick(ServerWorld world) {
+        AtmosphereState.of(world).tick(world);
         for (ServerPlayerEntity player : world.getServer().getPlayerManager().getPlayerList()) {
             if (player.getServerWorld() != world || Math.floorMod(world.getTime() + player.getUuid().hashCode(), 40) != 0) continue;
             BlockPos playerPos = player.getBlockPos();

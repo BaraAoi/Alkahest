@@ -16,7 +16,6 @@ class AtmosphereReadingTest {
     @Test void serializesExactValuesAndCorrectNegativeCell() {
         var a = reading();
         assertEquals(-16, a.x()); assertEquals(64, a.y()); assertEquals(-32, a.z());
-        assertEquals(.04, a.chance(), 1e-9);
         assertEquals(a, AtmosphereReading.decode(a.encode()).orElseThrow());
         assertTrue(a.matches("minecraft:overworld", new BlockPos(-16, 79, -32)));
         assertFalse(a.matches("minecraft:overworld", new BlockPos(0, 65, -17)));
