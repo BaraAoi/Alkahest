@@ -41,9 +41,12 @@ public class JarBlockEntity extends BlockEntity {
         }
     }
     public void setContents(JarContentsComponent value) {
+        int before = net.alkahest.essence.EssenceComparator.signal(contents().total(), JarItem.CAPACITY);
         JarItem.set(holder(), value); markDirty();
         if (world != null && !world.isClient && world.getBlockState(pos).isOf(ModBlocks.JAR)) {
             updateLevel();
+            if (before != net.alkahest.essence.EssenceComparator.signal(value.total(), JarItem.CAPACITY))
+                world.updateComparators(pos, ModBlocks.JAR);
             // Notify even if level did not change: a mixture may have changed color.
             BlockState state = world.getBlockState(pos);
             world.updateListeners(pos, state, state, Block.NOTIFY_LISTENERS);

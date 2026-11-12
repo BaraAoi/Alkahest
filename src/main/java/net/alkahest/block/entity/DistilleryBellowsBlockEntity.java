@@ -59,11 +59,12 @@ public class DistilleryBellowsBlockEntity extends BlockEntity {
         if (type != null && type != incoming) return 0;
         int accepted = Math.min(count, CAPACITY - amount);
         if (accepted <= 0) return 0;
+        int before = amount;
         stability = amount == 0 ? incomingStability
             : (stability * amount + incomingStability * accepted) / (amount + accepted);
         type = incoming;
         amount += accepted;
-        changed();
+        changed(before);
         return accepted;
     }
 
@@ -71,13 +72,14 @@ public class DistilleryBellowsBlockEntity extends BlockEntity {
     public int drain(int count) {
         int taken = Math.min(count, amount);
         if (taken <= 0) return 0;
+        int before = amount;
         amount -= taken;
         if (amount <= 0) {
             type = null;
             amount = 0;
             stability = 0;
         }
-        changed();
+        changed(before);
         return taken;
     }
 
@@ -103,9 +105,10 @@ public class DistilleryBellowsBlockEntity extends BlockEntity {
         EssenceType movedType = type;
         JarItem.set(held, jar.merge(new JarContentsComponent(List.of(new EssenceStack(movedType, moved, stability))),
             JarItem.CAPACITY));
+        int before = amount;
         amount -= moved;
         if (amount <= 0) { type = null; stability = 0; }
-        changed();
+        changed(before);
         player.sendMessage(Text.translatable("message.alkahest.bellows_poured", movedType.displayName(), moved), true);
         if (world instanceof ServerWorld serverWorld) {
             serverWorld.spawnParticles(ParticleTypes.ENCHANT,
@@ -126,9 +129,12 @@ public class DistilleryBellowsBlockEntity extends BlockEntity {
     /** Repairs the visible fill of bellows loaded from an older save. */
     public void refreshLevel() { updateLevel(); }
 
-    private void changed() {
+    private void changed(int before) {
         markDirty();
         updateLevel();
+        if (world != null && !world.isClient && world.getBlockState(pos).getBlock() instanceof DistilleryBellowsBlock
+            && net.alkahest.essence.EssenceComparator.signal(before, CAPACITY) != net.alkahest.essence.EssenceComparator.signal(amount, CAPACITY))
+            world.updateComparators(pos, world.getBlockState(pos).getBlock());
     }
 
     private void updateLevel() {
@@ -155,7 +161,8 @@ public class DistilleryBellowsBlockEntity extends BlockEntity {
         if (saved.contents().size() == 1) {
             var entry = saved.contents().getFirst();
             if (entry.type() != EssenceType.VACUUM && entry.amount() <= CAPACITY) {
-                type = entry.type(); amount = entry.amount(); stability = entry.stability(); changed();
+                int before = amount;
+                type = entry.type(); amount = entry.amount(); stability = entry.stability(); changed(before);
             }
         }
     }

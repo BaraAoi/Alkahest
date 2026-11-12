@@ -15,6 +15,7 @@
       "net.alkahest.test.AssemblyBlueprintGameTests",
       "net.alkahest.test.DistilleryGameTests",
       "net.alkahest.test.JarGameTests",
+      "net.alkahest.test.ComparatorGameTests",
       "net.alkahest.test.ChargerGameTests",
       "net.alkahest.test.PipeGameTests",
       "net.alkahest.test.MiningGameTests",

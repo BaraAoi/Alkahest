@@ -50,6 +50,12 @@ public class JarBlock extends Block implements BlockEntityProvider {
         return !world.isClient && type == ModBlockEntities.JAR ? (w, p, s, be) -> ((JarBlockEntity)be).updateLevel() : null;
     }
     @Override public BlockEntity createBlockEntity(BlockPos pos, BlockState state) { return new JarBlockEntity(pos, state); }
+    @Override protected boolean hasComparatorOutput(BlockState state) { return true; }
+    @Override protected int getComparatorOutput(BlockState state, World world, BlockPos pos) {
+        return world.getBlockEntity(pos) instanceof JarBlockEntity jar
+            ? net.alkahest.essence.EssenceComparator.signal(jar.contents().total(), net.alkahest.item.custom.JarItem.CAPACITY) : 0;
+    }
+
     @Override protected VoxelShape getOutlineShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) { return SHAPE; }
     @Override protected VoxelShape getCollisionShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) { return SHAPE; }
     @Override protected ItemActionResult onUseWithItem(ItemStack stack, BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {

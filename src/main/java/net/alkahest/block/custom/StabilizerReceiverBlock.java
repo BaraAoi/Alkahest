@@ -38,6 +38,12 @@ public class StabilizerReceiverBlock extends Block implements BlockEntityProvide
 
     @Override protected void appendProperties(StateManager.Builder<Block, BlockState> builder) { builder.add(OCCUPIED); }
     @Override public BlockEntity createBlockEntity(BlockPos pos, BlockState state) { return new StabilizerReceiverBlockEntity(pos, state); }
+    @Override protected boolean hasComparatorOutput(BlockState state) { return true; }
+    @Override protected int getComparatorOutput(BlockState state, World world, BlockPos pos) {
+        return world.getBlockEntity(pos) instanceof StabilizerReceiverBlockEntity receiver
+            ? net.alkahest.essence.EssenceComparator.signal(receiver.contents().total(), StabilizerReceiverBlockEntity.CAPACITY) : 0;
+    }
+
     @Override protected VoxelShape getOutlineShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) { return SHAPE; }
     @Override protected VoxelShape getCollisionShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) { return SHAPE; }
 

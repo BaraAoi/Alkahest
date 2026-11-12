@@ -38,6 +38,12 @@ public class DistilleryBellowsBlock extends Block implements BlockEntityProvider
         return !world.isClient && type == ModBlockEntities.DISTILLERY_BELLOWS
             ? (w, p, s, be) -> { if (w.getTime() % 20 == 0) ((DistilleryBellowsBlockEntity) be).refreshLevel(); } : null;
     }
+    @Override protected boolean hasComparatorOutput(BlockState state) { return true; }
+    @Override protected int getComparatorOutput(BlockState state, World world, BlockPos pos) {
+        return world.getBlockEntity(pos) instanceof DistilleryBellowsBlockEntity bellows
+            ? net.alkahest.essence.EssenceComparator.signal(bellows.amount(), DistilleryBellowsBlockEntity.CAPACITY) : 0;
+    }
+
     @Override protected VoxelShape getOutlineShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) { return SHAPE; }
     @Override protected VoxelShape getCollisionShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) { return SHAPE; }
 

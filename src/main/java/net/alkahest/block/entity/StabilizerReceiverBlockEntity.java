@@ -69,9 +69,10 @@ public class StabilizerReceiverBlockEntity extends BlockEntity {
 
     /** Used by tests and by the break handler; keeps the liquid exactly as it is. */
     public void setContents(JarContentsComponent contents) {
+        int before = contents().total();
         JarItem.set(tank(), contents);
         progress = 0;
-        changed();
+        changed(before);
     }
 
     /** Pipe input may mix types in the receiver, but never in an ordinary jar. */
@@ -94,9 +95,10 @@ public class StabilizerReceiverBlockEntity extends BlockEntity {
     /** Adding the same current type continues its work; a reordered type starts its own cycle. */
     private void mergeInput(JarContentsComponent addition) {
         EssenceType sorting = currentType();
+        int before = contents().total();
         JarItem.set(tank(), contents().merge(addition, CAPACITY));
         if (sorting != null && currentType() != sorting) progress = 0;
-        changed();
+        changed(before);
     }
 
     public boolean structureFormed() {
@@ -300,7 +302,7 @@ public class StabilizerReceiverBlockEntity extends BlockEntity {
         player.sendMessage(Text.translatable(key, args), true);
     }
 
-    private void changed() {
+    private void changed(int before) {
         markDirty();
         if (world == null || world.isClient) return;
         BlockState state = world.getBlockState(pos);
@@ -309,6 +311,8 @@ public class StabilizerReceiverBlockEntity extends BlockEntity {
         if (state.get(StabilizerReceiverBlock.OCCUPIED) != occupied)
             world.setBlockState(pos, state.with(StabilizerReceiverBlock.OCCUPIED, occupied), Block.NOTIFY_ALL);
         else world.updateListeners(pos, state, state, Block.NOTIFY_LISTENERS);
+        if (net.alkahest.essence.EssenceComparator.signal(before, CAPACITY) != net.alkahest.essence.EssenceComparator.signal(contents().total(), CAPACITY))
+            world.updateComparators(pos, state.getBlock());
     }
 
     @Override protected void writeNbt(NbtCompound nbt, RegistryWrapper.WrapperLookup registries) {
