@@ -189,7 +189,7 @@ public class StabilizerReceiverBlockEntity extends BlockEntity {
         double bestDistance = Double.MAX_VALUE;
         for (BlockPos candidate : BlockPos.iterate(pos.add(-RADIUS, -2, -RADIUS), pos.add(RADIUS, 4, RADIUS))) {
             if (candidate.equals(pos) || !world.isChunkLoaded(candidate)) continue;
-            if (!(world.getBlockEntity(candidate) instanceof JarBlockEntity jar)) continue;
+            if (!(world.getBlockEntity(candidate) instanceof JarBlockEntity jar) || jar.pipeSource()) continue;
             JarContentsComponent contents = jar.contents();
             if (!JarItem.allowed(contents) || !JarItem.singleType(contents)) continue;
             if (contents.total() >= JarItem.CAPACITY) continue;

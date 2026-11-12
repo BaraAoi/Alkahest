@@ -193,7 +193,16 @@ public class JarBlock extends Block implements BlockEntityProvider {
             player.sendMessage(Text.literal("◆ " + e.type().displayName() + ": " + e.amount() + " · " + Math.round(e.stability() * 100) + "%").styled(style -> style.withColor(e.type().color())), false);
     }
     @Override protected ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, BlockHitResult hit) {
-        if (!world.isClient && world.getBlockEntity(pos) instanceof JarBlockEntity jar) describe(player, jar.contents());
+        if (!world.isClient && world.getBlockEntity(pos) instanceof JarBlockEntity jar) {
+            if (player.isSneaking() && player.getMainHandStack().isEmpty()) {
+                jar.setPipeSource(!jar.pipeSource());
+                player.sendMessage(Text.translatable(jar.pipeSource()
+                    ? "message.alkahest.jar_pipe_source_on" : "message.alkahest.jar_pipe_source_off"), true);
+            } else {
+                describe(player, jar.contents());
+                if (jar.pipeSource()) player.sendMessage(Text.translatable("message.alkahest.jar_pipe_source_on"), false);
+            }
+        }
         return ActionResult.success(world.isClient);
     }
 }

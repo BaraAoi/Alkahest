@@ -286,9 +286,9 @@ public class AlchemyPipeBlockEntity extends BlockEntity {
         return be instanceof DistilleryBellowsBlockEntity;
     }
 
-    /** Storage jars receive only; a receiver is a one-way destination, never a pipe source. */
+    /** Opt-in source jars cannot also be pipe destinations. */
     private static boolean canReceive(BlockEntity be) {
-        return be instanceof JarBlockEntity;
+        return be instanceof JarBlockEntity jar && !jar.pipeSource();
     }
 
     private static EssenceType typeOf(BlockEntity be) {
@@ -460,8 +460,8 @@ public class AlchemyPipeBlockEntity extends BlockEntity {
         }
 
         /**
-         * Pay an awakened compact transmutator directly from connected jars. Jars may supply
-         * this consumer only: never another jar or a bellow. First check the ENTIRE cost, then
+         * Pay an awakened compact transmutator directly from connected jars. Both ordinary and
+         * source-mode jars can supply it; jars never directly supply other jars or bellows. First check the ENTIRE cost, then
          * transfer the exact amounts and complete in the same server tick. No intermediate
          * pipe or machine buffer exists, so a missing type leaves all jars untouched.
          */
@@ -501,9 +501,8 @@ public class AlchemyPipeBlockEntity extends BlockEntity {
 
         /**
          * Moves up to {@link #UNITS_PER_PULSE} units from every source into receivers or jars.
-         * Bellows only give, receivers and jars only receive, and each jar takes a single essence type, so
-         * several flasks feed several jars with different essences instead of shuffling one
-         * unit back and forth.
+         * Bellows give to receivers or storage jars. Explicit source-mode jars give only to
+         * receivers, never to other jars. A source-mode jar is excluded as an output target.
          */
         int pulse(World world) {
             int moved = 0;
@@ -527,13 +526,33 @@ public class AlchemyPipeBlockEntity extends BlockEntity {
                     moved += sent;
                 }
             }
-            // Distillation still fills jars first. Only a ready Transmutator may draw from
-            // jars; idle machines and jars never trigger transfers between storage containers.
+            // Ready Transmutators pay before optional jar-to-receiver transfers. An idle or
+            // incomplete recipe never reserves jars, so shared source jars may still drain.
             for (BlockEntity port : ports) {
                 if (!(port instanceof TransmutatorCoreBlockEntity core)) continue;
                 int paid = payTransmutator(world, core, used);
                 if (paid > 0) {
                     moved += paid;
+                }
+            }
+            for (BlockEntity source : ports) {
+                if (!(source instanceof JarBlockEntity jar) || !jar.pipeSource()) continue;
+                JarContentsComponent contents = jar.contents();
+                if (contents.total() == 0 || !JarItem.allowed(contents)) continue;
+                int budget = UNITS_PER_PULSE;
+                for (EssenceStack entry : contents.contents()) {
+                    if (budget <= 0) break;
+                    for (BlockEntity target : ports) {
+                        if (!(target instanceof StabilizerReceiverBlockEntity) || portFree(target, entry.type()) <= 0) continue;
+                        List<BlockPos> path = route(world, source, target, entry.type());
+                        if (path.isEmpty()) continue;
+                        int sent = move(source, target, entry.type(), budget);
+                        if (sent <= 0) continue;
+                        for (BlockPos segment : path) used.put(segment, entry.type());
+                        budget -= sent;
+                        moved += sent;
+                        break;
+                    }
                 }
             }
             if (moved == 0) return 0;

@@ -540,5 +540,7 @@
   "message.alkahest.pipe_direction.west": "на запад",
   "message.alkahest.pipe_direction.east": "на восток",
   "message.alkahest.pipe_direction_status": "Выход: %s",
-  "message.alkahest.pipe_direction_changed": "Направление выхода трубы: %s"
+  "message.alkahest.pipe_direction_changed": "Направление выхода трубы: %s",
+  "message.alkahest.jar_pipe_source_on": "Банка: источник для Стабилизатора",
+  "message.alkahest.jar_pipe_source_off": "Банка: обычное хранение"
 }

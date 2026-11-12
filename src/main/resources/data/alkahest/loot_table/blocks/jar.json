@@ -12,7 +12,8 @@
               "function": "minecraft:copy_components",
               "source": "block_entity",
               "include": [
-                "alkahest:jar_contents"
+                "alkahest:jar_contents",
+                "alkahest:jar_pipe_source"
               ]
             }
           ]

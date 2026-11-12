@@ -540,5 +540,7 @@
   "message.alkahest.pipe_direction.west": "west",
   "message.alkahest.pipe_direction.east": "east",
   "message.alkahest.pipe_direction_status": "Output: %s",
-  "message.alkahest.pipe_direction_changed": "Pipe output direction: %s"
+  "message.alkahest.pipe_direction_changed": "Pipe output direction: %s",
+  "message.alkahest.jar_pipe_source_on": "Jar: stabilizer input source",
+  "message.alkahest.jar_pipe_source_off": "Jar: ordinary storage"
 }

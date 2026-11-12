@@ -62,6 +62,7 @@ public final class MonocleHud {
         } else if (blockEntity instanceof JarBlockEntity jar) {
             var contents = jar.contents();
             lines.add(Text.translatable("screen.alkahest.monocle.jar", contents.total(), JarItem.CAPACITY));
+            if (jar.pipeSource()) lines.add(Text.translatable("message.alkahest.jar_pipe_source_on"));
             if (contents.total() == 0) lines.add(Text.translatable("screen.alkahest.monocle.empty"));
             else {
                 int limit = Math.min(contents.contents().size(), 4);

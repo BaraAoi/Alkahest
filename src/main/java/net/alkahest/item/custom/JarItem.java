@@ -6,6 +6,9 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.inventory.StackReference;
 import net.minecraft.item.BlockItem;
 import net.minecraft.item.ItemStack;
+import net.minecraft.item.tooltip.TooltipType;
+import net.minecraft.util.Formatting;
+import java.util.List;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.util.ClickType;
 import net.minecraft.text.Text;
@@ -16,6 +19,10 @@ import net.minecraft.block.Block;
 /** A portable normal jar. Right click pours the cursor/held jar into the other jar. */
 public class JarItem extends BlockItem {
     public static final int CAPACITY = 100;
+    @Override public void appendTooltip(ItemStack stack, TooltipContext context, List<Text> tooltip, TooltipType type) {
+        if (stack.getOrDefault(ModDataComponents.JAR_PIPE_SOURCE, false))
+            tooltip.add(Text.translatable("message.alkahest.jar_pipe_source_on").formatted(Formatting.GRAY));
+    }
     public JarItem(Block block, Settings settings) { super(block, settings.maxCount(1)); }
     public static JarContentsComponent contents(ItemStack stack) {
         return stack.getOrDefault(ModDataComponents.JAR_CONTENTS, JarContentsComponent.EMPTY);
