@@ -175,6 +175,25 @@ public class DistilleryGameTests implements FabricGameTest {
     }
 
     @GameTest(templateName=EMPTY_STRUCTURE)
+    public void oldSavedProgressIsKeptUnlessInvalidForCurrentMode(TestContext c) {
+        c.setBlockState(3,2,3,ModBlocks.DISTILLERY); var world=c.getWorld();
+        BlockPos pos=c.getAbsolutePos(new BlockPos(3,2,3)); var d=(DistilleryBlockEntity)world.getBlockEntity(pos);
+        var player=c.createMockPlayer(GameMode.SURVIVAL);
+        var screen=(DistilleryScreenHandler)d.createMenu(1,player.getInventory(),player);
+        d.setStack(0,new ItemStack(Items.APPLE,2));
+        var nbt=d.createNbt(world.getRegistryManager()); nbt.putInt("Progress",900);
+        d.readComponentlessNbt(nbt,world.getRegistryManager());
+        c.assertTrue(screen.progress()==900,"Valid old raw progress survives loading");
+        d.setStack(9,new ItemStack(ModItems.ALKAHEST_VIAL));
+        nbt=d.createNbt(world.getRegistryManager()); nbt.putInt("Progress",900);
+        d.readComponentlessNbt(nbt,world.getRegistryManager());
+        c.assertTrue(screen.progress()==0 && d.getStack(0).getCount()==2 && d.hasAlkahest(),"Impossible old solvent counter resets without losing inventory");
+        nbt.putInt("Progress",50); d.readComponentlessNbt(nbt,world.getRegistryManager());
+        c.assertTrue(screen.progress()==50,"Valid old solvent progress survives loading");
+        c.complete();
+    }
+
+    @GameTest(templateName=EMPTY_STRUCTURE)
     public void changingModeNeverDestroysAlreadyQueuedOutput(TestContext c) {
         c.setBlockState(3,2,3,ModBlocks.DISTILLERY); var world=c.getWorld();
         BlockPos pos=c.getAbsolutePos(new BlockPos(3,2,3)); var d=(DistilleryBlockEntity)world.getBlockEntity(pos);

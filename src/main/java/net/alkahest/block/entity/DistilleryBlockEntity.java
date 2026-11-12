@@ -312,7 +312,10 @@ public class DistilleryBlockEntity extends BlockEntity implements SidedInventory
         super.readNbt(nbt, registries);
         stacks.clear();
         Inventories.readNbt(nbt, stacks, registries);
-        progress = nbt.getInt("Progress");
+        int savedProgress = nbt.getInt("Progress");
+        // Old saves may have switched modes in the GUI without resetting the counter.
+        // No normal tick can persist a counter at or beyond its current duration.
+        progress = savedProgress >= 0 && savedProgress < currentMaxProgress() ? savedProgress : 0;
         extraPending.clear();
         if (nbt.contains("ExtraPending", NbtElement.LIST_TYPE)) {
             NbtList list = nbt.getList("ExtraPending", NbtElement.COMPOUND_TYPE);
