@@ -467,4 +467,44 @@ public class PipeGameTests implements FabricGameTest {
         c.complete();
     }
 
+    @GameTest(templateName=EMPTY_STRUCTURE)
+    public void mergedNetworkResumesOnFollowingTicks(TestContext c) {
+        c.setBlockState(1,2,3,ModBlocks.DISTILLERY_BELLOWS);
+        c.setBlockState(2,2,3,ModBlocks.ALCHEMY_PIPE);
+        c.setBlockState(3,2,4,ModBlocks.ALCHEMY_PIPE);
+        c.setBlockState(4,2,4,ModBlocks.JAR);
+        BlockPos first=c.getAbsolutePos(new BlockPos(2,2,3));
+        var source=(DistilleryBellowsBlockEntity)c.getWorld().getBlockEntity(first.west());
+        var jar=(JarBlockEntity)c.getWorld().getBlockEntity(first.east(2).south());
+        source.accept(EssenceType.IGNIS,8,.5f);
+        AlchemyPipeBlockEntity.pulseOncePerTick(c.getWorld(),first);
+        c.setBlockState(3,2,3,ModBlocks.ALCHEMY_PIPE);
+        AlchemyPipeBlockEntity.pulseOncePerTick(c.getWorld(),first.east().south());
+        c.runAtTick(8,()->{
+            c.assertTrue(source.amount()==0 && jar.contents().total()==8,
+                "A merged network resumes automatically on subsequent pulses, without loss");
+            c.complete();
+        });
+    }
+
+    @GameTest(templateName=EMPTY_STRUCTURE)
+    public void oversizedNetworkDoesNotPartiallyRunAndRecoversAtLimit(TestContext c) {
+        for (int y=10; y<=11; y++) for (int z=2; z<=6; z++) for (int x=2; x<=6; x++)
+            c.setBlockState(x,y,z,ModBlocks.ALCHEMY_PIPE);
+        for (int z=2; z<=4; z++) for (int x=2; x<=6; x++)
+            c.setBlockState(x,12,z,ModBlocks.ALCHEMY_PIPE);
+        c.setBlockState(1,10,2,ModBlocks.DISTILLERY_BELLOWS);
+        c.setBlockState(7,10,2,ModBlocks.JAR);
+        BlockPos first=c.getAbsolutePos(new BlockPos(2,10,2));
+        var source=(DistilleryBellowsBlockEntity)c.getWorld().getBlockEntity(first.west());
+        var jar=(JarBlockEntity)c.getWorld().getBlockEntity(first.east(5));
+        source.accept(EssenceType.IGNIS,8,.5f);
+        c.assertTrue(AlchemyPipeBlockEntity.pulse(c.getWorld(),first)==0,"65 segments do not partially transfer");
+        c.assertTrue(source.amount()==8 && jar.contents().total()==0,"An oversized network retains all essence");
+        c.setBlockState(6,12,4,net.minecraft.block.Blocks.AIR);
+        c.assertTrue(AlchemyPipeBlockEntity.pulse(c.getWorld(),first)==4,"A connected 64-segment network works");
+        c.assertTrue(source.amount()==4 && jar.contents().total()==4,"Transfer after recovery is exact");
+        c.complete();
+    }
+
 }
