@@ -67,4 +67,27 @@ public final class ComparatorGameTests implements FabricGameTest {
             c.complete();
         });
     }
+    @GameTest(templateName=EMPTY_STRUCTURE, tickLimit=80)
+    public void comparatorCanControlPipeValve(TestContext c) {
+        c.setBlockState(3,2,3,ModBlocks.JAR); placeComparator(c,3);
+        c.setBlockState(5,2,3,ModBlocks.ALCHEMY_PIPE);
+        var world=c.getWorld();
+        var jar=(JarBlockEntity)world.getBlockEntity(c.getAbsolutePos(new BlockPos(3,2,3)));
+        var pipe=(net.alkahest.block.entity.AlchemyPipeBlockEntity)world.getBlockEntity(c.getAbsolutePos(new BlockPos(5,2,3)));
+        pipe.setValveMode(net.alkahest.block.entity.PipeValveMode.CLOSE_WHEN_POWERED);
+        c.runAtTick(5,()->{
+            c.assertTrue(pipe.valveOpen(),"Empty jar leaves the valve open");
+            jar.setPipeSource(true); jar.setContents(one(8));
+        });
+        c.runAtTick(15,()->{
+            c.assertTrue(output(c,3)==2 && !pipe.valveOpen(),"Comparator output closes the redstone valve");
+            jar.setContents(JarContentsComponent.EMPTY);
+        });
+        c.runAtTick(25,()->{
+            c.assertTrue(output(c,3)==0 && pipe.valveOpen(),"Emptying the jar reopens the valve");
+            c.assertTrue(jar.pipeSource(),"Comparator and storage changes do not reset source mode");
+            c.complete();
+        });
+    }
+
 }
