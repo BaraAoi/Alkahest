@@ -692,4 +692,27 @@ public class TransmutatorGameTests implements FabricGameTest {
         c.complete();
     }
 
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void completedTransmutationPaysBeforeOptInJarFeed(TestContext c) {
+        int y=CY+48;
+        BlockPos pos=tower(c,y);
+        var core=(TransmutatorCoreBlockEntity)c.getWorld().getBlockEntity(pos);
+        installInput(c,core); core.wake();
+        c.setBlockState(CX+1,y,CZ,ModBlocks.ALCHEMY_PIPE);
+        var pipe=c.getAbsolutePos(new BlockPos(CX+1,y,CZ));
+        var metal=jar(c,CX+1,y,CZ-1,EssenceType.METALLUM,10);
+        var ordo=jar(c,CX+2,y,CZ,EssenceType.ORDO,10);
+        metal.setPipeSource(true); ordo.setPipeSource(true);
+        c.setBlockState(CX+1,y,CZ+1,ModBlocks.STABILIZER_RECEIVER);
+        var receiver=(net.alkahest.block.entity.StabilizerReceiverBlockEntity)c.getWorld().getBlockEntity(pipe.south());
+        run(c.getWorld(),pos,110);
+        net.alkahest.block.entity.AlchemyPipeBlockEntity.pulse(c.getWorld(),pipe);
+        c.assertTrue(core.getStack(TransmutatorCoreBlockEntity.OUTPUT).isOf(Items.GOLD_INGOT)
+            && core.getStack(TransmutatorCoreBlockEntity.AMULET).get(ModDataComponents.ESSENCE_CHARGE)==3,
+            "A fully payable finished operation gets priority over optional feeding");
+        c.assertTrue(metal.contents().total()==3 && ordo.contents().total()==4 && receiver.contents().total()==8,
+            "After the exact 3+2 payment each source sends four units, conserving the remainder");
+        c.complete();
+    }
+
 }

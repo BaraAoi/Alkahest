@@ -278,4 +278,42 @@ public class JarGameTests implements FabricGameTest {
         c.assertTrue(drops==17 && jar.contents().total()==0 && powder.getCount()==2,"Creative: drops="+drops+", jar="+jar.contents().total()+", powder="+powder.getCount()+", creative="+player.isCreative());
         c.complete();
     }
+    @GameTest(templateName = EMPTY_STRUCTURE, tickLimit = 80)
+    public void sourceModePersistsInWorldSyncAndMinedJar(TestContext c) {
+        c.setBlockState(2,2,3,ModBlocks.JAR);
+        var w=c.getWorld(); BlockPos pos=c.getAbsolutePos(new BlockPos(2,2,3));
+        var jar=(JarBlockEntity)w.getBlockEntity(pos);
+        var contents=of(EssenceType.ORDO,9,.6f);
+        c.assertTrue(!jar.pipeSource(), "Fresh and legacy jars default to ordinary storage");
+        jar.setContents(contents); jar.setPipeSource(true);
+        var replica=new JarBlockEntity(pos,jar.getCachedState());
+        replica.readComponentlessNbt(jar.toInitialChunkDataNbt(w.getRegistryManager()),w.getRegistryManager());
+        c.assertTrue(replica.pipeSource() && replica.contents().equals(contents) && jar.toUpdatePacket()!=null,
+            "Mode and contents are included in world saves and client packets");
+        var old=jar.createNbt(w.getRegistryManager()); old.remove("PipeSource");
+        replica.readComponentlessNbt(old,w.getRegistryManager());
+        c.assertTrue(!replica.pipeSource() && replica.contents().equals(contents), "Older data remains ordinary storage without losing contents");
+        w.breakBlock(pos,true);
+        c.runAtTick(5,()->{
+            var drops=w.getEntitiesByClass(ItemEntity.class,new net.minecraft.util.math.Box(pos).expand(2),
+                e->e.getStack().isOf(ModBlocks.JAR.asItem()));
+            c.assertTrue(drops.size()==1, "Breaking yields one jar");
+            var item=drops.getFirst().getStack().copy(); drops.getFirst().discard();
+            c.assertTrue(item.getOrDefault(ModDataComponents.JAR_PIPE_SOURCE,false) && JarItem.contents(item).equals(contents),
+                "The item retains both the opt-in mode and its contents");
+            var inv=net.minecraft.util.collection.DefaultedList.ofSize(1,ItemStack.EMPTY); inv.set(0,item);
+            var nbt=new net.minecraft.nbt.NbtCompound(); net.minecraft.inventory.Inventories.writeNbt(nbt,inv,w.getRegistryManager());
+            var loaded=net.minecraft.util.collection.DefaultedList.ofSize(1,ItemStack.EMPTY);
+            net.minecraft.inventory.Inventories.readNbt(nbt,loaded,w.getRegistryManager()); item=loaded.get(0);
+            var player=c.createMockPlayer(net.minecraft.world.GameMode.SURVIVAL);
+            player.setStackInHand(net.minecraft.util.Hand.MAIN_HAND,item);
+            BlockPos base=c.getAbsolutePos(new BlockPos(5,1,3)); w.setBlockState(base,net.minecraft.block.Blocks.STONE.getDefaultState());
+            var hit=new net.minecraft.util.hit.BlockHitResult(net.minecraft.util.math.Vec3d.ofCenter(base),net.minecraft.util.math.Direction.UP,base,false);
+            c.assertTrue(((net.minecraft.item.BlockItem)item.getItem()).place(new net.minecraft.item.ItemPlacementContext(player,net.minecraft.util.Hand.MAIN_HAND,item,hit)).isAccepted(), "Saved jar can be placed");
+            var placed=(JarBlockEntity)w.getBlockEntity(base.up());
+            c.assertTrue(placed.pipeSource() && placed.contents().equals(contents), "Replaced jar restores mode and exact contents");
+            c.complete();
+        });
+    }
+
 }

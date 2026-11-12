@@ -953,4 +953,113 @@ public class PipeGameTests implements FabricGameTest {
         c.complete();
     }
 
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void optInSourceFeedsOnlyReceiverAndPreservesMixedContents(TestContext c) {
+        c.setBlockState(2,2,3,ModBlocks.JAR);
+        c.setBlockState(3,2,3,ModBlocks.ALCHEMY_PIPE);
+        c.setBlockState(4,2,3,ModBlocks.STABILIZER_RECEIVER);
+        c.setBlockState(3,2,4,ModBlocks.JAR);
+        var w=c.getWorld(); var p=c.getAbsolutePos(new BlockPos(3,2,3));
+        var source=(JarBlockEntity)w.getBlockEntity(p.west());
+        var receiver=(StabilizerReceiverBlockEntity)w.getBlockEntity(p.east());
+        var storage=(JarBlockEntity)w.getBlockEntity(p.south());
+        source.setContents(new JarContentsComponent(List.of(
+            new EssenceStack(EssenceType.AQUA,3,.4f),new EssenceStack(EssenceType.ORDO,3,.7f))));
+        c.assertTrue(!source.pipeSource() && AlchemyPipeBlockEntity.pulse(w,p)==0 && source.contents().total()==6,
+            "Old mixed jars do not become sources without explicit opt-in");
+        var player=c.createMockPlayer(GameMode.SURVIVAL); player.setSneaking(true);
+        var hit=new BlockHitResult(Vec3d.ofCenter(p.west()),Direction.UP,p.west(),false);
+        w.getBlockState(p.west()).onUse(w,player,hit);
+        c.assertTrue(source.pipeSource(), "Sneak empty hand activates source mode");
+        c.assertTrue(AlchemyPipeBlockEntity.pulse(w,p)==4 && receiver.contents().total()==4 && source.contents().total()==2,
+            "One source supplies at most four units per pulse, including legacy mixtures");
+        c.assertTrue(AlchemyPipeBlockEntity.pulse(w,p)==2 && source.contents().total()==0 && receiver.contents().total()==6,
+            "The remaining fractions reach the receiver exactly once");
+        c.assertTrue(storage.contents().total()==0 && receiver.contents().contents().size()==2,
+            "The source does not feed other jars or mix essence into them");
+        var aqua=receiver.contents().contents().stream().filter(e->e.type()==EssenceType.AQUA).findFirst().orElseThrow();
+        var ordo=receiver.contents().contents().stream().filter(e->e.type()==EssenceType.ORDO).findFirst().orElseThrow();
+        c.assertTrue(aqua.amount()==3 && ordo.amount()==3 && Math.abs(aqua.stability()-.4f)<.001f
+            && Math.abs(ordo.stability()-.7f)<.001f, "Amounts and stability survive fraction transfer");
+        w.getBlockState(p.west()).onUse(w,player,hit);
+        c.assertTrue(!source.pipeSource(), "A second sneak click restores ordinary storage mode");
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void optedInJarRespectsCapacityFiltersValvesAndDirection(TestContext c) {
+        c.setBlockState(2,2,3,ModBlocks.JAR);
+        c.setBlockState(3,2,3,ModBlocks.ALCHEMY_PIPE);
+        c.setBlockState(4,2,3,ModBlocks.STABILIZER_RECEIVER);
+        var w=c.getWorld(); var p=c.getAbsolutePos(new BlockPos(3,2,3));
+        var jar=(JarBlockEntity)w.getBlockEntity(p.west());
+        var pipe=(AlchemyPipeBlockEntity)w.getBlockEntity(p);
+        var receiver=(StabilizerReceiverBlockEntity)w.getBlockEntity(p.east());
+        jar.setContents(of(EssenceType.AQUA,8,.6f)); jar.setPipeSource(true);
+        receiver.setContents(of(EssenceType.AQUA,98,.4f));
+        pipe.setFilter(EssenceType.ORDO);
+        c.assertTrue(AlchemyPipeBlockEntity.pulse(w,p)==0 && jar.contents().total()==8, "Wrong filter blocks source without loss");
+        pipe.setFilter(EssenceType.AQUA); pipe.setValveMode(net.alkahest.block.entity.PipeValveMode.CLOSED);
+        c.assertTrue(AlchemyPipeBlockEntity.pulse(w,p)==0 && jar.contents().total()==8, "Closed valve also blocks source");
+        pipe.setValveMode(net.alkahest.block.entity.PipeValveMode.OPEN);
+        pipe.setDirection(net.alkahest.block.entity.PipeDirection.WEST);
+        c.assertTrue(AlchemyPipeBlockEntity.pulse(w,p)==0 && jar.contents().total()==8, "A reversed output blocks source");
+        pipe.setDirection(net.alkahest.block.entity.PipeDirection.EAST);
+        c.assertTrue(AlchemyPipeBlockEntity.pulse(w,p)==2 && receiver.contents().total()==100 && jar.contents().total()==6,
+            "Only the receiver's free space is transferred");
+        c.assertTrue(AlchemyPipeBlockEntity.pulse(w,p)==0 && jar.contents().total()==6,
+            "A full receiver leaves the remainder in its source jar");
+        c.assertTrue(Math.abs(receiver.contents().contents().getFirst().stability()-.404f)<.001f,
+            "The receiver merges input stability by weight");
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void sourceJarCannotBeDestinationOrFeedAnotherJar(TestContext c) {
+        c.setBlockState(2,2,3,ModBlocks.DISTILLERY_BELLOWS);
+        c.setBlockState(3,2,3,ModBlocks.ALCHEMY_PIPE);
+        c.setBlockState(4,2,3,ModBlocks.JAR);
+        c.setBlockState(3,2,4,ModBlocks.JAR);
+        var w=c.getWorld(); var p=c.getAbsolutePos(new BlockPos(3,2,3));
+        var bellows=(DistilleryBellowsBlockEntity)w.getBlockEntity(p.west());
+        var source=(JarBlockEntity)w.getBlockEntity(p.east());
+        var ordinary=(JarBlockEntity)w.getBlockEntity(p.south());
+        source.setPipeSource(true); source.setContents(of(EssenceType.IGNIS,5,.5f));
+        ordinary.setContents(of(EssenceType.AQUA,100,.5f));
+        bellows.accept(EssenceType.IGNIS,5,.5f);
+        c.assertTrue(AlchemyPipeBlockEntity.pulse(w,p)==0 && source.contents().total()==5 && bellows.amount()==5,
+            "Opted-in source is not a destination for bellows, and full other storage cannot accept");
+        bellows.drain(5); ordinary.setContents(JarContentsComponent.EMPTY);
+        c.assertTrue(AlchemyPipeBlockEntity.pulse(w,p)==0 && source.contents().total()==5 && ordinary.contents().total()==0,
+            "A jar source never transfers into another jar even if it is empty");
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE, tickLimit = 300)
+    public void realTickerFeedsAndNeverRecyclesStabilizedOutput(TestContext c) {
+        int y=145;
+        c.setBlockState(1,y,3,ModBlocks.JAR); c.setBlockState(2,y,3,ModBlocks.ALCHEMY_PIPE);
+        c.setBlockState(3,y,3,ModBlocks.STABILIZER_RECEIVER);
+        c.setBlockState(3,y+1,3,ModBlocks.STABILIZER_CORE); c.setBlockState(3,y+2,3,ModBlocks.STABILIZER_CREST);
+        c.setBlockState(2,y,6,ModBlocks.JAR);
+        var w=c.getWorld(); BlockPos p=c.getAbsolutePos(new BlockPos(2,y,3));
+        var source=(JarBlockEntity)w.getBlockEntity(p.west());
+        var output=(JarBlockEntity)w.getBlockEntity(p.south(3));
+        var receiver=(StabilizerReceiverBlockEntity)w.getBlockEntity(p.east());
+        var core=(StabilizerCoreBlockEntity)w.getBlockEntity(p.east().up());
+        source.setPipeSource(true); source.setContents(of(EssenceType.AQUA,8,.5f)); core.setActivated(true);
+        c.runAtTick(20,()->c.assertTrue(source.contents().total()==0 && receiver.contents().total()==8,
+            "The registered pipe ticker feeds the receiver from the opted-in jar"));
+        c.runAtTick(240,()->{
+            c.assertTrue(source.contents().total()==0 && output.contents().total()==8 && receiver.contents().total()==0,
+                "The stabilizer skips its empty source jar and deposits into normal storage without recirculation");
+            c.assertTrue(Math.abs(output.contents().contents().getFirst().stability()-.9f)<.001f,
+                "The output is stabilized normally");
+            c.setBlockState(1,y,3,net.minecraft.block.Blocks.AIR); c.setBlockState(2,y,3,net.minecraft.block.Blocks.AIR);
+            c.setBlockState(2,y,6,net.minecraft.block.Blocks.AIR); c.setBlockState(3,y+2,3,net.minecraft.block.Blocks.AIR);
+            c.setBlockState(3,y+1,3,net.minecraft.block.Blocks.AIR); c.setBlockState(3,y,3,net.minecraft.block.Blocks.AIR);
+            c.complete();
+        });
+    }
+
 }
