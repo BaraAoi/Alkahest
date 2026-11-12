@@ -98,12 +98,16 @@ public final class JournalScreen extends Screen {
     }
     private void renderMap(DrawContext c, int mouseX, int mouseY) {
         int x = mapX(), y = mapY(), w = mapW(), h = mapH();
-        c.enableScissor(x + 2, y + 2, x + w - 2, y + h - 2);
-        // Parent bits are the single source of truth for both progression and connections.
-        for (Node child : NODES) for (Node parent : NODES)
-            if ((child.parents() & parent.completed()) != 0) link(c, parent, child);
-        for (Node node : NODES) if (!state(node).equals("hidden")) drawNode(c, node, mouseX, mouseY);
-        c.disableScissor();
+        // Never draw the map inside the modal rectangle. This also protects against item
+        // renderers that use their own GUI depth rather than the surrounding matrix depth.
+        for (var region : layout.mapRegions(selected != null)) {
+            c.enableScissor(region.x(), region.y(), region.x() + region.width(), region.y() + region.height());
+            // Parent bits are the single source of truth for both progression and connections.
+            for (Node child : NODES) for (Node parent : NODES)
+                if ((child.parents() & parent.completed()) != 0) link(c, parent, child);
+            for (Node node : NODES) if (!state(node).equals("hidden") && nodeIntersects(node, region)) drawNode(c, node, mouseX, mouseY);
+            c.disableScissor();
+        }
         String mapHint = textRenderer.trimToWidth(Text.translatable("screen.alkahest.journal.map_hint").getString(), Math.max(20, width - 40));
         centered(c, Text.literal(mapHint), width / 2, height - 18, 0xFFBCCBD0);
         if (within(mouseX, mouseY, x, y, x + w, y + h)) {
@@ -113,6 +117,11 @@ public final class JournalScreen extends Screen {
                 break;
             }
         }
+    }
+    private boolean nodeIntersects(Node node, JournalLayout.Rect region) {
+        double radius = 20 * camera.zoom();
+        return nx(node) + radius > region.x() && nx(node) - radius < region.x() + region.width()
+            && ny(node) + radius > region.y() && ny(node) - radius < region.y() + region.height();
     }
     private void link(DrawContext c, Node a, Node b) {
         if (state(a).equals("hidden") || state(b).equals("hidden")) return;

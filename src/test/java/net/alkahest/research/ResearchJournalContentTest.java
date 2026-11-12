@@ -28,5 +28,18 @@ class ResearchJournalContentTest {
             assertTrue(book.contains(book.x(), book.y()));
             assertFalse(book.contains(book.x() + book.width(), book.y()));
         }
+    }    @Test void mapClippingLeavesOnlyTheBookRectangleEmpty() {
+        for (int[] size : new int[][]{{320, 240}, {480, 270}, {854, 480}, {1920, 1080}}) {
+            var layout = JournalLayout.of(size[0], size[1]);
+            assertEquals(java.util.List.of(layout.map()), layout.mapRegions(false));
+            var regions = layout.mapRegions(true);
+            for (int y = 0; y < size[1]; y += 3) for (int x = 0; x < size[0]; x += 3) {
+                int count = 0;
+                for (var r : regions) if (r.contains(x, y)) count++;
+                boolean expected = layout.map().contains(x, y) && !layout.detail().contains(x, y);
+                assertEquals(expected ? 1 : 0, count, "Map clips must cover only the area outside the book");
+            }
+        }
     }
+
 }

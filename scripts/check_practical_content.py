@@ -84,6 +84,7 @@ assert 'BookPagination.pages(net.alkahest.recipe.CauldronEssenceRecipes.all().si
 assert 'renderCauldronDiagram(c, brew, 0, 0,' in journal
 assert 'screen.alkahest.journal.notes' not in journal and 'renderGuide(' not in journal
 assert 'layout.detail().contains' in journal and 'camera.zoomAt(' in journal
+assert 'layout.mapRegions(selected != null)' in journal
 
 # The atlas has no book base; modal depth must exceed Minecraft's elevated item layer.
 atlas = (root / 'src/client/resources/assets/alkahest/textures/gui/research_atlas.png').read_bytes()
