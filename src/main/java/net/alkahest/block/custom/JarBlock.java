@@ -130,7 +130,8 @@ public class JarBlock extends Block implements BlockEntityProvider {
             int count = Math.min(remaining, new ItemStack(crystal).getMaxCount());
             ItemStack output = new ItemStack(crystal, count);
             output.set(ModDataComponents.ESSENCE_STABILITY, essence.stability());
-            player.getInventory().insertStack(output);
+            // Vanilla's creative insert silently deletes overflow; don't let that erase stored essence.
+            if (!player.isCreative() || hasRoomFor(player, output)) player.getInventory().insertStack(output);
             int delivered = count - output.getCount();
             if (!output.isEmpty()) {
                 ItemEntity drop = new ItemEntity(world, player.getX(), player.getY() + .5, player.getZ(), output, 0, .05, 0);
@@ -148,6 +149,18 @@ public class JarBlock extends Block implements BlockEntityProvider {
         powder.decrementUnlessCreative(1, player);
         world.playSound(null, pos, SoundEvents.BLOCK_AMETHYST_BLOCK_CHIME, SoundCategory.BLOCKS, .8f, 1.2f);
         player.sendMessage(Text.translatable("message.alkahest.jar_crystallized", produced), true);
+    }
+
+    private static boolean hasRoomFor(PlayerEntity player, ItemStack output) {
+        int room = 0;
+        // Main inventory/hotbar are the slots used for ordinary insertion; ignoring offhand is conservative.
+        for (int i = 0; i < 36; i++) {
+            ItemStack slot = player.getInventory().getStack(i);
+            if (slot.isEmpty()) room += output.getMaxCount();
+            else if (ItemStack.areItemsAndComponentsEqual(slot, output)) room += Math.max(0, slot.getMaxCount() - slot.getCount());
+            if (room >= output.getCount()) return true;
+        }
+        return false;
     }
 
     /** Sneak-use crystals in bulk: never consume beyond free capacity or create a mixed jar. */

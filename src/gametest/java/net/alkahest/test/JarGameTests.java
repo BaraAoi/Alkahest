@@ -265,4 +265,17 @@ public class JarGameTests implements FabricGameTest {
         c.assertTrue(total==100,"All crystals dropped without loss or duplication");
         c.complete();
     }
+    @GameTest(templateName=EMPTY_STRUCTURE,tickLimit=40)
+    public void creativeFullInventoryDoesNotVoidJarContents(TestContext c) {
+        c.setBlockState(3,2,3,ModBlocks.JAR); BlockPos pos=c.getAbsolutePos(new BlockPos(3,2,3));
+        var jar=(JarBlockEntity)c.getWorld().getBlockEntity(pos); var player=c.createMockPlayer(net.minecraft.world.GameMode.CREATIVE);
+        player.setPosition(pos.getX()+2.5,pos.getY()+1,pos.getZ()+.5);
+        for(int i=0;i<player.getInventory().size();i++) player.getInventory().setStack(i,new ItemStack(net.minecraft.item.Items.COBBLESTONE,64));
+        jar.setContents(of(EssenceType.ORDO,17,.6f));
+        var powder=new ItemStack(ModItems.CRYSTALLIZATION_POWDER,2); clickJar(c,pos,player,powder);
+        var area=new net.minecraft.util.math.Box(player.getBlockPos()).expand(3);
+        int drops=c.getWorld().getEntitiesByClass(ItemEntity.class,area,e->e.getStack().isOf(ModItems.CRYSTALS.get(EssenceType.ORDO))).stream().mapToInt(e->e.getStack().getCount()).sum();
+        c.assertTrue(drops==17 && jar.contents().total()==0 && powder.getCount()==2,"Creative overflow drops every crystal instead of voiding it; powder is not consumed");
+        c.complete();
+    }
 }
