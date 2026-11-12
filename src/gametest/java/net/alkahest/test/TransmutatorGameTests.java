@@ -664,4 +664,32 @@ public class TransmutatorGameTests implements FabricGameTest {
         c.complete();
     }
 
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void directionalPipeBlocksWholePriceUntilTurnedTowardMachine(TestContext c) {
+        int y=CY+48;
+        BlockPos pos=tower(c,y);
+        var core=(TransmutatorCoreBlockEntity)c.getWorld().getBlockEntity(pos);
+        installInput(c,core); core.wake();
+        c.setBlockState(CX+1,y,CZ,ModBlocks.ALCHEMY_PIPE);
+        c.setBlockState(CX+2,y,CZ,ModBlocks.ALCHEMY_PIPE);
+        BlockPos first=c.getAbsolutePos(new BlockPos(CX+1,y,CZ));
+        var branch=(net.alkahest.block.entity.AlchemyPipeBlockEntity)c.getWorld().getBlockEntity(first.east());
+        branch.setDirection(net.alkahest.block.entity.PipeDirection.EAST);
+        var metal=jar(c,CX+1,y,CZ-1,EssenceType.METALLUM,10);
+        var ordo=jar(c,CX+3,y,CZ,EssenceType.ORDO,10);
+        run(c.getWorld(),pos,110);
+        for(int i=0;i<100;i++) net.alkahest.block.entity.AlchemyPipeBlockEntity.pulse(c.getWorld(),first);
+        c.assertTrue(metal.contents().total()==10 && ordo.contents().total()==10
+            && core.getStack(TransmutatorCoreBlockEntity.OUTPUT).isEmpty()
+            && core.getStack(TransmutatorCoreBlockEntity.AMULET).get(ModDataComponents.ESSENCE_CHARGE)==4,
+            "A reversed branch cannot pay part of a recipe or spend an item or charge");
+        branch.setDirection(net.alkahest.block.entity.PipeDirection.WEST);
+        net.alkahest.block.entity.AlchemyPipeBlockEntity.pulse(c.getWorld(),first);
+        c.assertTrue(metal.contents().total()==7 && ordo.contents().total()==8
+            && core.getStack(TransmutatorCoreBlockEntity.OUTPUT).isOf(Items.GOLD_INGOT)
+            && core.getStack(TransmutatorCoreBlockEntity.AMULET).get(ModDataComponents.ESSENCE_CHARGE)==3,
+            "Turning the branch toward the core pays the entire price exactly once");
+        c.complete();
+    }
+
 }

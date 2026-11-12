@@ -788,4 +788,139 @@ public class PipeGameTests implements FabricGameTest {
         c.complete();
     }
 
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void directedOutputRespectsEverySegmentAndTargetFace(TestContext c) {
+        c.setBlockState(1,2,3,ModBlocks.DISTILLERY_BELLOWS);
+        c.setBlockState(2,2,3,ModBlocks.ALCHEMY_PIPE);
+        c.setBlockState(3,2,3,ModBlocks.ALCHEMY_PIPE);
+        c.setBlockState(4,2,3,ModBlocks.JAR);
+        var w=c.getWorld(); BlockPos p=c.getAbsolutePos(new BlockPos(2,2,3));
+        var source=(DistilleryBellowsBlockEntity)w.getBlockEntity(p.west());
+        var first=(AlchemyPipeBlockEntity)w.getBlockEntity(p);
+        var last=(AlchemyPipeBlockEntity)w.getBlockEntity(p.east());
+        var jar=(JarBlockEntity)w.getBlockEntity(p.east(2));
+        source.accept(EssenceType.AQUA,12,.4f);
+        first.setDirection(net.alkahest.block.entity.PipeDirection.WEST);
+        c.assertTrue(AlchemyPipeBlockEntity.pulse(w,p)==0 && source.amount()==12 && jar.contents().total()==0,
+            "A segment aimed back at the source cannot feed the next segment");
+        first.setDirection(net.alkahest.block.entity.PipeDirection.EAST);
+        last.setDirection(net.alkahest.block.entity.PipeDirection.UP);
+        c.assertTrue(AlchemyPipeBlockEntity.pulse(w,p)==0 && source.amount()==12,
+            "The final segment must also point to the actual output jar");
+        last.setDirection(net.alkahest.block.entity.PipeDirection.EAST);
+        last.setFilter(EssenceType.AQUA);
+        last.setValveMode(net.alkahest.block.entity.PipeValveMode.CLOSED);
+        c.assertTrue(AlchemyPipeBlockEntity.pulse(w,p)==0, "Correct direction cannot bypass a closed valve");
+        last.setValveMode(net.alkahest.block.entity.PipeValveMode.OPEN);
+        last.setFilter(EssenceType.IGNIS);
+        c.assertTrue(AlchemyPipeBlockEntity.pulse(w,p)==0, "Correct direction cannot bypass a wrong filter");
+        last.setFilter(EssenceType.AQUA);
+        c.assertTrue(AlchemyPipeBlockEntity.pulse(w,p)==4 && jar.contents().total()==4 && source.amount()==8,
+            "Matching direction, valve and filter allow the exact transfer");
+        c.assertTrue(Math.abs(jar.contents().contents().getFirst().stability()-.4f)<.001,
+            "Directed routing retains stability");
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void directionControlsCycleAndRemainSeparateFromFilter(TestContext c) {
+        c.setBlockState(2,2,3,ModBlocks.ALCHEMY_PIPE);
+        var w=c.getWorld(); BlockPos p=c.getAbsolutePos(new BlockPos(2,2,3));
+        var pipe=(AlchemyPipeBlockEntity)w.getBlockEntity(p);
+        var player=c.createMockPlayer(GameMode.SURVIVAL);
+        var wand=new ItemStack(net.alkahest.registry.ModItems.WANDS.get(EssenceType.TERRA));
+        player.setStackInHand(Hand.MAIN_HAND,wand);
+        var hit=new BlockHitResult(Vec3d.ofCenter(p),Direction.UP,p,false);
+        for (var expected : new net.alkahest.block.entity.PipeDirection[]{
+            net.alkahest.block.entity.PipeDirection.DOWN, net.alkahest.block.entity.PipeDirection.UP,
+            net.alkahest.block.entity.PipeDirection.NORTH, net.alkahest.block.entity.PipeDirection.SOUTH,
+            net.alkahest.block.entity.PipeDirection.WEST, net.alkahest.block.entity.PipeDirection.EAST,
+            net.alkahest.block.entity.PipeDirection.AUTO}) {
+            w.getBlockState(p).onUseWithItem(wand,w,player,Hand.MAIN_HAND,hit);
+            c.assertTrue(pipe.direction()==expected, "Normal wand clicks visit all directions then automatic");
+        }
+        c.assertTrue(wand.get(net.alkahest.registry.ModDataComponents.ESSENCE_CHARGE)==100 && pipe.filter()==null,
+            "Changing direction is free and leaves the filter unchanged");
+        var amulet=new ItemStack(net.alkahest.registry.ModItems.ALKAHEST_AMULET);
+        player.setStackInHand(Hand.MAIN_HAND,amulet);
+        w.getBlockState(p).onUseWithItem(amulet,w,player,Hand.MAIN_HAND,hit);
+        c.assertTrue(pipe.direction()==net.alkahest.block.entity.PipeDirection.DOWN
+            && amulet.get(net.alkahest.registry.ModDataComponents.ESSENCE_CHARGE)==100,
+            "A normal amulet click also changes direction without spending charge");
+        player.setSneaking(true);
+        amulet.useOnBlock(new net.minecraft.item.ItemUsageContext(player,Hand.MAIN_HAND,hit));
+        c.assertTrue(pipe.filter()==EssenceType.IGNIS && pipe.direction()==net.alkahest.block.entity.PipeDirection.DOWN,
+            "Sneak-use still changes only the filter");
+        var replica=new AlchemyPipeBlockEntity(p,pipe.getCachedState());
+        replica.readComponentlessNbt(pipe.toInitialChunkDataNbt(w.getRegistryManager()),w.getRegistryManager());
+        c.assertTrue(replica.direction()==pipe.direction() && replica.filter()==pipe.filter() && pipe.toUpdatePacket()!=null,
+            "Direction and filter are available to client updates and saves");
+        var old=pipe.createNbt(w.getRegistryManager()); old.remove("Direction");
+        replica.readComponentlessNbt(old,w.getRegistryManager());
+        c.assertTrue(replica.direction()==net.alkahest.block.entity.PipeDirection.AUTO, "Old data defaults to automatic");
+        old.putString("Direction","invalid"); replica.readComponentlessNbt(old,w.getRegistryManager());
+        c.assertTrue(replica.direction()==net.alkahest.block.entity.PipeDirection.AUTO, "Invalid NBT defaults to automatic");
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE, tickLimit = 80)
+    public void configuredDirectionSurvivesDropAndPlacement(TestContext c) {
+        c.setBlockState(2,2,3,ModBlocks.ALCHEMY_PIPE);
+        var w=c.getWorld(); var p=c.getAbsolutePos(new BlockPos(2,2,3));
+        var pipe=(AlchemyPipeBlockEntity)w.getBlockEntity(p);
+        pipe.setDirection(net.alkahest.block.entity.PipeDirection.EAST);
+        pipe.setFilter(EssenceType.AQUA);
+        pipe.setValveMode(net.alkahest.block.entity.PipeValveMode.OPEN_WHEN_POWERED);
+        w.breakBlock(p,true);
+        c.runAtTick(5,()->{
+            var drops=w.getEntitiesByClass(net.minecraft.entity.ItemEntity.class,new net.minecraft.util.math.Box(p).expand(2),
+                e->e.getStack().isOf(ModBlocks.ALCHEMY_PIPE.asItem()));
+            c.assertTrue(drops.size()==1, "Configured pipe drops normally");
+            var item=drops.getFirst().getStack().copy(); drops.getFirst().discard();
+            c.assertTrue(item.get(net.alkahest.registry.ModDataComponents.PIPE_DIRECTION)==net.alkahest.block.entity.PipeDirection.EAST
+                && item.get(net.alkahest.registry.ModDataComponents.PIPE_FILTER)==EssenceType.AQUA
+                && item.get(net.alkahest.registry.ModDataComponents.PIPE_VALVE)==net.alkahest.block.entity.PipeValveMode.OPEN_WHEN_POWERED,
+                "Direction, filter and valve are all copied into the mined item");
+            c.assertFalse(ItemStack.areItemsAndComponentsEqual(item,new ItemStack(ModBlocks.ALCHEMY_PIPE)), "Configured and plain pipes do not stack");
+            var slots=net.minecraft.util.collection.DefaultedList.ofSize(1,ItemStack.EMPTY); slots.set(0,item);
+            var nbt=new net.minecraft.nbt.NbtCompound(); net.minecraft.inventory.Inventories.writeNbt(nbt,slots,w.getRegistryManager());
+            var loaded=net.minecraft.util.collection.DefaultedList.ofSize(1,ItemStack.EMPTY);
+            net.minecraft.inventory.Inventories.readNbt(nbt,loaded,w.getRegistryManager()); item=loaded.get(0);
+            BlockPos base=c.getAbsolutePos(new BlockPos(5,1,3)); w.setBlockState(base,net.minecraft.block.Blocks.STONE.getDefaultState());
+            var player=c.createMockPlayer(GameMode.SURVIVAL); player.setStackInHand(Hand.MAIN_HAND,item);
+            var hit=new BlockHitResult(Vec3d.ofCenter(base),Direction.UP,base,false);
+            c.assertTrue(((net.minecraft.item.BlockItem)item.getItem()).place(new net.minecraft.item.ItemPlacementContext(player,Hand.MAIN_HAND,item,hit)).isAccepted(), "Configured item can be placed");
+            var placed=(AlchemyPipeBlockEntity)w.getBlockEntity(base.up());
+            c.assertTrue(placed.direction()==net.alkahest.block.entity.PipeDirection.EAST && placed.filter()==EssenceType.AQUA
+                && placed.valveMode()==net.alkahest.block.entity.PipeValveMode.OPEN_WHEN_POWERED,
+                "Inventory NBT and replacement restore all three settings");
+            c.complete();
+        });
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE, tickLimit = 80)
+    public void worldTickerHonoursDirectionChanges(TestContext c) {
+        int y=110;
+        c.setBlockState(1,y,3,ModBlocks.DISTILLERY_BELLOWS);
+        c.setBlockState(2,y,3,ModBlocks.ALCHEMY_PIPE);
+        c.setBlockState(3,y,3,ModBlocks.JAR);
+        BlockPos p=c.getAbsolutePos(new BlockPos(2,y,3));
+        var pipe=(AlchemyPipeBlockEntity)c.getWorld().getBlockEntity(p);
+        var source=(DistilleryBellowsBlockEntity)c.getWorld().getBlockEntity(p.west());
+        var jar=(JarBlockEntity)c.getWorld().getBlockEntity(p.east());
+        pipe.setDirection(net.alkahest.block.entity.PipeDirection.WEST);
+        source.accept(EssenceType.HERBA,8,.5f);
+        c.runAtTick(10,()->{
+            c.assertTrue(source.amount()==8 && jar.contents().total()==0, "Registered ticker respects a reversed direction");
+            pipe.setDirection(net.alkahest.block.entity.PipeDirection.EAST);
+        });
+        c.runAtTick(20,()->{
+            c.assertTrue(source.empty() && jar.contents().total()==8, "The next network pulses use the corrected direction");
+            c.setBlockState(1,y,3,net.minecraft.block.Blocks.AIR);
+            c.setBlockState(2,y,3,net.minecraft.block.Blocks.AIR);
+            c.setBlockState(3,y,3,net.minecraft.block.Blocks.AIR);
+            c.complete();
+        });
+    }
+
 }
