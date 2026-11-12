@@ -971,6 +971,9 @@ public class PipeGameTests implements FabricGameTest {
         var hit=new BlockHitResult(Vec3d.ofCenter(p.west()),Direction.UP,p.west(),false);
         w.getBlockState(p.west()).onUse(w,player,hit);
         c.assertTrue(source.pipeSource(), "Sneak empty hand activates source mode");
+        var spectator=c.createMockPlayer(GameMode.SPECTATOR); spectator.setSneaking(true);
+        w.getBlockState(p.west()).onUse(w,spectator,hit);
+        c.assertTrue(source.pipeSource(), "A spectator cannot alter the jar's mode");
         c.assertTrue(AlchemyPipeBlockEntity.pulse(w,p)==4 && receiver.contents().total()==4 && source.contents().total()==2,
             "One source supplies at most four units per pulse, including legacy mixtures");
         c.assertTrue(AlchemyPipeBlockEntity.pulse(w,p)==2 && source.contents().total()==0 && receiver.contents().total()==6,

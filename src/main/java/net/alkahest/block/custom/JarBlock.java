@@ -194,7 +194,7 @@ public class JarBlock extends Block implements BlockEntityProvider {
     }
     @Override protected ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, BlockHitResult hit) {
         if (!world.isClient && world.getBlockEntity(pos) instanceof JarBlockEntity jar) {
-            if (player.isSneaking() && player.getMainHandStack().isEmpty()) {
+            if (!player.isSpectator() && player.isSneaking() && player.getMainHandStack().isEmpty()) {
                 jar.setPipeSource(!jar.pipeSource());
                 player.sendMessage(Text.translatable(jar.pipeSource()
                     ? "message.alkahest.jar_pipe_source_on" : "message.alkahest.jar_pipe_source_off"), true);
