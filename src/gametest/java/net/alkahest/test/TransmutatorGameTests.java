@@ -608,4 +608,31 @@ public class TransmutatorGameTests implements FabricGameTest {
         c.complete();
     }
 
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void inaccessibleJarIsExcludedFromWholePriceUntilRouteOpens(TestContext c) {
+        int y = CY + 48;
+        BlockPos pos = tower(c, y);
+        var core = (TransmutatorCoreBlockEntity) c.getWorld().getBlockEntity(pos);
+        installInput(c, core); core.wake();
+        c.setBlockState(CX + 1, y, CZ, ModBlocks.ALCHEMY_PIPE);
+        c.setBlockState(CX + 2, y, CZ, ModBlocks.ALCHEMY_PIPE);
+        BlockPos pipe = c.getAbsolutePos(new BlockPos(CX + 1, y, CZ));
+        var filter = (net.alkahest.block.entity.AlchemyPipeBlockEntity)c.getWorld().getBlockEntity(pipe.east());
+        var metal = jar(c, CX + 1, y, CZ - 1, EssenceType.METALLUM, 10);
+        var nearOrdo = jar(c, CX + 1, y, CZ + 1, EssenceType.ORDO, 1);
+        var blockedOrdo = jar(c, CX + 3, y, CZ, EssenceType.ORDO, 10);
+        filter.setFilter(EssenceType.IGNIS);
+        run(c.getWorld(), pos, 110);
+        c.assertTrue(net.alkahest.block.entity.AlchemyPipeBlockEntity.pulse(c.getWorld(),pipe)==0,
+            "The physically connected but filtered jar cannot satisfy the missing Ordo");
+        c.assertTrue(metal.contents().total()==10 && nearOrdo.contents().total()==1 && blockedOrdo.contents().total()==10,
+            "Neither accessible nor blocked jars are partly drained");
+        filter.setFilter(null);
+        net.alkahest.block.entity.AlchemyPipeBlockEntity.pulse(c.getWorld(),pipe);
+        c.assertTrue(metal.contents().total()==7 && nearOrdo.contents().total()+blockedOrdo.contents().total()==9,
+            "Opening the route pays exactly the missing price");
+        c.assertTrue(core.getStack(TransmutatorCoreBlockEntity.OUTPUT).isOf(Items.GOLD_INGOT),"The operation resumes");
+        c.complete();
+    }
+
 }

@@ -348,6 +348,14 @@ public class PipeGameTests implements FabricGameTest {
         c.assertTrue(pipe.filter()==null,"Cycle wraps to unrestricted without admitting Vacuum");
         pipe.cycleFilter(player);
         c.assertTrue(pipe.filter()==EssenceType.IGNIS,"Cycle starts at the first ordinary essence");
+        pipe.setFilter(null);
+        for (EssenceType type : EssenceType.values()) {
+            if (type==EssenceType.VACUUM) continue;
+            pipe.cycleFilter(player);
+            c.assertTrue(pipe.filter()==type,"Cycle visits every ordinary essence in order");
+        }
+        pipe.cycleFilter(player);
+        c.assertTrue(pipe.filter()==null,"Cycle returns to unrestricted after all ordinary types");
         var oldNbt=new net.minecraft.nbt.NbtCompound(); oldNbt.putString("Filter","vacuum");
         replica.readComponentlessNbt(oldNbt,c.getWorld().getRegistryManager());
         c.assertTrue(replica.filter()==null,"Invalid old or unsupported filter safely defaults to unrestricted");
