@@ -255,6 +255,13 @@ public class PracticalResearchGameTests implements FabricGameTest {
         long expected = PracticalResearchPlan.IGNIS_WAND | PracticalResearchPlan.MATRIX;
         c.assertTrue((PracticalResearchStorage.completed(player) & expected) == expected, "Parent unlocks group without relocking old progress");
         clearResearch(player);
+        player.getAdvancementTracker().grantCriterion(player.getServer().getAdvancementLoader().get(Alkahest.id("practice/observed_aer_wand")), "done");
+        PracticalResearchStorage.migrate(player);
+        c.assertTrue((PracticalResearchStorage.observed(player) & PracticalResearchPlan.IGNIS_WAND) != 0 &&
+            (PracticalResearchStorage.completed(player) & PracticalResearchPlan.IGNIS_WAND) == 0, "Old early observation migrates and waits");
+        grant(player, "monocle"); PracticalResearchStorage.migrate(player);
+        c.assertTrue((PracticalResearchStorage.completed(player) & PracticalResearchPlan.IGNIS_WAND) != 0, "Migrated observation completes after parent");
+        clearResearch(player);
         player.getAdvancementTracker().grantCriterion(player.getServer().getAdvancementLoader().get(Alkahest.id("practice/completed_aer_wand")), "done");
         PracticalResearchStorage.migrate(player);
         expected = PracticalResearchPlan.AER_WAND | PracticalResearchPlan.IGNIS_WAND;

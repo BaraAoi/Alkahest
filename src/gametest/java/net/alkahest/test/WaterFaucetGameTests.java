@@ -62,6 +62,31 @@ public class WaterFaucetGameTests implements FabricGameTest {
         });
     }
 
+    @GameTest(templateName=EMPTY_STRUCTURE,tickLimit=80)
+    public void placementOnRimAndMixturePreservation(TestContext c) {
+        c.setBlockState(3,1,3,Blocks.MAGMA_BLOCK);
+        c.setBlockState(3,2,3,ModBlocks.ALCHEMY_CAULDRON);
+        BlockPos cauldronPos=c.getAbsolutePos(new BlockPos(3,2,3));
+        var player=c.createMockPlayer(GameMode.SURVIVAL);
+        var blockItem=new ItemStack(ModBlocks.WATER_FAUCET);
+        player.setStackInHand(Hand.MAIN_HAND,blockItem);
+        var hit=new net.minecraft.util.hit.BlockHitResult(net.minecraft.util.math.Vec3d.ofCenter(cauldronPos).add(0,0.5,0),net.minecraft.util.math.Direction.UP,cauldronPos,false);
+        c.getWorld().getBlockState(cauldronPos).onUseWithItem(blockItem,c.getWorld(),player,Hand.MAIN_HAND,hit);
+        c.assertTrue(c.getWorld().getBlockState(cauldronPos.up()).isOf(ModBlocks.WATER_FAUCET),"Faucet places directly on cauldron rim");
+        var faucet=(WaterFaucetBlockEntity)c.getWorld().getBlockEntity(cauldronPos.up());
+        player.setStackInHand(Hand.MAIN_HAND,new ItemStack(ModItems.WANDS.get(EssenceType.AQUA)));
+        faucet.insert(player,Hand.MAIN_HAND);
+        var cauldron=(CauldronBlockEntity)c.getWorld().getBlockEntity(cauldronPos);
+        cauldron.fillFromFaucet();
+        c.assertTrue(cauldron.dissolveOne(new ItemStack(ModItems.CRYSTALS.get(EssenceType.IGNIS))),"Dissolve test essence");
+        var before=cauldron.essences();
+        c.runAtTick(30,()->{
+            c.assertTrue(cauldron.hasWater() && cauldron.essences().equals(before),"Faucet does not replace a filled mixture");
+            c.assertTrue(faucet.stacks().get(0).isOf(ModItems.WANDS.get(EssenceType.AQUA)),"Water wand remains installed");
+            c.complete();
+        });
+    }
+
     @GameTest(templateName=EMPTY_STRUCTURE,tickLimit=60)
     public void waterWandIsPreservedWhenBroken(TestContext c) {
         c.setBlockState(3,2,3,ModBlocks.ALCHEMY_CAULDRON);
