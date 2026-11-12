@@ -34,8 +34,15 @@ public final class RecipeEssenceCalculator {
                 if (known.containsKey(recipe.output()) || recipe.count() <= 0 || recipe.slots().isEmpty()) continue;
                 EnumMap<EssenceType, Double> sum = new EnumMap<>(EssenceType.class);
                 boolean ready = true;
-                int maxDepth = 0;
+                int maxDepth = 0, returnedOutput = 0;
                 for (List<String> slot : recipe.slots()) {
+                    // Template duplication: an unambiguous copy of the output is consumed and
+                    // returned among the results. Infer only the genuinely new copies.
+                    if (slot.size() == 1 && slot.getFirst().equals(recipe.output())
+                            && !recipe.remainders().containsKey(recipe.output())) {
+                        returnedOutput++;
+                        continue;
+                    }
                     String selected = slot.stream().filter(known::containsKey)
                         .filter(id -> !recipe.remainders().containsKey(id) || known.containsKey(recipe.remainders().get(id)))
                         .sorted().findFirst().orElse(null);
@@ -49,9 +56,10 @@ public final class RecipeEssenceCalculator {
                         if (consumed > 0) sum.merge(type, consumed, Double::sum);
                     });
                 }
-                if (!ready || sum.isEmpty()) continue;
+                int netOutput = recipe.count() - returnedOutput;
+                if (!ready || sum.isEmpty() || netOutput <= 0) continue;
                 // Keep fractions and large intermediate values: a later recipe may divide them.
-                sum.replaceAll((type, amount) -> amount / recipe.count());
+                sum.replaceAll((type, amount) -> amount / netOutput);
                 known.put(recipe.output(), Map.copyOf(sum));
                 depths.put(recipe.output(), Math.min(7, maxDepth + 1));
                 changed = true;

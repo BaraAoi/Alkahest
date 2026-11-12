@@ -10,6 +10,8 @@ import net.minecraft.util.Identifier;
 public final class TestItems implements ModInitializer {
     public static final Item CRAFTED = Registry.register(Registries.ITEM,
         Identifier.of("alkahest_gametest", "crafted_sample"), new Item(new Item.Settings()));
+    public static final Item TEMPLATE = Registry.register(Registries.ITEM,
+        Identifier.of("alkahest_gametest", "smithing_template"), new Item(new Item.Settings()));
     public static final Item SMITHED = Registry.register(Registries.ITEM,
         Identifier.of("alkahest_gametest", "smithing_result"), new Item(new Item.Settings()));
     public static final Item COMPLEX = Registry.register(Registries.ITEM,

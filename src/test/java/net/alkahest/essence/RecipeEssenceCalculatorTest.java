@@ -79,4 +79,16 @@ class RecipeEssenceCalculatorTest {
         assertEquals(1, result.depths().get("product"));
         assertEquals(Map.of(ORDO, 10.0), result.values().get("product"));
     }
+    @Test void selfCopyTemplatesAreInferredFromTheNetNewCopiesOnly() {
+        var seed=Map.of("diamond",Map.of(ORDO,10.0));
+        var values=calculate(seed,List.of(
+            new Recipe("a", "template", 2, List.of(List.of("template"), List.of("diamond"))),
+            new Recipe("b", "ambiguous", 2, List.of(List.of("ambiguous", "unknown"), List.of("diamond"))),
+            new Recipe("c", "no_gain", 1, List.of(List.of("no_gain"), List.of("diamond"))),
+            new Recipe("d", "missing", 2, List.of(List.of("missing"), List.of("unknown")))));
+        assertEquals(Map.of(ORDO,10.0), values.get("template"));
+        assertFalse(values.containsKey("ambiguous"));
+        assertFalse(values.containsKey("no_gain"));
+        assertFalse(values.containsKey("missing"));
+    }
 }

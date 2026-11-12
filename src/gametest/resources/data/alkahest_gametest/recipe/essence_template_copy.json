@@ -1,0 +1,5 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [{"item":"alkahest_gametest:smithing_template"}, {"item":"minecraft:diamond"}],
+  "result": {"id":"alkahest_gametest:smithing_template", "count":2}
+}

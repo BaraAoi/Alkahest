@@ -139,15 +139,18 @@ public class RecipeEssenceGameTests implements FabricGameTest {
             .findFirst().orElseThrow();
         c.assertTrue(smithRecipe.value() instanceof net.minecraft.recipe.SmithingTransformRecipe,
             "A real datapack smithing transform was loaded");
+        var template=CauldronBlockEntity.essencesOf(new ItemStack(TestItems.TEMPLATE),world);
+        c.assertTrue(template.getOrDefault(EssenceType.TERRA,0)==15 && template.getOrDefault(EssenceType.LUX,0)==10,
+            "A modded self-copying template is inferred from the cost of one extra copy: "+template);
         var smith=new ItemStack(TestItems.SMITHED);
         var composition=CauldronBlockEntity.essencesOf(smith,world);
-        c.assertTrue(composition.getOrDefault(EssenceType.TERRA,0)==20
-            && composition.getOrDefault(EssenceType.ORDO,0)==20
-            && composition.getOrDefault(EssenceType.LUX,0)==11,
+        c.assertTrue(composition.getOrDefault(EssenceType.TERRA,0)==34
+            && composition.getOrDefault(EssenceType.ORDO,0)==34
+            && composition.getOrDefault(EssenceType.LUX,0)==22,
             "Smithing sums template, crafted base, diamond and the second-stage bonus: "+composition);
         c.assertTrue(composition.getOrDefault(EssenceType.METALLUM,0)==3, "The modded base contributes its iron");
         var complex=CauldronBlockEntity.essencesOf(new ItemStack(TestItems.COMPLEX),world);
-        c.assertTrue(complex.getOrDefault(EssenceType.TERRA,0)==40 && complex.getOrDefault(EssenceType.LUX,0)==24,
+        c.assertTrue(complex.getOrDefault(EssenceType.TERRA,0)==55 && complex.getOrDefault(EssenceType.LUX,0)==36,
             "One further crafting stage and another diamond produce more essence: "+complex);
         c.assertTrue(ItemEssenceMap.get(new ItemStack(TestItems.UNRESOLVED_SMITH),world).isEmpty(),
             "Unknown smithing base is not replaced with a guessed composition");
@@ -155,7 +158,7 @@ public class RecipeEssenceGameTests implements FabricGameTest {
         c.setBlockState(3,1,3,Blocks.MAGMA_BLOCK); c.setBlockState(3,2,3,ModBlocks.ALCHEMY_CAULDRON);
         var pot=(CauldronBlockEntity)world.getBlockEntity(c.getAbsolutePos(new BlockPos(3,2,3)));
         var player=c.createMockPlayer(GameMode.SURVIVAL); player.setStackInHand(Hand.MAIN_HAND,new ItemStack(Items.WATER_BUCKET)); pot.fill(player,Hand.MAIN_HAND);
-        c.assertTrue(pot.dissolveOne(smith) && pot.essences().getOrDefault(EssenceType.TERRA,0)==20,
+        c.assertTrue(pot.dissolveOne(smith) && pot.essences().getOrDefault(EssenceType.TERRA,0)==34,
             "A real cauldron uses the calculated smithing result");
         var original=ItemEssenceMap.get(smith,world); RecipeEssenceService.rebuild(server);
         c.assertTrue(original.equals(ItemEssenceMap.get(smith,world)), "Reload rebuilding is deterministic");
