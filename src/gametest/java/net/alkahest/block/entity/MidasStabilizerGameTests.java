@@ -185,9 +185,9 @@ public final class MidasStabilizerGameTests implements FabricGameTest {
         c.assertTrue(replica.waitingForOutput() && replica.progress()==200 && replica.contents().equals(receiver(c).contents()),
             "The ready state survives world NBT and client data");
         target(c).setContents(JarContentsComponent.EMPTY);
-        for(int t=501;t<=509;t++) tick(c,false,t);
+        for(int t=501;t<=519;t++) tick(c,false,t);
         c.assertTrue(target(c).contents().total()==0 && receiver(c).progress()==200,"The ready batch waits for the next short retry");
-        tick(c,false,510);
+        tick(c,false,520);
         c.assertTrue(target(c).contents().total()==10 && receiver(c).contents().total()==0 && receiver(c).progress()==0,
             "Unblocking delivers the waiting batch without another full cycle");
         c.assertTrue(Math.abs(target(c).contents().contents().getFirst().stability()-.90f)<.001,

@@ -44,8 +44,8 @@ public class StabilizerReceiverBlockEntity extends BlockEntity {
     /** Search area for empty/matching jars; keeps the mechanism simple and predictable. */
     public static final int RADIUS = 4;
     public static final int CAPACITY = JarItem.CAPACITY;
-    /** A ready batch retries output at most twice per second while blocked. */
-    public static final int OUTPUT_RETRY_TICKS = 10;
+    /** A ready batch retries output at most once per second while blocked. */
+    public static final int OUTPUT_RETRY_TICKS = 20;
     public static final float OUTPUT_STABILITY = 0.90f;
     private static final float LOSS_THRESHOLD = 0.20f;
     private static final float LOSS_CHANCE = 0.15f;
