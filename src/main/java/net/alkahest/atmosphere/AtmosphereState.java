@@ -23,8 +23,7 @@ import java.util.Map;
 /** Per-dimension saved excess. Environmental baselines are disposable, loaded-chunk-only caches. */
 public final class AtmosphereState extends PersistentState {
     private static final Type<AtmosphereState> TYPE = new Type<>(AtmosphereState::new, AtmosphereState::read, null);
-    private static final int MAX_CELLS = 4096, CACHE_SIZE = 512;
-    private static final double MAX_STORED = 1_000_000_000_000.0;
+    private static final int MAX_DIFFUSION_CELLS = 4096, CACHE_SIZE = 512;
     static final long SPREAD_INTERVAL = 400;
     static final int WORK_PER_TICK = 16;
     private static final double SPREAD_DIVISOR = 256.0, MIN_TRANSFER = 0.000001;
@@ -77,8 +76,6 @@ public final class AtmosphereState extends PersistentState {
     private Cell obtain(long key, long now) {
         Cell cell = cells.get(key);
         if (cell != null) { prepare(cell, now); return cell; }
-        // Never evict existing atmosphere to make room; stop accepting new cells at the cap.
-        if (cells.size() >= MAX_CELLS) return null;
         cell = new Cell(now); cells.put(key, cell); work.addLast(key); return cell;
     }
     /** Process a bounded round-robin slice; never load a chunk for atmosphere simulation. */
@@ -111,10 +108,11 @@ public final class AtmosphereState extends PersistentState {
                 Cell target = cells.get(dest.asLong());
                 if (target != null) prepare(target, now);
                 double old = target == null ? 0 : target.excess.getOrDefault(type, 0.0);
-                double moved = Math.min(remaining, Math.min((initial - old) / SPREAD_DIVISOR, MAX_STORED - old));
+                double moved = Math.min(remaining, (initial - old) / SPREAD_DIVISOR);
                 if (moved < MIN_TRANSFER) continue; // retain tiny amounts rather than deleting them
+                // Limit passive expansion, not emissions: an actual source can always create its own cell.
+                if (target == null && cells.size() >= MAX_DIFFUSION_CELLS) continue;
                 if (target == null) target = obtain(dest.asLong(), now);
-                if (target == null) continue; // leave the amount in the source if the cell budget is full
                 target.excess.put(type, old + moved);
                 remaining -= moved;
             }
@@ -128,9 +126,7 @@ public final class AtmosphereState extends PersistentState {
         AtmosphereMath.split(type, amount, parts);
         if (parts.isEmpty() || !world.isChunkLoaded(pos)) return;
         Cell cell = obtain(cellOrigin(pos).asLong(), world.getTime());
-        if (cell == null) return;
-        parts.forEach((key, value) -> cell.excess.merge(key, Math.min(MAX_STORED, value),
-            (a, b) -> Math.min(MAX_STORED, a + b)));
+        parts.forEach((key, value) -> cell.excess.merge(key, value, Double::sum));
         markDirty();
     }
     public void add(ServerWorld world, BlockPos pos, Map<EssenceType, ? extends Number> amounts, double factor) {
@@ -198,13 +194,13 @@ public final class AtmosphereState extends PersistentState {
         AtmosphereState state = new AtmosphereState();
         boolean oldFormat = nbt.getInt("Format") < 2;
         NbtList list = nbt.getList("Cells", NbtElement.COMPOUND_TYPE);
-        for (int i = 0; i < list.size() && state.cells.size() < MAX_CELLS; i++) {
+        for (int i = 0; i < list.size(); i++) {
             NbtCompound entry = list.getCompound(i); Cell cell = new Cell(entry.getLong("Time"));
             cell.legacyDecay = oldFormat || entry.getBoolean("LegacyDecay");
             state.needsMigration |= cell.legacyDecay;
             for (EssenceType type : AtmosphereMath.PRIMALS) {
                 double value = entry.getDouble(type.asString());
-                if (Double.isFinite(value) && value > 0) cell.excess.put(type, Math.min(MAX_STORED, value));
+                if (Double.isFinite(value) && value > 0) cell.excess.put(type, value);
             }
             long key = entry.getLong("Pos");
             if (!cell.excess.isEmpty() && !state.cells.containsKey(key)) {

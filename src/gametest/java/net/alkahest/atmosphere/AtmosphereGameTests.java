@@ -122,6 +122,28 @@ public class AtmosphereGameTests implements FabricGameTest {
     }
 
     @GameTest(templateName = EMPTY_STRUCTURE)
+    public void emissionsRemainStoredEvenWhenDiffusionBudgetIsFull(TestContext c) {
+        var w = c.getWorld(); BlockPos pos = c.getAbsolutePos(new BlockPos(3, 3, 3));
+        var root = new NbtCompound(); root.putInt("Format", 2);
+        var entries = new net.minecraft.nbt.NbtList();
+        for (int i = 0; i < 4096; i++) {
+            var entry = new NbtCompound(); entry.putLong("Pos", new BlockPos(1000000 + i * 16, 64, 1000000).asLong());
+            entry.putLong("Time", w.getTime()); entry.putDouble("ignis", 1); entries.add(entry);
+        }
+        root.put("Cells", entries);
+        var state = AtmosphereState.read(root, w.getRegistryManager());
+        state.add(w, pos, EssenceType.IGNIS, 1000000000001.0);
+        state.add(w, pos, EssenceType.IGNIS, 2);
+        c.assertTrue(Math.abs(storedAt(state, c, pos, EssenceType.IGNIS) - 1000000000003.0) < 0.01,
+            "A real emission can create a cell and is not clipped when the passive expansion budget is full");
+        state.diffuseOne(w, pos, w.getTime() + AtmosphereState.SPREAD_INTERVAL);
+        var reloaded = AtmosphereState.read(state.writeNbt(new NbtCompound(), w.getRegistryManager()), w.getRegistryManager());
+        c.assertTrue(Math.abs(storedAt(reloaded, c, pos, EssenceType.IGNIS) - 1000000000003.0) < 0.01,
+            "Full expansion budget retains the source and reload keeps all cells");
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
     public void unloadedDiffusionDoesNotLoadChunksOrDeleteEssence(TestContext c) {
         var w = c.getWorld(); BlockPos far = AtmosphereState.cellOrigin(new BlockPos(29000000, 64, 29000000));
         c.assertFalse(w.isChunkLoaded(far), "Distant cell starts unloaded");
