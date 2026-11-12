@@ -27,7 +27,9 @@ class AtmosphereReadingTest {
         assertTrue(AtmosphereReading.decode("x".repeat(513)).isEmpty());
         assertTrue(AtmosphereReading.decode(wire + "|extra").isEmpty());
         assertTrue(AtmosphereReading.decode(wire.replace("40.0", "NaN")).isEmpty());
-        assertTrue(AtmosphereReading.decode(wire.replace("40.0", "101")).isEmpty());
+        assertEquals(101.0, AtmosphereReading.decode(wire.replace("40.0", "101")).orElseThrow().levels().get(0));
+        assertTrue(AtmosphereReading.decode(wire.replace("40.0", "Infinity")).isEmpty());
+        assertTrue(AtmosphereReading.decode(wire.replace("40.0", "-1")).isEmpty());
         assertTrue(AtmosphereReading.decode(wire.replace("|-16|", "|-15|")).isEmpty());
         assertTrue(AtmosphereReading.decode(wire.replace("minecraft:overworld", "invalid id")).isEmpty());
     }

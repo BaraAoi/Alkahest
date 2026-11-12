@@ -26,7 +26,7 @@ public final class AtmosphereState extends PersistentState {
     private static final int MAX_DIFFUSION_CELLS = 4096, CACHE_SIZE = 512;
     static final long SPREAD_INTERVAL = 400;
     static final int WORK_PER_TICK = 16;
-    private static final double SPREAD_DIVISOR = 256.0, MIN_TRANSFER = 0.000001;
+    private static final double MIN_TRANSFER = 0.000001;
     private static final long BASELINE_TICKS = 400;
     private final Map<Long, Cell> cells = new HashMap<>();
     private final ArrayDeque<Long> work = new ArrayDeque<>();
@@ -90,7 +90,7 @@ public final class AtmosphereState extends PersistentState {
             diffuseOne(world, BlockPos.fromLong(key), now);
         }
     }
-    /** Each face transfers 1/256 of the excess gradient per 20 loaded seconds. */
+    /** Slow gradient-dependent transfer per face, no more often than every 20 loaded seconds. */
     void diffuseOne(ServerWorld world, BlockPos pos, long now) {
         BlockPos origin = cellOrigin(pos); Cell source = cells.get(origin.asLong());
         if (source == null || !world.isChunkLoaded(origin)) return;
@@ -108,7 +108,7 @@ public final class AtmosphereState extends PersistentState {
                 Cell target = cells.get(dest.asLong());
                 if (target != null) prepare(target, now);
                 double old = target == null ? 0 : target.excess.getOrDefault(type, 0.0);
-                double moved = Math.min(remaining, (initial - old) / SPREAD_DIVISOR);
+                double moved = Math.min(remaining, AtmosphereMath.diffusionTransfer(initial, old));
                 if (moved < MIN_TRANSFER) continue; // retain tiny amounts rather than deleting them
                 // Limit passive expansion, not emissions: an actual source can always create its own cell.
                 if (target == null && cells.size() >= MAX_DIFFUSION_CELLS) continue;
@@ -126,7 +126,7 @@ public final class AtmosphereState extends PersistentState {
         AtmosphereMath.split(type, amount, parts);
         if (parts.isEmpty() || !world.isChunkLoaded(pos)) return;
         Cell cell = obtain(cellOrigin(pos).asLong(), world.getTime());
-        parts.forEach((key, value) -> cell.excess.merge(key, value, Double::sum));
+        parts.forEach((key, value) -> cell.excess.merge(key, value, AtmosphereMath::finiteSum));
         markDirty();
     }
     public void add(ServerWorld world, BlockPos pos, Map<EssenceType, ? extends Number> amounts, double factor) {
@@ -140,8 +140,8 @@ public final class AtmosphereState extends PersistentState {
         Cell cell = cells.get(origin.asLong());
         if (cell != null) prepare(cell, world.getTime());
         for (EssenceType type : AtmosphereMath.PRIMALS)
-            result.put(type, Math.min(AtmosphereMath.MAX_LEVEL, baseline.getOrDefault(type, 10.0)
-                + (cell == null ? 0 : cell.excess.getOrDefault(type, 0.0))));
+            result.put(type, AtmosphereMath.finiteSum(baseline.getOrDefault(type, 10.0),
+                cell == null ? 0 : cell.excess.getOrDefault(type, 0.0)));
         return result;
     }
     /** Whether a real block scan exists, rather than the temporary neutral fallback. */

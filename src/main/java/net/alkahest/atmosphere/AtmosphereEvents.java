@@ -34,8 +34,8 @@ public final class AtmosphereEvents {
                 player.sendMessage(Text.translatable("message.alkahest.air_header", origin.getX(), origin.getY(), origin.getZ()), false);
                 for (EssenceType type : AtmosphereMath.PRIMALS) {
                     player.sendMessage(Text.translatable("message.alkahest.air_value", type.displayName(),
-                        String.format(java.util.Locale.ROOT, "%.1f", levels.get(type)),
-                        String.format(java.util.Locale.ROOT, "%.1f", base.get(type)))
+                        AtmosphereMath.formatLevel(levels.get(type)),
+                        AtmosphereMath.formatLevel(base.get(type)))
                         .styled(style -> style.withColor(type.color())), false);
                 }
                 return 1;
@@ -132,19 +132,22 @@ public final class AtmosphereEvents {
         if (!ElementalEntity.canSpawn(entityType, world, SpawnReason.EVENT, target, world.random)) return false;
         ElementalEntity entity = entityType.spawn(world, target, SpawnReason.EVENT);
         if (entity == null) return false;
-        AtmosphereState.of(world).spend(world, origin, type, 25);
+        AtmosphereState.of(world).spend(world, origin, type, 5);
         return true;
     }
     private static void attempt(ServerWorld world, BlockPos origin) {
         if (!world.isChunkLoaded(origin)) return;
         Map<EssenceType, Double> levels = AtmosphereState.of(world).levels(world, origin);
         if (world.random.nextDouble() >= AtmosphereMath.spawnChance(levels)) return;
+        // Normalize weights first so even very large finite saved concentrations cannot overflow the sum.
+        double largest = 0;
+        for (EssenceType t : AtmosphereMath.PRIMALS) largest = Math.max(largest, Math.max(0, levels.getOrDefault(t, 0.0) - AtmosphereMath.SPAWN_THRESHOLD));
+        if (largest <= 0) return;
         double total = 0;
-        for (EssenceType t : AtmosphereMath.PRIMALS) total += Math.max(0, levels.getOrDefault(t, 0.0) - AtmosphereMath.SPAWN_THRESHOLD);
-        if (total <= 0) return;
+        for (EssenceType t : AtmosphereMath.PRIMALS) total += Math.max(0, levels.getOrDefault(t, 0.0) - AtmosphereMath.SPAWN_THRESHOLD) / largest;
         double draw = world.random.nextDouble() * total; EssenceType selected = null;
         for (EssenceType t : AtmosphereMath.PRIMALS) {
-            draw -= Math.max(0, levels.getOrDefault(t, 0.0) - AtmosphereMath.SPAWN_THRESHOLD);
+            draw -= Math.max(0, levels.getOrDefault(t, 0.0) - AtmosphereMath.SPAWN_THRESHOLD) / largest;
             if (draw < 0) { selected = t; break; }
         }
         if (selected == null) return;

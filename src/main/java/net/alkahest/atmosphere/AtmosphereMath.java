@@ -9,7 +9,8 @@ import java.util.Map;
 public final class AtmosphereMath {
     public static final List<EssenceType> PRIMALS = List.of(EssenceType.IGNIS, EssenceType.AQUA,
         EssenceType.TERRA, EssenceType.AER, EssenceType.ORDO, EssenceType.PERDITIO);
-    public static final double LEGACY_MAX_EXCESS = 80, MAX_LEVEL = 100;
+    public static final double LEGACY_MAX_EXCESS = 80;
+    private static final double STABILITY_LEVEL_LIMIT = 100;
     public static final long LEGACY_HALF_LIFE = 12000; // only for importing pre-diffusion saves
     public static final double SPAWN_THRESHOLD = 25;
 
@@ -38,7 +39,7 @@ public final class AtmosphereMath {
         double weight = 0, overload = 0;
         for (var entry : weights.entrySet()) {
             weight += entry.getValue();
-            overload += entry.getValue() * Math.max(0, Math.min(MAX_LEVEL, levels.getOrDefault(entry.getKey(), 0.0)) - 30);
+            overload += entry.getValue() * Math.max(0, Math.min(STABILITY_LEVEL_LIMIT, levels.getOrDefault(entry.getKey(), 0.0)) - 30);
         }
         if (weight == 0) return 100;
         return (int) Math.round(Math.max(50, Math.min(100, 100 - overload / weight)));
@@ -46,8 +47,27 @@ public final class AtmosphereMath {
     /** One roll per active cell per minute, summed chance capped at 12%. */
     public static double spawnChance(Map<EssenceType, Double> levels) {
         double excess = 0;
-        for (EssenceType type : PRIMALS) excess += Math.max(0, Math.min(MAX_LEVEL, levels.getOrDefault(type, 0.0)) - SPAWN_THRESHOLD);
-        return Math.min(0.12, excess * 0.001);
+        for (EssenceType type : PRIMALS) {
+            excess += Math.min(120, Math.max(0, levels.getOrDefault(type, 0.0) - SPAWN_THRESHOLD));
+            if (excess >= 120) return 0.12;
+        }
+        return excess * 0.001;
+    }
+    /** Slow positive-gradient flow per face; larger differences accelerate it, without overtaking the old rate. */
+    public static double diffusionTransfer(double source, double target) {
+        double difference = source - target;
+        if (!(difference > 0) || !Double.isFinite(difference)) return 0;
+        // Saturating response: 1/2048 for tiny gradients, approaching 1/512 for extreme ones.
+        double acceleration = 1 + 3 * (1 - 400 / (difference + 400));
+        return difference / 2048 * acceleration;
+    }
+    /** Finite saturation protects the saved and network formats from IEEE overflow, not a gameplay cap. */
+    public static double finiteSum(double a, double b) {
+        double sum = a + b;
+        return Double.isFinite(sum) ? sum : Double.MAX_VALUE;
+    }
+    public static String formatLevel(double value) {
+        return String.format(java.util.Locale.ROOT, value >= 100000 ? "%.2e" : "%.1f", value);
     }
     private AtmosphereMath() { }
 }

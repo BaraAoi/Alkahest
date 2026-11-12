@@ -40,5 +40,19 @@ class AtmosphereMathTest {
         assertEquals(.015, AtmosphereMath.spawnChance(Map.of(IGNIS, 40.0)), 1e-9);
         assertEquals(.12, AtmosphereMath.spawnChance(Map.of(IGNIS, 100.0, AQUA, 100.0)), 1e-9);
         assertEquals(.075, AtmosphereMath.spawnChance(Map.of(IGNIS, 100.0)), 1e-9);
+        assertEquals(.12, AtmosphereMath.spawnChance(Map.of(IGNIS, 145.0)), 1e-9);
+    }
+    @Test void gradientDiffusionIsSlowMonotonicAndBounded() {
+        assertEquals(0, AtmosphereMath.diffusionTransfer(10, 20));
+        assertEquals(0, AtmosphereMath.diffusionTransfer(10, 10));
+        double small = AtmosphereMath.diffusionTransfer(40, 0);
+        double large = AtmosphereMath.diffusionTransfer(400, 0);
+        assertTrue(small > 0 && small < 40.0 / 256);
+        assertTrue(large > small && large / 400 > small / 40);
+        assertTrue(large < 400.0 / 256);
+        assertTrue(AtmosphereMath.diffusionTransfer(1e12, 0) < 1e12 / 256);
+        assertTrue(Double.isFinite(AtmosphereMath.diffusionTransfer(Double.MAX_VALUE, 0)));
+        assertEquals(Double.MAX_VALUE, AtmosphereMath.finiteSum(Double.MAX_VALUE, Double.MAX_VALUE));
+        assertTrue(AtmosphereMath.formatLevel(1e12).contains("e"));
     }
 }

@@ -17,8 +17,8 @@ public record AtmosphereReading(String dimension, int x, int y, int z,
                 || x % 16 != 0 || y % 16 != 0 || z % 16 != 0
                 || Math.abs((long) x) > 30000016 || Math.abs((long) z) > 30000016
                 || y < -2048 || y > 2047 || levels.size() != 6 || baseline.size() != 6
-                || levels.stream().anyMatch(v -> !Double.isFinite(v) || v < 0 || v > 100)
-                || baseline.stream().anyMatch(v -> !Double.isFinite(v) || v < 0 || v > 100))
+                || levels.stream().anyMatch(v -> !Double.isFinite(v) || v < 0)
+                || baseline.stream().anyMatch(v -> !Double.isFinite(v) || v < 0))
             throw new IllegalArgumentException("Invalid atmospheric reading");
     }
     public static AtmosphereReading create(String dimension, BlockPos pos, Map<EssenceType, Double> levels,

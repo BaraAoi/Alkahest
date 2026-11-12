@@ -107,6 +107,36 @@ public class AtmosphereGameTests implements FabricGameTest {
         c.complete();
     }
     @GameTest(templateName = EMPTY_STRUCTURE)
+    public void uncappedLevelsAndSlowGradientSurviveSaveAndTelemetry(TestContext c) {
+        var w = c.getWorld(); BlockPos pos = c.getAbsolutePos(new BlockPos(3,3,3));
+        var up = AtmosphereState.cellOrigin(pos).up(16); long now = w.getTime();
+        var weak = new AtmosphereState(); var strong = new AtmosphereState();
+        weak.add(w, pos, EssenceType.IGNIS, 40); strong.add(w, pos, EssenceType.IGNIS, 400);
+        double base = strong.baseline(w, pos).get(EssenceType.IGNIS);
+        c.assertTrue(Math.abs(strong.levels(w, pos).get(EssenceType.IGNIS) - base - 400) < 1e-8,
+            "Real levels expose all 400 units above the natural background");
+        var sample = AtmosphereReading.create("minecraft:overworld", pos, strong.levels(w,pos), strong.baseline(w,pos));
+        c.assertTrue(AtmosphereReading.decode(sample.encode()).orElseThrow().levels().get(0) > 400,
+            "Network reading accepts and preserves values above 100");
+        weak.diffuseOne(w,pos,now+AtmosphereState.SPREAD_INTERVAL);
+        strong.diffuseOne(w,pos,now+AtmosphereState.SPREAD_INTERVAL);
+        double weakMove = storedAt(weak,c,up,EssenceType.IGNIS), strongMove = storedAt(strong,c,up,EssenceType.IGNIS);
+        c.assertTrue(weakMove > 0 && strongMove > weakMove && strongMove / 400 > weakMove / 40,
+            "A larger excess gradient raises both the transfer and its fraction");
+        c.assertTrue(strongMove < 400.0/256 && storedAt(strong,c,pos,EssenceType.IGNIS) > 390,
+            "Even large gradients diffuse slower than the old rate and mostly stay local");
+        for (int i=2; i<=60; i++) strong.diffuseOne(w,pos,now+i*AtmosphereState.SPREAD_INTERVAL);
+        c.assertTrue(storedAt(strong,c,pos,EssenceType.IGNIS) > 200,
+            "Even after 20 loaded minutes most of a 400-unit emission stays in its original cell");
+        c.assertTrue(Math.abs(totalStored(strong,c,EssenceType.IGNIS)-400) < 1e-7,
+            "Repeated slow diffusion conserves the full emission");
+        var reloaded=AtmosphereState.read(strong.writeNbt(new NbtCompound(),w.getRegistryManager()),w.getRegistryManager());
+        c.assertTrue(Math.abs(totalStored(reloaded,c,EssenceType.IGNIS)-400)<1e-7 && reloaded.levels(w,pos).get(EssenceType.IGNIS)>100,
+            "Save/load retains uncapped levels and total stored essence");
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
     public void diffusionSchedulerRunsAfterLoad(TestContext c) {
         var w = c.getWorld(); BlockPos pos = c.getAbsolutePos(new BlockPos(3, 3, 3));
         var initial = new AtmosphereState(); initial.add(w, pos, EssenceType.ORDO, 32);
@@ -330,8 +360,8 @@ public class AtmosphereGameTests implements FabricGameTest {
         var air = AtmosphereState.of(w); air.add(w, target, EssenceType.IGNIS, 40);
         double before = air.levels(w, target).get(EssenceType.IGNIS);
         c.assertTrue(AtmosphereEvents.spawnAt(w, origin, target, EssenceType.IGNIS, List.of(player)), "Valid player distance and clear loaded space allow manifestation");
-        c.assertTrue(Math.abs(air.levels(w, target).get(EssenceType.IGNIS) - before + 25) < 1e-8,
-            "Successful manifestation spends only 25 excess Ignis");
+        c.assertTrue(Math.abs(air.levels(w, target).get(EssenceType.IGNIS) - before + 5) < 1e-8,
+            "Successful manifestation spends only 5 excess Ignis");
         var mobs = w.getEntitiesByClass(net.alkahest.entity.ElementalEntity.class,
             new net.minecraft.util.math.Box(target).expand(24), e -> e.isAlive());
         c.assertTrue(mobs.size() == 1 && mobs.getFirst().essenceType() == EssenceType.IGNIS, "The selected elemental actually appears");

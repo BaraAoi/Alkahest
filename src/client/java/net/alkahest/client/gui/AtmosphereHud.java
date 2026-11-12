@@ -10,7 +10,6 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;
 import org.lwjgl.glfw.GLFW;
-import java.util.Locale;
 
 /** Optional, quiet current-cell panel; values are supplied by the server, never reconstructed client-side. */
 public final class AtmosphereHud {
@@ -42,12 +41,14 @@ public final class AtmosphereHud {
         var snapshot = reading.get();
         if (!snapshot.equals(rendered)) {
             var updated = new java.util.ArrayList<String>(AtmosphereMath.PRIMALS.size());
-            for (double value : snapshot.levels()) updated.add(String.format(Locale.ROOT, "%.1f", value));
+            for (double value : snapshot.levels()) updated.add(AtmosphereMath.formatLevel(value));
             rendered = snapshot; cachedValues = java.util.List.copyOf(updated);
         }
         // Only six coloured numbers: no plate, frame, labels, coordinates, symbols or chance.
+        int columnWidth = 42;
+        for (String value : cachedValues) columnWidth = Math.max(columnWidth, client.textRenderer.getWidth(value) + 8);
         for (int i = 0; i < cachedValues.size(); i++) {
-            int x = 7 + (i % 3) * 42, y = 7 + (i / 3) * 14;
+            int x = 7 + (i % 3) * columnWidth, y = 7 + (i / 3) * 14;
             context.drawTextWithShadow(client.textRenderer, cachedValues.get(i), x, y, COLORS[i]);
         }
     }
