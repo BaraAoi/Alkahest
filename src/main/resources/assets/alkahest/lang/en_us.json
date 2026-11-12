@@ -485,5 +485,11 @@
   "screen.alkahest.journal.inventory_mix": "Inventory: right-click",
   "screen.alkahest.journal.cauldron_diagram": "Heated cauldron + water",
   "screen.alkahest.journal.cauldron_hint": "Dissolve essences, then right-click with catalyst.",
-  "screen.alkahest.journal.alkahest_hint": "Dissolve moss first; right-click with the diamond."
+  "screen.alkahest.journal.alkahest_hint": "Dissolve moss first; right-click with the diamond.",
+  "screen.alkahest.practice.herbal_paste.title": "Herbal Paste",
+  "screen.alkahest.practice.herbal_paste.recipe": "Dissolve the essences in a heated cauldron of water, then right-click it with wheat seeds. The two pastes can be processed for essence; further uses for paste are not implemented yet.",
+  "screen.alkahest.practice.fire_dust.title": "Fire Dust",
+  "screen.alkahest.practice.fire_dust.recipe": "Dissolve the indicated essences in a cauldron, then right-click with gunpowder. Throw the dust to ignite creatures and terrain, or mix it with a slime ball in your inventory for napalm. Beware of fire.",
+  "screen.alkahest.practice.caustic_slime.title": "Caustic Slime",
+  "screen.alkahest.practice.caustic_slime.recipe": "Dissolve the indicated essences in a cauldron, then right-click with a slime ball. When thrown, caustic slime creates a slowing area. Mix it with gunpowder in your inventory to make an acid bomb."
 }

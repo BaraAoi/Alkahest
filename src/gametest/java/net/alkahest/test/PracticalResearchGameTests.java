@@ -178,6 +178,65 @@ public class PracticalResearchGameTests implements FabricGameTest {
         player.getAdvancementTracker().grantCriterion(player.getServer().getAdvancementLoader().get(Alkahest.id("practice/completed_" + id)), "done");
     }
     @GameTest(templateName = EMPTY_STRUCTURE)
+    public void reagentResearchRemembersEarlyItemsAndPreservesOldProgress(TestContext c) {
+        var player = c.createMockCreativeServerPlayerInWorld();
+        clearResearch(player);
+        grant(player, "matrix");
+        ItemStack paste = new ItemStack(ModItems.HERBAL_PASTE, 2);
+        c.assertTrue(player.getInventory().insertStack(paste), "Real inventory insertion observes paste");
+        PracticalResearchStorage.observe(player, new ItemStack(ModItems.CAUSTIC_SLIME));
+        long early = PracticalResearchPlan.HERBAL_PASTE | PracticalResearchPlan.CAUSTIC_SLIME;
+        c.assertTrue((PracticalResearchStorage.observed(player) & early) == early, "Early items are recorded independently");
+        c.assertTrue((PracticalResearchStorage.completed(player) & early) == 0, "Both await purified water");
+        c.assertTrue((PracticalResearchStorage.completed(player) & PracticalResearchPlan.MATRIX) != 0, "Old Matrix completion stays intact");
+        grant(player, "water");
+        PracticalResearchStorage.migrate(player);
+        c.assertTrue((PracticalResearchStorage.completed(player) & early) == early, "Both finish once the parent is complete");
+        c.assertTrue((PracticalResearchStorage.completed(player) & PracticalResearchPlan.FIRE_DUST) == 0, "Unobtained sibling stays unfinished");
+        PracticalResearchStorage.observe(player, new ItemStack(ModItems.FIRE_DUST));
+        long expected = early | PracticalResearchPlan.FIRE_DUST | PracticalResearchPlan.MATRIX | PracticalResearchPlan.WATER;
+        c.assertTrue((PracticalResearchStorage.completed(player) & expected) == expected, "Obtaining fire dust finishes its own branch");
+        c.assertTrue(player.getInventory().contains(new ItemStack(ModItems.HERBAL_PASTE)), "Research never consumes the received item");
+        player.getAdvancementTracker().save();
+        player.getAdvancementTracker().reload(c.getWorld().getServer().getAdvancementLoader());
+        c.assertTrue((PracticalResearchStorage.completed(player) & expected) == expected, "New high-bit and old progress survive reload");
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void reagentBrewingImmediatelyCreditsTheResearch(TestContext c) {
+        var player = c.createMockCreativeServerPlayerInWorld();
+        clearResearch(player); grant(player, "water");
+        c.setBlockState(3, 1, 3, net.minecraft.block.Blocks.MAGMA_BLOCK);
+        c.setBlockState(3, 2, 3, ModBlocks.ALCHEMY_CAULDRON);
+        var cauldron = (net.alkahest.block.entity.CauldronBlockEntity)c.getWorld().getBlockEntity(c.getAbsolutePos(new net.minecraft.util.math.BlockPos(3, 2, 3)));
+        for (var output : java.util.List.of(ModItems.HERBAL_PASTE, ModItems.FIRE_DUST, ModItems.CAUSTIC_SLIME)) {
+            var recipe = net.alkahest.recipe.CauldronEssenceRecipes.all().stream().filter(r -> r.result() == output).findFirst().orElseThrow();
+            player.setStackInHand(net.minecraft.util.Hand.MAIN_HAND, new ItemStack(net.minecraft.item.Items.WATER_BUCKET));
+            cauldron.fill(player, net.minecraft.util.Hand.MAIN_HAND);
+            for (var cost : recipe.cost().entrySet()) for (int i = 0; i < cost.getValue(); i++)
+                c.assertTrue(cauldron.dissolveOne(new ItemStack(ModItems.CRYSTALS.get(cost.getKey()))), "Essence dissolves");
+            player.setStackInHand(net.minecraft.util.Hand.MAIN_HAND, new ItemStack(recipe.catalyst()));
+            c.assertTrue(cauldron.useItem(player, net.minecraft.util.Hand.MAIN_HAND), "Catalyst brews the real recipe");
+            long flag = PracticalResearchPlan.forItem(net.minecraft.registry.Registries.ITEM.getId(output).toString()).bit();
+            c.assertTrue((PracticalResearchStorage.completed(player) & flag) != 0, "Brewing and receiving the item credits its research");
+        }
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void journalPayloadPreservesResearchBitsAboveThirtyOne(TestContext c) {
+        long flags = PracticalResearchPlan.CAULDRON | PracticalResearchPlan.FIRE_DUST | PracticalResearchPlan.CAUSTIC_SLIME;
+        var buf = new net.minecraft.network.RegistryByteBuf(io.netty.buffer.Unpooled.buffer(), c.getWorld().getRegistryManager());
+        try {
+            net.alkahest.network.OpenJournalPayload.CODEC.encode(buf, new net.alkahest.network.OpenJournalPayload(flags));
+            c.assertTrue(net.alkahest.network.OpenJournalPayload.CODEC.decode(buf).flags() == flags,
+                "Journal payload preserves all high research bits");
+        } finally { buf.release(); }
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
     public void assembledMatrixRequiresWandAndTwoPedestals(TestContext c) {
         var player = c.createMockCreativeServerPlayerInWorld(); clearResearch(player); grant(player, "amulet"); grant(player, "transmutator");
         c.setBlockState(3,3,3,ModBlocks.MATRIX_CORE);

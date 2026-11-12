@@ -12,7 +12,7 @@ data = root / 'src/main/resources/data/alkahest'
 java = root / 'src/main/java/net/alkahest'
 plan = (java / 'research/PracticalResearchPlan.java').read_text()
 steps = re.findall(r'new Step\("([a-z0-9_]+)", "alkahest:([a-z0-9_]+)",', plan)
-assert len(steps) == 31 and len(set(steps)) == len(steps), 'all 31 steps must exist and be unique'
+assert len(steps) == 34 and len(set(steps)) == len(steps), 'all 34 steps must exist and be unique'
 # Every visible node must exist exactly once and have its own clickable area.
 journal = (root / 'src/client/java/net/alkahest/client/gui/JournalScreen.java').read_text()
 nodes = [(int(i), int(x), int(y)) for i, x, y in re.findall(r'node\((\d+),\s*(-?\d+),\s*(-?\d+)\)', journal)]
@@ -74,3 +74,8 @@ for output, inputs in {
     assert [entry['item'] for entry in recipe['ingredients']] == inputs
     assert recipe['result'] == {'id': f'alkahest:{output}', 'count': 1}
 subprocess.run(['python3', 'scripts/generate_journal_recipes.py', '--check'], check=True)
+
+# All cauldron recipes must be illustrated in the notes, not a manually maintained subset.
+assert 'CAULDRON_PAGE = 3' in journal and 'renderCauldronIndex(c, x, y, w, h, mouseX, mouseY)' in journal
+assert 'BookPagination.pages(net.alkahest.recipe.CauldronEssenceRecipes.all().size(), 2)' in journal
+assert 'Node preview = new Node("cauldron_index"' in journal

@@ -47,6 +47,17 @@ class PracticalResearchPlanTest {
         assertEquals(0, migrate(1L << 33)); // previously discovered is not previously completed
     }
 
+    @Test void newReagentsUseHighBitsAndKeepOldCompletions() {
+        long old = (1L << 31) - 1;
+        long additions = HERBAL_PASTE | FIRE_DUST | CAUSTIC_SLIME;
+        assertEquals(old, resolve(old, 0, 0));
+        assertEquals(0, old & additions);
+        assertEquals(0, resolve(0, additions, 0));
+        assertEquals(WATER | additions, resolve(WATER, additions, 0));
+        assertEquals(old | additions, resolve(old, additions, 0));
+        assertEquals(33, Long.numberOfTrailingZeros(CAUSTIC_SLIME));
+    }
+
     @Test void graphIsAcyclicAndIdsAreUnique() {
         var ids = new HashSet<String>();
         var items = new HashSet<String>();

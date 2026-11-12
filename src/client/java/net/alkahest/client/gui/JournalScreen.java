@@ -27,6 +27,7 @@ public final class JournalScreen extends Screen {
     private static final Identifier BACKGROUND = Alkahest.id("textures/gui/journal_background.png");
     private static final int GUIDE_PAGES = 11;
     /** The last page of the field notes is not text: it lists every synthesis of the Matrix. */
+    private static final int CAULDRON_PAGE = 3;
     private static final int RECIPES_PAGE = 9;
     private static final int TRANSMUTATION_PAGE = 10;
     private record Node(String key, long parents, long completed, int x, int y, ItemStack icon) { }
@@ -42,7 +43,8 @@ public final class JournalScreen extends Screen {
         node(13, 556, 90), node(14, 632, -60),
         node(17, 784, 0), node(19, -80, -100), node(20, -20, -150),
         node(21, 50, -185), node(22, 120, -185), node(23, 190, -165), node(24, -100, -40), node(25, -90, 40),
-        node(26, 176, 80), node(29, 252, 110), node(30, 176, -80)
+        node(26, 176, 80), node(29, 252, 110), node(30, 176, -80),
+        node(31, -175, -180), node(32, -175, -110), node(33, -175, -40)
     };
     private final long researchFlags;
     private boolean guide;
@@ -275,6 +277,7 @@ public final class JournalScreen extends Screen {
     }
     private int guidePageCount(int chapter) {
         int h = mapH();
+        if (chapter == CAULDRON_PAGE) return BookPagination.pages(net.alkahest.recipe.CauldronEssenceRecipes.all().size(), 2);
         if (chapter == RECIPES_PAGE) return Math.max(1, BookPagination.pages(MatrixRecipe.all().size(), listRows(17)));
         if (chapter == TRANSMUTATION_PAGE) return Math.max(1, BookPagination.pages(TransmutationRecipe.all().size(), listRows(19)));
         int rows = Math.max(1, (h - 24) / textRenderer.fontHeight);
@@ -286,7 +289,9 @@ public final class JournalScreen extends Screen {
         int x = mapX(), y = mapY(), w = mapW(), h = mapH();
         paper(c, x, y, w, h);
         guideSubPage = MathHelper.clamp(guideSubPage, 0, guidePageCount(guidePage) - 1);
-        if (guidePage == RECIPES_PAGE) {
+        if (guidePage == CAULDRON_PAGE) {
+            renderCauldronIndex(c, x, y, w, h, mouseX, mouseY);
+        } else if (guidePage == RECIPES_PAGE) {
             scroll = guideSubPage * listRows(17) * 17;
             renderRecipes(c, x, y, w, h, mouseX, mouseY);
         } else if (guidePage == TRANSMUTATION_PAGE) {
@@ -309,6 +314,33 @@ public final class JournalScreen extends Screen {
         button(c, left + bookWidth - 59, top + bookHeight - 25, 44, "screen.alkahest.journal.next");
         c.drawCenteredTextWithShadow(textRenderer, (guidePage + 1) + "." + (guideSubPage + 1) + " / " + GUIDE_PAGES + "." + guidePageCount(guidePage), left + bookWidth / 2, top + bookHeight - 21, 0xFFD8C69D);
     }
+    /** Two illustrated recipes per spread, derived from the actual cauldron registry. */
+    private void renderCauldronIndex(DrawContext c, int x, int y, int w, int h, int mouseX, int mouseY) {
+        var recipes = net.alkahest.recipe.CauldronEssenceRecipes.all();
+        int half = w / 2;
+        diagramTooltip = ItemStack.EMPTY;
+        for (int column = 0; column < 2; column++) {
+            int index = BookPagination.index(guideSubPage, column, 2);
+            if (index >= recipes.size()) break;
+            var brew = recipes.get(index);
+            int leftPage = x + column * half;
+            c.enableScissor(leftPage + 5, y + 6, leftPage + half - 5, y + h - 6);
+            c.drawText(textRenderer, textRenderer.trimToWidth(new ItemStack(brew.result()).getName().getString(), Math.max(20, half - 22)),
+                leftPage + 10, y + 10, 0xFF4F3520, false);
+            int originX = leftPage + 10, originY = y + 25;
+            float scale = Math.max(0.1f, Math.min(1f, Math.min((half - 20) / 92f, (h - 34) / 120f)));
+            c.getMatrices().push();
+            c.getMatrices().translate(originX, originY, 0);
+            c.getMatrices().scale(scale, scale, 1);
+            Node preview = new Node("cauldron_index", 0, 0, 0, 0, new ItemStack(brew.result()));
+            renderDiagram(c, preview, 0, 0, 0, Math.max(20, (int)((half - 20) / scale)),
+                (int)((mouseX - originX) / scale), (int)((mouseY - originY) / scale));
+            c.getMatrices().pop();
+            c.disableScissor();
+        }
+        if (!diagramTooltip.isEmpty()) c.drawTooltip(textRenderer, diagramTooltip.getName(), mouseX, mouseY);
+    }
+
     /** The synthesis page: one row per Matrix recipe, icons first, names and prices on hover. */
     private void renderRecipes(DrawContext c, int x, int y, int w, int h, int mouseX, int mouseY) {
         c.drawText(textRenderer, Text.translatable("screen.alkahest.journal.recipes"), x + 12, y + 10, 0xFF4F3520, false);

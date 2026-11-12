@@ -485,5 +485,11 @@
   "screen.alkahest.journal.inventory_mix": "Инвентарь: ПКМ",
   "screen.alkahest.journal.cauldron_diagram": "Нагретый котёл с водой",
   "screen.alkahest.journal.cauldron_hint": "Раствори эссенции; катализатор — ПКМ по котлу.",
-  "screen.alkahest.journal.alkahest_hint": "Раствори мох первым; алмаз применяй ПКМ."
+  "screen.alkahest.journal.alkahest_hint": "Раствори мох первым; алмаз применяй ПКМ.",
+  "screen.alkahest.practice.herbal_paste.title": "Травяная паста",
+  "screen.alkahest.practice.herbal_paste.recipe": "Раствори эссенции в нагретом котле с водой, затем нажми по котлу семенами пшеницы. Две пасты можно переработать в эссенции; дальнейшие рецепты с пастой ещё не реализованы.",
+  "screen.alkahest.practice.fire_dust.title": "Огненная пыль",
+  "screen.alkahest.practice.fire_dust.recipe": "В котле раствори указанные эссенции, затем нажми порохом. Пыль можно бросить, чтобы поджечь существ и местность, или смешать в инвентаре со слизью для напалма. Берегись огня.",
+  "screen.alkahest.practice.caustic_slime.title": "Едкая слизь",
+  "screen.alkahest.practice.caustic_slime.recipe": "В котле раствори указанные эссенции, затем нажми сгустком слизи. При броске едкая слизь создаёт замедляющую область. Смешай её с порохом в инвентаре, чтобы получить кислотную бомбу."
 }
