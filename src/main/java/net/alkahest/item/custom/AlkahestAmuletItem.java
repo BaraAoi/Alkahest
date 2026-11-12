@@ -57,7 +57,7 @@ public class AlkahestAmuletItem extends TrinketItem {
         var player = context.getPlayer();
         if (player != null && player.isSneaking()
             && context.getWorld().getBlockEntity(context.getBlockPos()) instanceof AlchemyPipeBlockEntity pipe) {
-            if (!context.getWorld().isClient) pipe.describe(player);
+            if (!context.getWorld().isClient) pipe.cycleFilter(player);
             return ActionResult.success(context.getWorld().isClient);
         }
         return super.useOnBlock(context);

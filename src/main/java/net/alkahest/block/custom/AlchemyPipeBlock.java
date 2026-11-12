@@ -31,7 +31,7 @@ import net.minecraft.world.World;
 import net.minecraft.world.WorldAccess;
 
 public class AlchemyPipeBlock extends Block implements BlockEntityProvider {
-    /** Pipes decide everything themselves; ACTIVE only drives the working animation. */
+    /** ACTIVE drives the working animation; optional filters live in the block entity. */
     public static final BooleanProperty ACTIVE = BooleanProperty.of("active");
     public static final BooleanProperty NORTH=Properties.NORTH, SOUTH=Properties.SOUTH, EAST=Properties.EAST,
         WEST=Properties.WEST, UP=Properties.UP, DOWN=Properties.DOWN;
@@ -80,6 +80,14 @@ public class AlchemyPipeBlock extends Block implements BlockEntityProvider {
             if (!world.isClient && !((BlockItem)stack.getItem()).place(new ItemPlacementContext(player,hand,stack,hit)).isAccepted())
                 player.sendMessage(Text.translatable("message.alkahest.pipe_no_space"), true);
             return ItemActionResult.success(world.isClient);
+        }
+        // Select a filter directly with a crystal, without consuming it.
+        for (var entry : net.alkahest.registry.ModItems.CRYSTALS.entrySet()) {
+            if (entry.getKey() != net.alkahest.essence.EssenceType.VACUUM && stack.isOf(entry.getValue())) {
+                if (!world.isClient && world.getBlockEntity(pos) instanceof AlchemyPipeBlockEntity pipe)
+                    pipe.selectFilter(entry.getKey(), player);
+                return ItemActionResult.success(world.isClient);
+            }
         }
         return ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
     }

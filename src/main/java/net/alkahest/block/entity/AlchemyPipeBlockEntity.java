@@ -32,8 +32,9 @@ import java.util.Set;
 
 /**
  * Self-routing essence line. Connected pipes form a network that looks for any container
- * holding essence and any container with room, then moves the liquid on its own: there are
- * no directions and no filters to configure. Essence is never buffered inside the pipes.
+ * holding essence and any container with room, then moves the liquid on its own. Optional
+ * per-segment filters constrain routes; unconfigured segments accept every ordinary essence.
+ * Essence is never buffered inside the pipes.
  */
 public class AlchemyPipeBlockEntity extends BlockEntity {
     /** How often a network looks for work. */
@@ -44,6 +45,7 @@ public class AlchemyPipeBlockEntity extends BlockEntity {
     private static final int MAX_SEGMENTS = 64;
 
     private EssenceType flowing;
+    private EssenceType filter;
     private int activeTicks;
 
     public AlchemyPipeBlockEntity(BlockPos pos, BlockState state) {
@@ -53,6 +55,38 @@ public class AlchemyPipeBlockEntity extends BlockEntity {
     /** Essence carried by the last pulse, used for the tint of the animated core. */
     public EssenceType flowing() { return flowing; }
 
+    /** Null means unrestricted; Vacuum is never carried by ordinary pipes. */
+    public EssenceType filter() { return filter; }
+
+    public void setFilter(EssenceType value) {
+        if (value == EssenceType.VACUUM) throw new IllegalArgumentException("Ordinary pipes cannot filter Vacuum");
+        if (filter == value) return;
+        filter = value;
+        markDirty();
+        if (world != null && !world.isClient) {
+            BlockState state = getCachedState();
+            world.updateListeners(pos, state, state, Block.NOTIFY_LISTENERS);
+        }
+    }
+
+    /** Sneak-use a wand to cycle the filter, without spending charges. */
+    public void cycleFilter(PlayerEntity player) {
+        EssenceType[] values = EssenceType.values();
+        int next = filter == null ? 0 : filter.ordinal() + 1;
+        setFilter(next >= values.length || values[next] == EssenceType.VACUUM ? null : values[next]);
+        player.sendMessage(Text.translatable("message.alkahest.pipe_filter_changed", filterText()), true);
+    }
+
+    public void selectFilter(EssenceType value, PlayerEntity player) {
+        setFilter(value);
+        player.sendMessage(Text.translatable("message.alkahest.pipe_filter_changed", filterText()), true);
+    }
+
+    public Text filterText() {
+        return filter == null ? Text.translatable("message.alkahest.pipe_filter_any")
+            : Text.literal(filter.displayName()).styled(style -> style.withColor(filter.color()));
+    }
+
     /** True while the pipe is visibly working. */
     public boolean active() { return activeTicks > 0; }
 
@@ -61,7 +95,8 @@ public class AlchemyPipeBlockEntity extends BlockEntity {
         int pipes = network == null ? 1 : network.pipes.size();
         int containers = network == null ? 0 : network.ports.size();
         player.sendMessage(Text.translatable("message.alkahest.pipe_status", pipes, containers), false);
-        if (flowing != null) {
+        player.sendMessage(Text.translatable("message.alkahest.pipe_filter", filterText()), false);
+        if (active() && flowing != null) {
             player.sendMessage(Text.translatable("message.alkahest.pipe_flowing",
                 Text.literal(flowing.displayName()).styled(style -> style.withColor(flowing.color()))), false);
         }
@@ -70,14 +105,17 @@ public class AlchemyPipeBlockEntity extends BlockEntity {
     @Override protected void writeNbt(NbtCompound nbt, RegistryWrapper.WrapperLookup registries) {
         super.writeNbt(nbt, registries);
         if (flowing != null) nbt.putString("Flowing", flowing.asString());
+        if (filter != null) nbt.putString("Filter", filter.asString());
         nbt.putInt("ActiveTicks", activeTicks);
     }
 
     @Override protected void readNbt(NbtCompound nbt, RegistryWrapper.WrapperLookup registries) {
         super.readNbt(nbt, registries);
         flowing = null;
+        filter = null;
         for (EssenceType type : EssenceType.values()) {
             if (type != EssenceType.VACUUM && type.asString().equals(nbt.getString("Flowing"))) flowing = type;
+            if (type != EssenceType.VACUUM && type.asString().equals(nbt.getString("Filter"))) filter = type;
         }
         activeTicks = Math.max(0, Math.min(ACTIVE_TICKS, nbt.getInt("ActiveTicks")));
     }
@@ -218,10 +256,12 @@ public class AlchemyPipeBlockEntity extends BlockEntity {
     private static final class Network {
         private final List<BlockPos> pipes;
         private final List<BlockEntity> ports;
+        private final Set<BlockPos> pipeSet;
 
         private Network(List<BlockPos> pipes, List<BlockEntity> ports) {
             this.pipes = pipes;
             this.ports = ports;
+            this.pipeSet = Set.copyOf(pipes);
         }
 
         static Network scan(World world, BlockPos start) {
@@ -253,27 +293,66 @@ public class AlchemyPipeBlockEntity extends BlockEntity {
             }
             if (pipes.isEmpty()) return null; // A removed starting segment has no network or leader.
             pipes.sort(null);
+            ports.sort((a, b) -> a.getPos().compareTo(b.getPos()));
             return new Network(List.copyOf(pipes), List.copyOf(ports));
         }
 
         BlockPos leader() { return pipes.getFirst(); }
 
-        /** A jar already holding the type wins; otherwise the first empty, unclaimed jar. */
-        private BlockEntity pickTarget(EssenceType type, Map<BlockEntity, EssenceType> claimed) {
-            // Explicitly connected receivers win over ordinary storage jars.
-            for (BlockEntity port : ports)
-                if (port instanceof StabilizerReceiverBlockEntity && portFree(port, type) > 0) return port;
-            for (BlockEntity port : ports) {
-                if (!canReceive(port) || typeOf(port) != type) continue;
-                if (portFree(port, type) > 0) return port;
+        /** A shortest allowed path, including both endpoint-adjacent pipes, or none.
+         * Search only the loaded network snapshot: never load chunks to perform transfers.
+         * An endpoint may touch several segments, so all eligible entry points are searched.
+         */
+        private List<BlockPos> route(World world, BlockEntity from, BlockEntity to, EssenceType type) {
+            if (type == EssenceType.VACUUM) return List.of();
+            Map<BlockPos, BlockPos> previous = new HashMap<>();
+            Deque<BlockPos> queue = new ArrayDeque<>();
+            for (Direction direction : Direction.values()) {
+                BlockPos start = from.getPos().offset(direction);
+                if (allows(world, start, type) && !previous.containsKey(start)) {
+                    previous.put(start, start);
+                    queue.add(start);
+                }
             }
-            for (BlockEntity port : ports) {
-                if (!canReceive(port)) continue;
-                if (typeOf(port) != null) continue;
-                EssenceType taken = claimed.get(port);
-                if (taken != null && taken != type) continue;
-                if (portFree(port, type) <= 0) continue;
-                return port;
+            while (!queue.isEmpty()) {
+                BlockPos pos = queue.remove();
+                if (pos.getManhattanDistance(to.getPos()) == 1) {
+                    List<BlockPos> path = new ArrayList<>();
+                    while (true) {
+                        path.add(pos);
+                        BlockPos parent = previous.get(pos);
+                        if (parent.equals(pos)) return path;
+                        pos = parent;
+                    }
+                }
+                for (Direction direction : Direction.values()) {
+                    BlockPos next = pos.offset(direction);
+                    if (!previous.containsKey(next) && allows(world, next, type)) {
+                        previous.put(next, pos);
+                        queue.add(next);
+                    }
+                }
+            }
+            return List.of();
+        }
+
+        private boolean allows(World world, BlockPos pos, EssenceType type) {
+            if (!pipeSet.contains(pos) || !world.isChunkLoaded(pos)) return false;
+            if (!(world.getBlockEntity(pos) instanceof AlchemyPipeBlockEntity pipe)) return false;
+            return pipe.filter == null || pipe.filter == type;
+        }
+
+        /** Receivers win, then jars already holding the type, then empty jars. */
+        private BlockEntity pickTarget(World world, BlockEntity source, EssenceType type, Map<BlockEntity, EssenceType> claimed) {
+            for (int priority = 0; priority < 3; priority++) {
+                for (BlockEntity port : ports) {
+                    if (port == source || portFree(port, type) <= 0) continue;
+                    if (priority == 0 && !(port instanceof StabilizerReceiverBlockEntity)) continue;
+                    if (priority == 1 && (!canReceive(port) || typeOf(port) != type)) continue;
+                    if (priority == 2 && (!canReceive(port) || typeOf(port) != null
+                        || (claimed.containsKey(port) && claimed.get(port) != type))) continue;
+                    if (!route(world, source, port, type).isEmpty()) return port;
+                }
             }
             return null;
         }
@@ -284,7 +363,7 @@ public class AlchemyPipeBlockEntity extends BlockEntity {
          * transfer the exact amounts and complete in the same server tick. No intermediate
          * pipe or machine buffer exists, so a missing type leaves all jars untouched.
          */
-        private int payTransmutator(TransmutatorCoreBlockEntity core) {
+        private int payTransmutator(World world, TransmutatorCoreBlockEntity core, Map<BlockPos, EssenceType> used) {
             Map<EssenceType, Integer> cost = core.pipeCost();
             if (cost.isEmpty()) return 0;
             for (var entry : cost.entrySet()) {
@@ -293,7 +372,8 @@ public class AlchemyPipeBlockEntity extends BlockEntity {
                     if (!(port instanceof JarBlockEntity jar)) continue;
                     JarContentsComponent contents = jar.contents();
                     if (!JarItem.allowed(contents) || !JarItem.singleType(contents) || contents.total() == 0) continue;
-                    if (contents.contents().getFirst().type() == entry.getKey()) available += contents.total();
+                    if (contents.contents().getFirst().type() == entry.getKey()
+                        && !route(world, jar, core, entry.getKey()).isEmpty()) available += contents.total();
                 }
                 if (available < entry.getValue()) return 0;
             }
@@ -305,9 +385,12 @@ public class AlchemyPipeBlockEntity extends BlockEntity {
                     JarContentsComponent contents = jar.contents();
                     if (!JarItem.allowed(contents) || !JarItem.singleType(contents) || contents.total() == 0
                         || contents.contents().getFirst().type() != entry.getKey()) continue;
+                    List<BlockPos> path = route(world, jar, core, entry.getKey());
+                    if (path.isEmpty()) continue;
                     int removed = portRemove(jar, entry.getKey(), Math.min(remaining, contents.total()));
                     remaining -= removed;
                     paid += removed;
+                    if (removed > 0) for (BlockPos segment : path) used.put(segment, entry.getKey());
                 }
             }
             core.finishPipedOperation();
@@ -322,8 +405,8 @@ public class AlchemyPipeBlockEntity extends BlockEntity {
          */
         int pulse(World world) {
             int moved = 0;
-            EssenceType last = null;
             Map<BlockEntity, EssenceType> claimed = new HashMap<>();
+            Map<BlockPos, EssenceType> used = new HashMap<>();
             for (BlockEntity source : ports) {
                 if (!canGive(source)) continue;
                 JarContentsComponent contents = portContents(source);
@@ -332,35 +415,32 @@ public class AlchemyPipeBlockEntity extends BlockEntity {
                 for (EssenceStack entry : contents.contents()) {
                     if (budget <= 0) break;
                     if (entry.type() == EssenceType.VACUUM) continue;
-                    BlockEntity target = pickTarget(entry.type(), claimed);
+                    BlockEntity target = pickTarget(world, source, entry.type(), claimed);
                     if (target == null) continue;
                     int sent = move(source, target, entry.type(), budget);
                     if (sent <= 0) continue;
+                    for (BlockPos segment : route(world, source, target, entry.type())) used.put(segment, entry.type());
                     claimed.put(target, entry.type());
                     budget -= sent;
                     moved += sent;
-                    last = entry.type();
                 }
             }
             // Distillation still fills jars first. Only a ready Transmutator may draw from
             // jars; idle machines and jars never trigger transfers between storage containers.
             for (BlockEntity port : ports) {
                 if (!(port instanceof TransmutatorCoreBlockEntity core)) continue;
-                Map<EssenceType, Integer> cost = core.pipeCost();
-                int paid = payTransmutator(core);
+                int paid = payTransmutator(world, core, used);
                 if (paid > 0) {
                     moved += paid;
-                    last = cost.keySet().iterator().next();
                 }
             }
             if (moved == 0) return 0;
-            for (BlockPos pos : pipes) {
-                if (world.getBlockEntity(pos) instanceof AlchemyPipeBlockEntity pipe) pipe.energize(world, last);
-            }
-            if (world instanceof ServerWorld server && last != null) {
-                DustParticleEffect dust = new DustParticleEffect(colorOf(last), 0.55f);
-                for (BlockPos pos : pipes) {
-                    if (world.random.nextInt(3) != 0) continue;
+            for (var entry : used.entrySet()) {
+                BlockPos pos = entry.getKey();
+                EssenceType type = entry.getValue();
+                if (world.getBlockEntity(pos) instanceof AlchemyPipeBlockEntity pipe) pipe.energize(world, type);
+                if (world instanceof ServerWorld server && world.random.nextInt(3) == 0) {
+                    DustParticleEffect dust = new DustParticleEffect(colorOf(type), 0.55f);
                     server.spawnParticles(dust, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
                         1, 0.18, 0.18, 0.18, 0.01);
                 }

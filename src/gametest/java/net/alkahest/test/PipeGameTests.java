@@ -267,4 +267,76 @@ public class PipeGameTests implements FabricGameTest {
         c.complete();
     }
 
+    @GameTest(templateName=EMPTY_STRUCTURE)
+    public void filtersSplitSourcesIntoSeparateBranches(TestContext c) {
+        c.setBlockState(2,2,3,ModBlocks.DISTILLERY_BELLOWS);
+        c.setBlockState(3,2,2,ModBlocks.DISTILLERY_BELLOWS);
+        c.setBlockState(3,2,3,ModBlocks.ALCHEMY_PIPE);
+        c.setBlockState(4,2,3,ModBlocks.ALCHEMY_PIPE);
+        c.setBlockState(3,2,4,ModBlocks.ALCHEMY_PIPE);
+        c.setBlockState(5,2,3,ModBlocks.JAR);
+        c.setBlockState(3,2,5,ModBlocks.JAR);
+        BlockPos p=c.getAbsolutePos(new BlockPos(3,2,3));
+        var ignis=(DistilleryBellowsBlockEntity)c.getWorld().getBlockEntity(p.west());
+        var aqua=(DistilleryBellowsBlockEntity)c.getWorld().getBlockEntity(p.north());
+        var firePipe=(AlchemyPipeBlockEntity)c.getWorld().getBlockEntity(p.east());
+        var waterPipe=(AlchemyPipeBlockEntity)c.getWorld().getBlockEntity(p.south());
+        var fireJar=(JarBlockEntity)c.getWorld().getBlockEntity(p.east(2));
+        var waterJar=(JarBlockEntity)c.getWorld().getBlockEntity(p.south(2));
+        firePipe.setFilter(EssenceType.IGNIS); waterPipe.setFilter(EssenceType.AQUA);
+        ignis.accept(EssenceType.IGNIS,8,.3f); aqua.accept(EssenceType.AQUA,8,.7f);
+        c.assertTrue(AlchemyPipeBlockEntity.pulse(c.getWorld(),p)==8,"Both branches run in one pulse");
+        c.assertTrue(fireJar.contents().equals(of(EssenceType.IGNIS,4,.3f)),"Fire reaches only its branch");
+        c.assertTrue(waterJar.contents().equals(of(EssenceType.AQUA,4,.7f)),"Water reaches only its branch");
+        c.assertTrue(firePipe.flowing()==EssenceType.IGNIS && waterPipe.flowing()==EssenceType.AQUA,
+            "Each active branch shows its own latest essence");
+        c.complete();
+    }
+
+    @GameTest(templateName=EMPTY_STRUCTURE)
+    public void routeCanBypassABlockedSegmentWithoutLightingIt(TestContext c) {
+        c.setBlockState(1,2,3,ModBlocks.DISTILLERY_BELLOWS);
+        for (int x=2; x<=4; x++) c.setBlockState(x,2,3,ModBlocks.ALCHEMY_PIPE);
+        for (int x=2; x<=4; x++) c.setBlockState(x,2,4,ModBlocks.ALCHEMY_PIPE);
+        c.setBlockState(5,2,3,ModBlocks.JAR);
+        BlockPos p=c.getAbsolutePos(new BlockPos(2,2,3));
+        var source=(DistilleryBellowsBlockEntity)c.getWorld().getBlockEntity(p.west());
+        var blocked=(AlchemyPipeBlockEntity)c.getWorld().getBlockEntity(p.east());
+        var alternate=(AlchemyPipeBlockEntity)c.getWorld().getBlockEntity(p.south().east());
+        var jar=(JarBlockEntity)c.getWorld().getBlockEntity(p.east(3));
+        blocked.setFilter(EssenceType.AQUA); source.accept(EssenceType.IGNIS,6,.6f);
+        c.assertTrue(AlchemyPipeBlockEntity.pulse(c.getWorld(),p)==4,"An alternative path is used");
+        c.assertTrue(jar.contents().total()==4 && source.amount()==2,"Bypass conserves essence");
+        c.assertFalse(blocked.active(),"Blocked branch does not falsely animate");
+        c.assertTrue(alternate.active() && alternate.flowing()==EssenceType.IGNIS,"Actual path animates");
+        c.setBlockState(3,2,4,net.minecraft.block.Blocks.AIR);
+        c.assertTrue(AlchemyPipeBlockEntity.pulse(c.getWorld(),p)==0,"No allowed path means backpressure");
+        c.assertTrue(jar.contents().total()==4 && source.amount()==2,"Blocked material remains in the source");
+        c.complete();
+    }
+
+    @GameTest(templateName=EMPTY_STRUCTURE)
+    public void filtersPersistSyncAndAllowDirectSelection(TestContext c) {
+        c.setBlockState(2,2,3,ModBlocks.ALCHEMY_PIPE);
+        BlockPos pos=c.getAbsolutePos(new BlockPos(2,2,3));
+        var pipe=(AlchemyPipeBlockEntity)c.getWorld().getBlockEntity(pos);
+        var player=c.createMockPlayer(GameMode.SURVIVAL);
+        ItemStack crystal=new ItemStack(net.alkahest.registry.ModItems.CRYSTALS.get(EssenceType.MOTUS),3);
+        player.setStackInHand(Hand.MAIN_HAND,crystal);
+        var hit=new BlockHitResult(Vec3d.ofCenter(pos),Direction.UP,pos,false);
+        c.getWorld().getBlockState(pos).onUseWithItem(crystal,c.getWorld(),player,Hand.MAIN_HAND,hit);
+        c.assertTrue(pipe.filter()==EssenceType.MOTUS && crystal.getCount()==3,"Crystal selects filter without being spent");
+        var replica=new AlchemyPipeBlockEntity(pos,pipe.getCachedState());
+        replica.readComponentlessNbt(pipe.toInitialChunkDataNbt(c.getWorld().getRegistryManager()),c.getWorld().getRegistryManager());
+        c.assertTrue(replica.filter()==EssenceType.MOTUS && pipe.toUpdatePacket()!=null,"Filter survives NBT and syncs");
+        pipe.setFilter(EssenceType.SPIRITUS); pipe.cycleFilter(player);
+        c.assertTrue(pipe.filter()==null,"Cycle wraps to unrestricted without admitting Vacuum");
+        pipe.cycleFilter(player);
+        c.assertTrue(pipe.filter()==EssenceType.IGNIS,"Cycle starts at the first ordinary essence");
+        var oldNbt=new net.minecraft.nbt.NbtCompound(); oldNbt.putString("Filter","vacuum");
+        replica.readComponentlessNbt(oldNbt,c.getWorld().getRegistryManager());
+        c.assertTrue(replica.filter()==null,"Invalid old or unsupported filter safely defaults to unrestricted");
+        c.complete();
+    }
+
 }

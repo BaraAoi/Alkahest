@@ -560,4 +560,29 @@ public class TransmutatorGameTests implements FabricGameTest {
         c.setBlockState(CX + 1, y, CZ + 1, net.minecraft.block.Blocks.AIR);
         c.complete();
     }
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void filteredTowerNeverPartiallyPaysAndResumes(TestContext c) {
+        int y = CY + 48;
+        BlockPos pos = tower(c, y);
+        var core = (TransmutatorCoreBlockEntity) c.getWorld().getBlockEntity(pos);
+        installInput(c, core); core.wake();
+        c.setBlockState(CX + 1, y, CZ, ModBlocks.ALCHEMY_PIPE);
+        BlockPos pipe = c.getAbsolutePos(new BlockPos(CX + 1, y, CZ));
+        var segment = (net.alkahest.block.entity.AlchemyPipeBlockEntity)c.getWorld().getBlockEntity(pipe);
+        var metal = jar(c, CX + 1, y, CZ - 1, EssenceType.METALLUM, 10);
+        var ordo = jar(c, CX + 2, y, CZ, EssenceType.ORDO, 10);
+        segment.setFilter(EssenceType.METALLUM);
+        run(c.getWorld(), pos, 110);
+        c.assertTrue(net.alkahest.block.entity.AlchemyPipeBlockEntity.pulse(c.getWorld(), pipe)==0,
+            "A blocked part of the price prevents the whole payment");
+        c.assertTrue(metal.contents().total()==10 && ordo.contents().total()==10
+            && core.getStack(TransmutatorCoreBlockEntity.OUTPUT).isEmpty(), "No partial payment or output");
+        segment.setFilter(null);
+        net.alkahest.block.entity.AlchemyPipeBlockEntity.pulse(c.getWorld(), pipe);
+        c.assertTrue(metal.contents().total()==7 && ordo.contents().total()==8,
+            "Removing the filter permits exactly one complete payment");
+        c.assertTrue(core.getStack(TransmutatorCoreBlockEntity.OUTPUT).isOf(Items.GOLD_INGOT), "Operation completes");
+        c.complete();
+    }
+
 }

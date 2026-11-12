@@ -149,7 +149,7 @@
   "message.alkahest.charger_no_space_on_jar": "Could not place the charger: clear the space above the jar.",
   "block.alkahest.alchemy_pipe": "Alchemy Pipe",
   "message.alkahest.pipe_no_space": "Cannot place the pipe: the space is occupied.",
-  "message.alkahest.pipe_status": "Pipe: a network of %s segments with %s containers. Flasks only give, jars only receive — nothing to configure.",
+  "message.alkahest.pipe_status": "Pipe: %s segments, %s containers. Routing is automatic.",
   "direction.alkahest.north": "north",
   "direction.alkahest.south": "south",
   "direction.alkahest.east": "east",
@@ -279,7 +279,7 @@
   "screen.alkahest.practice.completed": "Completed! The item was obtained.",
   "screen.alkahest.practice.free_recipes": "Crafting is always available. Tasks reveal the next journal entries.",
   "screen.alkahest.practice.pipe.title": "Essence Flow",
-  "screen.alkahest.practice.pipe.recipe": "Connect bellows to a jar or Stabilizer receiver: bellows supply essence through pipes. No filters or directions are needed; jars do not pump to each other.",
+  "screen.alkahest.practice.pipe.recipe": "Connect bellows to a jar or receiver. Pipes route automatically; sneak-use a wand to cycle a segment filter without spending charge. Jars do not pump into each other.",
   "screen.alkahest.practice.charger.title": "Essence Charger",
   "screen.alkahest.practice.charger.recipe": "Place the charger on a jar. While you are nearby it recharges compatible wands and the amulet from the jar.",
   "screen.alkahest.practice.tier2.title": "Tier II Distillery and Bellows",
@@ -515,5 +515,8 @@
   "message.alkahest.jar_crystal_no_space": "Could not deliver crystals; the jar contents were preserved.",
   "message.alkahest.jar_crystallized": "Crystallized %s units.",
   "screen.alkahest.distillery_tier2.queue": "Queued",
-  "screen.alkahest.distillery_tier2.queue_details": "Waiting to be delivered: %s"
+  "screen.alkahest.distillery_tier2.queue_details": "Waiting to be delivered: %s",
+  "message.alkahest.pipe_filter": "Filter: %s",
+  "message.alkahest.pipe_filter_changed": "Pipe filter: %s",
+  "message.alkahest.pipe_filter_any": "any essence"
 }
