@@ -10,7 +10,7 @@
   "screen.alkahest.practice.separator.title": "Manual Separator",
   "screen.alkahest.practice.separator.recipe": "Insert a legacy mixed jar into the separator. Right-click with empty jars to extract each essence type separately; use an empty hand to recover the original jar.",
   "screen.alkahest.practice.crystallization.title": "Crystallization Powder",
-  "screen.alkahest.practice.crystallization.recipe": "In a heated cauldron with water, dust crystallizes residue at 5% stability. Right-click a placed jar with dust to crystallize its contents 1:1 while preserving stability. Dust is consumed only on success.",
+  "screen.alkahest.practice.crystallization.recipe": "In a heated cauldron with water, dust crystallizes residue at 5% stability; large batches emerge gradually and wait for the area to load. Right-click a placed jar with dust to crystallize its contents 1:1 while preserving stability. Dust is consumed only on success.",
   "key.categories.alkahest": "Alkahest",
   "key.alkahest.atmosphere": "Show essence atmosphere",
   "screen.alkahest.monocle.cauldron_evaporation": "Evaporation: up to %s units/s",

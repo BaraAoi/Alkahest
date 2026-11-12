@@ -285,4 +285,37 @@ public class CauldronGameTests implements FabricGameTest {
         w.getEntitiesByClass(ItemEntity.class,area,e->e.isAlive() && e.getStack().isOf(ModItems.CRYSTALS.get(EssenceType.IGNIS))).forEach(ItemEntity::discard);
         c.complete();
     }
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void realStackInteractionsWorkPastOldCap(TestContext c) {
+        var pot=cauldron(c); var player=fill(c,pot); var registry=c.getWorld().getRegistryManager();
+        var nbt=pot.createNbt(registry); var stored=new NbtCompound(); stored.putInt("ignis",255); nbt.put("Essences",stored);
+        pot.readComponentlessNbt(nbt,registry);
+        player.setSneaking(true);
+        var crystals=new ItemStack(ModItems.CRYSTALS.get(EssenceType.IGNIS), 10);
+        player.setStackInHand(Hand.MAIN_HAND,crystals);
+        c.assertTrue(pot.useItem(player,Hand.MAIN_HAND) && crystals.isEmpty() && pot.essences().get(EssenceType.IGNIS)==265,
+            "Sneak use consumes and dissolves the whole stack beyond 256");
+        var dropped=item(c,3.5,2.5,3.5,new ItemStack(ModItems.CRYSTALS.get(EssenceType.IGNIS),10));
+        CauldronBlockEntity.tick(c.getWorld(),pot.getPos(),pot);
+        c.assertTrue(dropped.isRemoved() && pot.essences().get(EssenceType.IGNIS)>=273,
+            "Dropped stack dissolves beyond 256; ordinary evaporation still applies");
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void unloadedResidueQueueRemainsSavedWithoutLoadingChunks(TestContext c) {
+        var w=c.getWorld(); BlockPos far=new BlockPos(29000000,64,29000000);
+        var nbt=new NbtCompound(); var list=new net.minecraft.nbt.NbtList(); var batch=new NbtCompound();
+        batch.putLong("Pos",far.asLong()); var amounts=new NbtCompound(); amounts.putInt("ignis",1000000);
+        batch.put("Amounts",amounts); list.add(batch); nbt.put("Batches",list);
+        var state=net.alkahest.block.entity.CauldronResidueState.read(nbt,w.getRegistryManager());
+        c.assertFalse(w.isChunkLoaded(far),"Far chunk starts unloaded");
+        state.tick(w);
+        var saved=state.writeNbt(new NbtCompound(),w.getRegistryManager());
+        var entries=saved.getList("Batches",net.minecraft.nbt.NbtElement.COMPOUND_TYPE);
+        c.assertTrue(entries.size()==1 && entries.getCompound(0).getCompound("Amounts").getInt("ignis")==1000000,
+            "All pending crystals stay saved when the chunk is unloaded");
+        c.assertFalse(w.isChunkLoaded(far),"Pending residue does not force a chunk to load");
+        c.complete();
+    }
 }
