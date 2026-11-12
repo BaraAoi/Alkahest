@@ -324,7 +324,7 @@
   "screen.alkahest.practice.water.title": "Purified Water",
   "screen.alkahest.practice.water.recipe": "Dissolve the shown essences in a heated cauldron, then right-click it with a glass bottle. Purified water is used for other alchemical items.",
   "screen.alkahest.practice.distillery.title": "Crude Distillation",
-  "screen.alkahest.practice.distillery.recipe": "Right-click to open the distillery and insert material. It distils one item per minute into primal crystals; sometimes it produces ash. Alkahest in the side slot speeds it up.",
+  "screen.alkahest.practice.distillery.recipe": "Right-click to open the distillery and insert material. It distils one item per minute into primal crystals; sometimes it produces ash. Alkahest in the side slot speeds it up. A side hopper feeds the vial; changing modes restarts the current cycle.",
   "screen.alkahest.practice.monocle.title": "True Sight",
   "screen.alkahest.practice.monocle.recipe": "Equip the monocle in its Trinkets slot. Look at an item, cauldron, jar or machine to see available essence and working information.",
   "screen.alkahest.practice.ignis_wand.title": "Elemental Wands",
