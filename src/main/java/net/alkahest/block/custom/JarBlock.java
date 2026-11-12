@@ -146,7 +146,7 @@ public class JarBlock extends Block implements BlockEntityProvider {
         if (produced == 0) { player.sendMessage(Text.translatable("message.alkahest.jar_crystal_no_space"), true); return; }
         jar.setContents(remaining == 0 ? JarContentsComponent.EMPTY :
             new JarContentsComponent(List.of(new EssenceStack(essence.type(), remaining, essence.stability()))));
-        powder.decrementUnlessCreative(1, player);
+        if (!player.isCreative()) powder.decrement(1);
         world.playSound(null, pos, SoundEvents.BLOCK_AMETHYST_BLOCK_CHIME, SoundCategory.BLOCKS, .8f, 1.2f);
         player.sendMessage(Text.translatable("message.alkahest.jar_crystallized", produced), true);
     }
