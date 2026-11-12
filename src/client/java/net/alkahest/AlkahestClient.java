@@ -51,6 +51,10 @@ public final class AlkahestClient implements ClientModInitializer {
         });
         ClientPlayNetworking.registerGlobalReceiver(net.alkahest.network.AtmospherePayload.ID, (payload, context) ->
             context.client().execute(() -> net.alkahest.client.gui.AtmosphereHud.receive(payload.data())));
+        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(
+            net.alkahest.client.assembly.AssemblyPreview::tick);
+        ClientPlayNetworking.registerGlobalReceiver(net.alkahest.network.AssemblyPreviewPayload.ID, (payload, context) ->
+            context.client().execute(() -> net.alkahest.client.assembly.AssemblyPreview.open(payload.pos())));
         ClientPlayNetworking.registerGlobalReceiver(OpenJournalPayload.ID, (payload, context) ->
             context.client().execute(() -> context.client().setScreen(new JournalScreen(payload.flags()))));
         ClientPlayNetworking.registerGlobalReceiver(net.alkahest.network.EssenceMapPayload.ID, (payload, context) ->
@@ -58,6 +62,7 @@ public final class AlkahestClient implements ClientModInitializer {
         net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
             net.alkahest.essence.RecipeEssenceService.clearClient();
             net.alkahest.client.gui.AtmosphereHud.clear();
+            net.alkahest.client.assembly.AssemblyPreview.clear();
         });
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.NAPALM_FLAME, RenderLayer.getCutout());
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.ALCHEMICAL_MOSS, RenderLayer.getCutout());

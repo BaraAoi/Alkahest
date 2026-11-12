@@ -64,6 +64,16 @@ public final class Alkahest implements ModInitializer {
 
         // Vanilla skips block interaction while sneaking with an item; this block always opens its GUI.
         UseBlockCallback.EVENT.register((player, world, hand, hit) -> {
+            if (!player.isSpectator() && player.isSneaking()
+                && (player.getStackInHand(hand).isOf(ModItems.WANDS.get(net.alkahest.essence.EssenceType.AER))
+                    || player.getStackInHand(hand).isOf(ModItems.ALKAHEST_AMULET))
+                && net.alkahest.assembly.AssemblyBlueprint.kind(world, hit.getBlockPos()) != null) {
+                if (player instanceof ServerPlayerEntity serverPlayer
+                    && net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.canSend(serverPlayer, net.alkahest.network.AssemblyPreviewPayload.ID))
+                    net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(serverPlayer,
+                        new net.alkahest.network.AssemblyPreviewPayload(hit.getBlockPos().asLong()));
+                return ActionResult.success(world.isClient);
+            }
             if (!player.isSpectator() && world.getBlockState(hit.getBlockPos()).isOf(ModBlocks.DISTILLERY)) {
                 if (!world.isClient && world.getBlockEntity(hit.getBlockPos()) instanceof net.alkahest.block.entity.DistilleryBlockEntity d)
                     player.openHandledScreen(d);

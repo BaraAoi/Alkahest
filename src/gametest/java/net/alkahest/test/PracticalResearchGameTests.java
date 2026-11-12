@@ -244,8 +244,24 @@ public class PracticalResearchGameTests implements FabricGameTest {
     }
 
     @GameTest(templateName = EMPTY_STRUCTURE)
+    public void aerWandIsRememberedBeforeMonocleAndPersists(TestContext c) {
+        var player = c.createMockCreativeServerPlayerInWorld(); clearResearch(player);
+        grant(player, "matrix");
+        var wand = new ItemStack(ModItems.WANDS.get(net.alkahest.essence.EssenceType.AER));
+        PracticalResearchStorage.observe(player, wand);
+        c.assertTrue((PracticalResearchStorage.observed(player) & PracticalResearchPlan.AER_WAND) != 0, "Early Aer wand is recorded");
+        c.assertTrue((PracticalResearchStorage.completed(player) & PracticalResearchPlan.AER_WAND) == 0, "Wait for monocle");
+        grant(player, "monocle"); PracticalResearchStorage.migrate(player);
+        long expected = PracticalResearchPlan.AER_WAND | PracticalResearchPlan.MATRIX;
+        c.assertTrue((PracticalResearchStorage.completed(player) & expected) == expected, "Parent unlocks wand without relocking old progress");
+        player.getAdvancementTracker().save(); player.getAdvancementTracker().reload(c.getWorld().getServer().getAdvancementLoader());
+        c.assertTrue((PracticalResearchStorage.completed(player) & expected) == expected && wand.getCount() == 1, "Wand and completion survive reload");
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
     public void journalPayloadPreservesResearchBitsAboveThirtyOne(TestContext c) {
-        long flags = PracticalResearchPlan.CAULDRON | PracticalResearchPlan.FIRE_DUST | PracticalResearchPlan.CAUSTIC_SLIME;
+        long flags = PracticalResearchPlan.CAULDRON | PracticalResearchPlan.FIRE_DUST | PracticalResearchPlan.CAUSTIC_SLIME | PracticalResearchPlan.AER_WAND;
         var buf = new net.minecraft.network.RegistryByteBuf(io.netty.buffer.Unpooled.buffer(), c.getWorld().getRegistryManager());
         try {
             net.alkahest.network.OpenJournalPayload.CODEC.encode(buf, new net.alkahest.network.OpenJournalPayload(flags));

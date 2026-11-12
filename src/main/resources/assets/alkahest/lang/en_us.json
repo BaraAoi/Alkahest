@@ -493,5 +493,12 @@
   "screen.alkahest.practice.caustic_slime.title": "Caustic Slime",
   "screen.alkahest.practice.caustic_slime.recipe": "Dissolve the indicated essences in a cauldron, then right-click with a slime ball. When thrown, caustic slime creates a slowing area. Mix it with gunpowder in your inventory to make an acid bomb.",
   "screen.alkahest.journal.continued": "Continued",
-  "screen.alkahest.journal.catalogue_later": "The recipe catalogue is on the following spreads."
+  "screen.alkahest.journal.catalogue_later": "The recipe catalogue is on the following spreads.",
+  "screen.alkahest.practice.aer_wand.title": "Aer Wand",
+  "screen.alkahest.practice.aer_wand.recipe": "Combine a stick with an Aer crystal. Hold the wand or amulet and Shift-right-click a Stabilizer, tier II distillery, Transmutator or Matrix core to show dotted outlines of missing parts for 8 seconds. Cyan means empty; orange means another block is in the way. This guide consumes no charge. The Matrix also needs two nearby pedestals.",
+  "message.alkahest.assembly_preview": "Assembly guide: %s missing; %s positions unavailable.",
+  "message.alkahest.assembly_part": "Needed: %s × %s",
+  "message.alkahest.assembly_colors": "Cyan outlines are empty spaces; orange are occupied. The guide fades after 8 seconds.",
+  "message.alkahest.assembly_pedestals": "Matrix research also requires two nearby pedestals; their positions are flexible and are not checked by the guide.",
+  "message.alkahest.assembly_unknown": "Some positions are unloaded or outside world height; the guide may be incomplete."
 }

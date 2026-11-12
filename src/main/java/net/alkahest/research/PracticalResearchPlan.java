@@ -27,7 +27,8 @@ public final class PracticalResearchPlan {
     public static final long JAR = 1L << 26, STABILIZER_RECEIVER = 1L << 27, STABILIZER_CREST = 1L << 28;
     public static final long SEPARATOR = 1L << 29, CRYSTALLIZATION = 1L << 30;
     public static final long HERBAL_PASTE = 1L << 31, FIRE_DUST = 1L << 32, CAUSTIC_SLIME = 1L << 33;
-    public static final long ALL = (1L << 34) - 1;
+    public static final long AER_WAND = 1L << 34;
+    public static final long ALL = (1L << 35) - 1;
     public static final long ASSEMBLIES = STABILIZER | TIER2 | TRANSMUTATOR | MATRIX;
     // Keep obsolete flags for saves, but group the component entries into their machine.
     public static final long HIDDEN_COMPONENTS = BELLOWS | CHAMBER | CROWN | PEDESTAL | STABILIZER_RECEIVER | STABILIZER_CREST;
@@ -67,7 +68,8 @@ public final class PracticalResearchPlan {
         new Step("crystallization", "alkahest:crystallization_powder", CRYSTALLIZATION, WATER, 0),
         new Step("herbal_paste", "alkahest:herbal_paste", HERBAL_PASTE, WATER, 0),
         new Step("fire_dust", "alkahest:fire_dust", FIRE_DUST, WATER, 0),
-        new Step("caustic_slime", "alkahest:caustic_slime", CAUSTIC_SLIME, WATER, 0)
+        new Step("caustic_slime", "alkahest:caustic_slime", CAUSTIC_SLIME, WATER, 0),
+        new Step("aer_wand", "alkahest:crystal_wand_aer", AER_WAND, MONOCLE, 0)
     );
 
     public static Step forItem(String itemId) {

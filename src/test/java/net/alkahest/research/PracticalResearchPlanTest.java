@@ -70,6 +70,14 @@ class PracticalResearchPlanTest {
         assertEquals(ACID | NAPALM, resolve(ACID | NAPALM, 0, 0), "Old completions do not relock");
     }
 
+    @Test void aerWandObservationWaitsForMonocleAndPreservesOldSave() {
+        long old = (1L << 34) - 1;
+        assertEquals(old, resolve(old, 0, 0));
+        assertEquals(0, resolve(0, AER_WAND, 0));
+        assertEquals(MONOCLE | AER_WAND, resolve(MONOCLE, AER_WAND, 0));
+        assertEquals(MONOCLE, forItem("alkahest:crystal_wand_aer").parents());
+    }
+
     @Test void graphIsAcyclicAndIdsAreUnique() {
         var ids = new HashSet<String>();
         var items = new HashSet<String>();

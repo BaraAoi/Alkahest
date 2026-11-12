@@ -6,7 +6,7 @@ import sys
 
 mapping = {
  'cauldron':['alchemy_cauldron'], 'distillery':['distillery'],
- 'ignis_wand':['crystal_wand_ignis'], 'aqua_wand':['crystal_wand_aqua'],
+ 'ignis_wand':['crystal_wand_ignis'], 'aqua_wand':['crystal_wand_aqua'], 'aer_wand':['crystal_wand_aer'],
  'stabilizer':['stabilizer_core','stabilizer_receiver','stabilizer_crest'],
  'pipe':['alchemy_pipe'], 'charger':['essence_charger'], 'tier2':['distillery_tier2','distillery_bellows'],
  'amulet':['alkahest_amulet'], 'transmutator':['transmutator_core','transmutator_pillar_aqua','transmutator_chamber','transmutator_crown'],
