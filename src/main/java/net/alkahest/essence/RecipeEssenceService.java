@@ -7,6 +7,8 @@ import net.minecraft.item.BlockItem;
 import net.minecraft.item.ItemStack;
 import net.minecraft.recipe.RecipeType;
 import net.minecraft.recipe.SpecialCraftingRecipe;
+import net.minecraft.recipe.SmithingTransformRecipe;
+import net.alkahest.mixin.SmithingTransformRecipeAccessor;
 import net.minecraft.registry.Registries;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -51,15 +53,26 @@ public final class RecipeEssenceService {
             var recipe = entry.value();
             var type = recipe.getType();
             if (type != RecipeType.CRAFTING && type != RecipeType.SMELTING && type != RecipeType.BLASTING
-                && type != RecipeType.SMOKING && type != RecipeType.CAMPFIRE_COOKING && type != RecipeType.STONECUTTING) continue;
+                && type != RecipeType.SMOKING && type != RecipeType.CAMPFIRE_COOKING && type != RecipeType.STONECUTTING
+                && !(recipe instanceof SmithingTransformRecipe)) continue;
             if (recipe instanceof SpecialCraftingRecipe) continue;
             try {
                 ItemStack output = recipe.getResult(server.getRegistryManager());
                 if (output.isEmpty()) continue;
                 List<List<String>> slots = new ArrayList<>();
                 Map<String, String> remainders = new HashMap<>();
-                for (var ingredient : recipe.getIngredients()) {
-                    if (ingredient.isEmpty()) continue; // blank shaped-grid position
+                // Smithing transforms have three real consumed slots, including the template.
+                // Trims and arbitrary custom smithing serializers can have dynamic results and are not inferred.
+                var ingredients = recipe instanceof SmithingTransformRecipe transform
+                    ? List.of(((SmithingTransformRecipeAccessor) transform).alkahest$template(),
+                              ((SmithingTransformRecipeAccessor) transform).alkahest$base(),
+                              ((SmithingTransformRecipeAccessor) transform).alkahest$addition())
+                    : recipe.getIngredients();
+                for (var ingredient : ingredients) {
+                    if (ingredient.isEmpty()) {
+                        if (recipe instanceof SmithingTransformRecipe) slots.add(List.of());
+                        continue; // blank shaped-grid position; empty required smithing slot cannot be inferred
+                    }
                     List<String> alternatives = new ArrayList<>();
                     for (ItemStack candidate : ingredient.getMatchingStacks()) {
                         if (candidate.isEmpty()) continue;
@@ -79,7 +92,8 @@ public final class RecipeEssenceService {
         }
         addAlchemyRecipes(recipes);
         addVanillaWorldTransformations(recipes);
-        var computed = RecipeEssenceCalculator.calculate(seeds, recipes);
+        var calculation = RecipeEssenceCalculator.calculateDetailed(seeds, recipes);
+        var computed = calculation.values();
         Map<Item, List<EssenceStack>> snapshot = new HashMap<>();
         for (var entry : computed.entrySet()) {
             Identifier id = Identifier.tryParse(entry.getKey());
@@ -87,7 +101,7 @@ public final class RecipeEssenceService {
                 Item item = Registries.ITEM.get(id);
                 List<EssenceStack> explicit = ItemEssenceMap.base(new ItemStack(item));
                 // Preserve the previous order of explicit values as it affects bellow/output order.
-                List<EssenceStack> values = explicit.isEmpty() ? RecipeEssenceCalculator.rounded(entry.getValue()) : explicit;
+                List<EssenceStack> values = explicit.isEmpty() ? RecipeEssenceCalculator.rounded(entry.getValue(), calculation.depths().getOrDefault(entry.getKey(), 0)) : explicit;
                 if (!values.isEmpty()) snapshot.put(item, values);
             }
         }
@@ -154,13 +168,6 @@ public final class RecipeEssenceService {
         worldTransform(recipes, "sponge", "wet_sponge");
         worldTransform(recipes, "anvil", "chipped_anvil");
         worldTransform(recipes, "chipped_anvil", "damaged_anvil");
-        // Netherite smithing consumes the upgrade template, diamond equipment and netherite ingot.
-        for (String equipment : new String[]{"sword", "pickaxe", "axe", "shovel", "hoe", "helmet", "chestplate", "leggings", "boots"}) {
-            recipes.add(new RecipeEssenceCalculator.Recipe("~world/netherite_" + equipment,
-                "minecraft:netherite_" + equipment, 1,
-                List.of(List.of("minecraft:diamond_" + equipment), List.of("minecraft:netherite_ingot"),
-                    List.of("minecraft:netherite_upgrade_smithing_template"))));
-        }
         // Oxidation changes state but does not consume the underlying copper block or device.
         String[] variants = {"copper", "cut_copper", "cut_copper_slab", "cut_copper_stairs",
             "chiseled_copper", "copper_grate", "copper_bulb", "copper_door", "copper_trapdoor"};

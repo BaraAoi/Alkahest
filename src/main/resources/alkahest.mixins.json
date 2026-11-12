@@ -7,7 +7,8 @@
     "OverworldBiomeMixin",
     "LivingEntityMidasLootMixin",
     "EntityMidasDropMixin",
-    "PlayerInventoryResearchMixin"
+    "PlayerInventoryResearchMixin",
+    "SmithingTransformRecipeAccessor"
   ],
   "injectors": {
     "defaultRequire": 1

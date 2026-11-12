@@ -132,6 +132,36 @@ public class RecipeEssenceGameTests implements FabricGameTest {
     }
 
     @GameTest(templateName = EMPTY_STRUCTURE)
+    public void loadedModSmithingTransformAndComplexCraftHaveEssences(TestContext c) {
+        var world=c.getWorld(); var server=world.getServer();
+        var smithRecipe=server.getRecipeManager().values().stream()
+            .filter(e->e.id().toString().equals("alkahest_gametest:essence_smithing"))
+            .findFirst().orElseThrow();
+        c.assertTrue(smithRecipe.value() instanceof net.minecraft.recipe.SmithingTransformRecipe,
+            "A real datapack smithing transform was loaded");
+        var smith=new ItemStack(TestItems.SMITHED);
+        var composition=CauldronBlockEntity.essencesOf(smith,world);
+        c.assertTrue(composition.getOrDefault(EssenceType.TERRA,0)==20
+            && composition.getOrDefault(EssenceType.ORDO,0)==20
+            && composition.getOrDefault(EssenceType.LUX,0)==11,
+            "Smithing sums template, crafted base, diamond and the second-stage bonus: "+composition);
+        c.assertTrue(composition.getOrDefault(EssenceType.METALLUM,0)==3, "The modded base contributes its iron");
+        var complex=CauldronBlockEntity.essencesOf(new ItemStack(TestItems.COMPLEX),world);
+        c.assertTrue(complex.getOrDefault(EssenceType.TERRA,0)==40 && complex.getOrDefault(EssenceType.LUX,0)==24,
+            "One further crafting stage and another diamond produce more essence: "+complex);
+        c.assertTrue(Tier2DistilleryBlockEntity.accepts(smith,world), "Tier two recognizes a modded smithing result");
+        c.setBlockState(3,1,3,Blocks.MAGMA_BLOCK); c.setBlockState(3,2,3,ModBlocks.ALCHEMY_CAULDRON);
+        var pot=(CauldronBlockEntity)world.getBlockEntity(c.getAbsolutePos(new BlockPos(3,2,3)));
+        var player=c.createMockPlayer(GameMode.SURVIVAL); player.setStackInHand(Hand.MAIN_HAND,new ItemStack(Items.WATER_BUCKET)); pot.fill(player,Hand.MAIN_HAND);
+        c.assertTrue(pot.dissolveOne(smith) && pot.essences().getOrDefault(EssenceType.TERRA,0)==20,
+            "A real cauldron uses the calculated smithing result");
+        var original=ItemEssenceMap.get(smith,world); RecipeEssenceService.rebuild(server);
+        c.assertTrue(original.equals(ItemEssenceMap.get(smith,world)), "Reload rebuilding is deterministic");
+        c.assertFalse(ItemEssenceMap.get(new ItemStack(Items.NETHERITE_SWORD),world).isEmpty(), "Real vanilla smithing remains covered without hardcoded recipe");
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
     public void reportedBuildingMaterialsAndItemsHaveEssences(TestContext c) {
         var world = c.getWorld();
         for (var item : java.util.List.of(

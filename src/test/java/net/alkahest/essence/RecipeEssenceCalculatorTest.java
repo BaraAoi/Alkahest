@@ -54,7 +54,29 @@ class RecipeEssenceCalculatorTest {
     }
     @Test void integerBoundsAndRounding() {
         assertEquals(List.of(new EssenceStack(AQUA, 1, 1f)), rounded(Map.of(AQUA, .1)));
-        assertEquals(List.of(new EssenceStack(ORDO, 256, 1f)), rounded(Map.of(ORDO, 9999.0)));
+        assertEquals(List.of(new EssenceStack(ORDO, 500, 1f)), rounded(Map.of(ORDO, 9999.0)));
         assertTrue(rounded(Map.of()).isEmpty());
+    }
+    @Test void longerKnownCraftingChainsHaveABoundedNonCompoundingBonus() {
+        var seeds = Map.of("a", Map.of(ORDO, 10.0, GELUM, 2.0));
+        var recipes = List.of(new Recipe("1", "first", 1, List.of(List.of("a"))),
+            new Recipe("2", "second", 1, List.of(List.of("first"))),
+            new Recipe("3", "third", 1, List.of(List.of("second"))));
+        var result = calculateDetailed(seeds, recipes);
+        assertEquals(1, result.depths().get("first"));
+        assertEquals(3, result.depths().get("third"));
+        assertEquals(10.0, result.values().get("third").get(ORDO)); // no repeated compounding
+        assertEquals(List.of(new EssenceStack(ORDO, 12, 1f), new EssenceStack(GELUM, 2, 1f)),
+            rounded(result.values().get("third"), result.depths().get("third")));
+        assertEquals(List.of(new EssenceStack(ORDO, 16, 1f)), rounded(Map.of(ORDO, 10.0), 999));
+        assertEquals(List.of(new EssenceStack(GELUM, 256, 1f)), rounded(Map.of(GELUM, 999.0), 999));
+    }
+    @Test void returnedContainerIsNotMistakenForAddedRecipeComplexity() {
+        var seeds = Map.of("base", Map.of(AQUA, 10.0), "ore", Map.of(ORDO, 10.0));
+        var recipes = List.of(new Recipe("1", "container", 1, List.of(List.of("base"))),
+            new Recipe("2", "product", 1, List.of(List.of("container"), List.of("ore")), Map.of("container", "base")));
+        var result = calculateDetailed(seeds, recipes);
+        assertEquals(1, result.depths().get("product"));
+        assertEquals(Map.of(ORDO, 10.0), result.values().get("product"));
     }
 }
