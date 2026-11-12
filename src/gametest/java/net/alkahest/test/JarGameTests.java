@@ -275,7 +275,7 @@ public class JarGameTests implements FabricGameTest {
         var powder=new ItemStack(ModItems.CRYSTALLIZATION_POWDER,2); clickJar(c,pos,player,powder);
         var area=new net.minecraft.util.math.Box(player.getBlockPos()).expand(3);
         int drops=c.getWorld().getEntitiesByClass(ItemEntity.class,area,e->e.getStack().isOf(ModItems.CRYSTALS.get(EssenceType.ORDO))).stream().mapToInt(e->e.getStack().getCount()).sum();
-        c.assertTrue(drops==17 && jar.contents().total()==0 && powder.getCount()==2,"Creative overflow drops every crystal instead of voiding it; powder is not consumed");
+        c.assertTrue(drops==17 && jar.contents().total()==0 && powder.getCount()==2,"Creative: drops="+drops+", jar="+jar.contents().total()+", powder="+powder.getCount()+", creative="+player.isCreative());
         c.complete();
     }
 }
