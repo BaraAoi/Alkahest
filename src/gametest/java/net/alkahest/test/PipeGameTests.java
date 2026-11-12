@@ -1062,4 +1062,25 @@ public class PipeGameTests implements FabricGameTest {
         });
     }
 
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void jarFeedRespectsStabilizerProgressIdentity(TestContext c) {
+        c.setBlockState(2,2,3,ModBlocks.JAR); c.setBlockState(3,2,3,ModBlocks.ALCHEMY_PIPE);
+        c.setBlockState(4,2,3,ModBlocks.STABILIZER_RECEIVER);
+        c.setBlockState(4,3,3,ModBlocks.STABILIZER_CORE); c.setBlockState(4,4,3,ModBlocks.STABILIZER_CREST);
+        var w=c.getWorld(); BlockPos p=c.getAbsolutePos(new BlockPos(3,2,3));
+        var jar=(JarBlockEntity)w.getBlockEntity(p.west());
+        var receiver=(StabilizerReceiverBlockEntity)w.getBlockEntity(p.east());
+        var core=(StabilizerCoreBlockEntity)w.getBlockEntity(p.east().up());
+        jar.setPipeSource(true); receiver.setContents(of(EssenceType.AQUA,4,.5f)); core.setActivated(true);
+        for(int i=0;i<40;i++) StabilizerReceiverBlockEntity.tick(w,p.east(),receiver);
+        jar.setContents(of(EssenceType.AQUA,3,.5f));
+        c.assertTrue(AlchemyPipeBlockEntity.pulse(w,p)==3 && receiver.progress()==40 && receiver.contents().total()==7,
+            "The active type retains its progress when fed from a source jar");
+        jar.setContents(of(EssenceType.IGNIS,2,.5f));
+        c.assertTrue(AlchemyPipeBlockEntity.pulse(w,p)==2 && receiver.progress()==0 && receiver.contents().total()==9
+            && receiver.contents().contents().getFirst().type()==EssenceType.IGNIS,
+            "A newly first type cannot inherit work from Aqua");
+        c.complete();
+    }
+
 }
