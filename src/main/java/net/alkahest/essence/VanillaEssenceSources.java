@@ -104,6 +104,11 @@ final class VanillaEssenceSources {
             Items.GOAT_HORN, Items.HEART_OF_THE_SEA, Items.ELYTRA, Items.DRAGON_BREATH,
             Items.ECHO_SHARD, Items.TOTEM_OF_UNDYING, Items.TRIDENT, Items.SADDLE
         );
+        // Reviewed hard-to-obtain loot, rather than inventing rarity from item names.
+        put(values, List.of(new EssenceStack(SPIRITUS, 10, 1f), new EssenceStack(MOTUS, 8, 1f), new EssenceStack(ORDO, 6, 1f)), Items.ELYTRA);
+        put(values, List.of(new EssenceStack(SPIRITUS, 8, 1f), new EssenceStack(AQUA, 8, 1f), new EssenceStack(ORDO, 6, 1f)), Items.HEART_OF_THE_SEA);
+        put(values, List.of(new EssenceStack(SPIRITUS, 10, 1f), new EssenceStack(ORDO, 8, 1f)), Items.TOTEM_OF_UNDYING);
+        put(values, List.of(new EssenceStack(AQUA, 10, 1f), new EssenceStack(METALLUM, 8, 1f), new EssenceStack(MOTUS, 4, 1f)), Items.TRIDENT);
         // Loot-only banner patterns and named tags.
         put(values, List.of(new EssenceStack(HERBA, 1, 1f), new EssenceStack(ORDO, 2, 1f)),
             Items.CREEPER_BANNER_PATTERN, Items.FLOW_BANNER_PATTERN, Items.GLOBE_BANNER_PATTERN, Items.GUSTER_BANNER_PATTERN,
@@ -125,6 +130,7 @@ final class VanillaEssenceSources {
             Items.SKELETON_SKULL, Items.WITHER_SKELETON_SKULL, Items.ZOMBIE_HEAD);
         put(values, List.of(new EssenceStack(SPIRITUS, 3, 1f), new EssenceStack(ORDO, 2, 1f)),
             Items.DRAGON_EGG, Items.TRIAL_KEY, Items.OMINOUS_TRIAL_KEY, Items.SPAWNER, Items.TRIAL_SPAWNER, Items.VAULT);
+        put(values, List.of(new EssenceStack(SPIRITUS, 20, 1f), new EssenceStack(ORDO, 12, 1f)), Items.DRAGON_EGG);
         // Creative/operator items are known vanilla registry entries, assigned explicitly too.
         put(values, List.of(new EssenceStack(POTENTIA, 3, 1f), new EssenceStack(ORDO, 2, 1f)),
             Items.BARRIER, Items.LIGHT, Items.COMMAND_BLOCK, Items.CHAIN_COMMAND_BLOCK,

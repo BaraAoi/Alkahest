@@ -149,6 +149,8 @@ public class RecipeEssenceGameTests implements FabricGameTest {
         var complex=CauldronBlockEntity.essencesOf(new ItemStack(TestItems.COMPLEX),world);
         c.assertTrue(complex.getOrDefault(EssenceType.TERRA,0)==40 && complex.getOrDefault(EssenceType.LUX,0)==24,
             "One further crafting stage and another diamond produce more essence: "+complex);
+        c.assertTrue(ItemEssenceMap.get(new ItemStack(TestItems.UNRESOLVED_SMITH),world).isEmpty(),
+            "Unknown smithing base is not replaced with a guessed composition");
         c.assertTrue(Tier2DistilleryBlockEntity.accepts(smith,world), "Tier two recognizes a modded smithing result");
         c.setBlockState(3,1,3,Blocks.MAGMA_BLOCK); c.setBlockState(3,2,3,ModBlocks.ALCHEMY_CAULDRON);
         var pot=(CauldronBlockEntity)world.getBlockEntity(c.getAbsolutePos(new BlockPos(3,2,3)));
@@ -158,6 +160,19 @@ public class RecipeEssenceGameTests implements FabricGameTest {
         var original=ItemEssenceMap.get(smith,world); RecipeEssenceService.rebuild(server);
         c.assertTrue(original.equals(ItemEssenceMap.get(smith,world)), "Reload rebuilding is deterministic");
         c.assertFalse(ItemEssenceMap.get(new ItemStack(Items.NETHERITE_SWORD),world).isEmpty(), "Real vanilla smithing remains covered without hardcoded recipe");
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void difficultVanillaLootHasReviewedHigherValues(TestContext c) {
+        var world=c.getWorld();
+        var star=CauldronBlockEntity.essencesOf(new ItemStack(Items.NETHER_STAR),world);
+        var egg=CauldronBlockEntity.essencesOf(new ItemStack(Items.DRAGON_EGG),world);
+        var wings=CauldronBlockEntity.essencesOf(new ItemStack(Items.ELYTRA),world);
+        c.assertTrue(star.getOrDefault(EssenceType.SPIRITUS,0)==18 && star.values().stream().mapToInt(Integer::intValue).sum()==42,
+            "Nether star has an explicitly reviewed rare reward");
+        c.assertTrue(egg.getOrDefault(EssenceType.SPIRITUS,0)==20 && wings.getOrDefault(EssenceType.MOTUS,0)==8,
+            "Dragon egg and elytra have larger curated profiles");
         c.complete();
     }
 

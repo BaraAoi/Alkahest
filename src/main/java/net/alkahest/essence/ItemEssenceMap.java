@@ -110,7 +110,7 @@ public final class ItemEssenceMap {
         e(Items.PHANTOM_MEMBRANE, s(SPIRITUS, 2), s(AER, 2)),
         e(Items.GHAST_TEAR, s(AQUA, 2), s(SPIRITUS, 2)),
         e(Items.PRISMARINE_CRYSTALS, s(AQUA, 3), s(LUX, 2)),
-        e(Items.NETHER_STAR, s(SPIRITUS, 8), s(LUX, 6), s(POTENTIA, 6)),
+        e(Items.NETHER_STAR, s(SPIRITUS, 18), s(LUX, 12), s(POTENTIA, 12)),
         e(Items.HEAVY_CORE, s(METALLUM, 6), s(ORDO, 4)),
         e(Items.BELL, s(METALLUM, 4), s(ORDO, 2), s(MOTUS, 2)),
         e(Items.GLOW_INK_SAC, s(AQUA, 1), s(LUX, 2)),

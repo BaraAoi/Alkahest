@@ -1,7 +1,7 @@
 {
   "type": "minecraft:smithing_transform",
   "template": {"item": "minecraft:netherite_upgrade_smithing_template"},
-  "base": {"item": "alkahest_gametest:crafted_sample"},
+  "base": {"tag": "alkahest_gametest:smithing_bases"},
   "addition": {"item": "minecraft:diamond"},
   "result": {"id": "alkahest_gametest:smithing_result"}
 }
