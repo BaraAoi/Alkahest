@@ -56,9 +56,20 @@ for key in ('GRAVEL, Items.FLINT', 'FLINT, Items.QUARTZ', 'REDSTONE, Items.GLOWS
             'NETHERRACK, Items.NETHER_BRICK', 'SOUL_SAND, Items.SOUL_SOIL', 'IRON_NUGGET, Items.GOLD_NUGGET'):
     assert key in source, key
 matrix = (java / 'matrix/MatrixRecipe.java').read_text()
-for key in ('ModItems.FROST_FLASK', 'ModItems.PURIFYING_FLASK', 'Items.POWERED_RAIL', 'Items.SEA_LANTERN',
+for key in ('Items.POWERED_RAIL', 'Items.SEA_LANTERN',
             'Items.MAGMA_BLOCK', 'Items.SOUL_LANTERN', 'Items.ARROW', 'Items.RAIL'):
     assert key in matrix, key
 journal = (root / 'src/client/java/net/alkahest/client/gui/JournalScreen.java').read_text()
 assert 'TransmutationRecipe.all()' in journal and 'child.parents() & parent.completed()' in journal
 print('Practical research, both generated flask sprites and new machine recipe registries validated')
+
+# The formerly Matrix-only items remain available without progression gates.
+for output, inputs in {
+    'frost_flask': ['minecraft:glass_bottle', 'minecraft:snowball', 'alkahest:crystal_gelum'],
+    'purifying_flask': ['minecraft:honey_bottle', 'alkahest:purified_water', 'alkahest:crystal_ordo'],
+    'midas_elixir': ['alkahest:purified_water', 'minecraft:golden_apple', 'minecraft:gold_ingot', 'alkahest:crystal_ordo'],
+}.items():
+    recipe = json.loads((data / f'recipe/{output}.json').read_text())
+    assert recipe['type'] == 'minecraft:crafting_shapeless'
+    assert [entry['item'] for entry in recipe['ingredients']] == inputs
+    assert recipe['result'] == {'id': f'alkahest:{output}', 'count': 1}

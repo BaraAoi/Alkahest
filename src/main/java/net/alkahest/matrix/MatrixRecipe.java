@@ -28,32 +28,10 @@ public record MatrixRecipe(Item base, List<Item> components, ItemStack output,
             EssenceType.TERRA, 4, EssenceType.ORDO, 2),
         synthesis(Items.GUNPOWDER, List.of(), new ItemStack(ModItems.FIRE_DUST, 2),
             EssenceType.IGNIS, 3, EssenceType.POTENTIA, 3),
-        synthesis(Items.LIGHTNING_ROD, List.of(Items.GLASS_BOTTLE), new ItemStack(ModItems.LIGHTNING_IN_A_BOTTLE),
-            EssenceType.IGNIS, 6, EssenceType.AER, 6),
         synthesis(Items.QUARTZ, List.of(), new ItemStack(Items.AMETHYST_SHARD, 4),
             EssenceType.LUX, 3, EssenceType.VITIUM, 2),
         synthesis(Items.COAL, List.of(Items.GOLD_INGOT, ModItems.SALT), new ItemStack(Items.DIAMOND),
             EssenceType.METALLUM, 8, EssenceType.LUX, 6, EssenceType.ORDO, 4),
-        // The specification's Matrix recipe; the earlier cauldron recipe remains available.
-        synthesis(Items.GLASS_BOTTLE, List.of(ModItems.CAUSTIC_SLIME), new ItemStack(ModItems.MIASMA),
-            EssenceType.PERDITIO, 20, EssenceType.MORTUUS, 15, EssenceType.AQUA, 10),
-        // The specification's alternative; the lightning-rod recipe stays available as well.
-        synthesis(Items.GLASS_BOTTLE, List.of(ModItems.CRYSTALS.get(EssenceType.IGNIS), ModItems.CRYSTALS.get(EssenceType.AER)),
-            new ItemStack(ModItems.LIGHTNING_IN_A_BOTTLE), EssenceType.POTENTIA, 15, EssenceType.AER, 10),
-        // The player requested more involved Matrix syntheses than the specification's original two items.
-        synthesis(Items.GOLDEN_APPLE, List.of(ModItems.PURIFIED_WATER, Items.GOLD_INGOT, ModItems.CRYSTALS.get(EssenceType.ORDO)),
-            new ItemStack(ModItems.MIDAS_ELIXIR), EssenceType.ORDO, 15, EssenceType.LUX, 10, EssenceType.METALLUM, 5),
-        // A higher-volume alternative to the early inventory mixture, not a replacement for it.
-        synthesis(ModItems.FIRE_DUST, List.of(Items.SLIME_BALL, Items.BLAZE_POWDER), new ItemStack(ModItems.NAPALM, 3),
-            EssenceType.IGNIS, 12, EssenceType.POTENTIA, 8),
-        // Optional advanced batch; the earlier two-item inventory mixture remains available.
-        synthesis(ModItems.CAUSTIC_SLIME, List.of(Items.GUNPOWDER, Items.IRON_NUGGET), new ItemStack(ModItems.ACID_BOMB, 3),
-            EssenceType.VITIUM, 12, EssenceType.PERDITIO, 8, EssenceType.METALLUM, 4),
-        // New consumables are final products, not the future byproduct materials reserved for discussion.
-        synthesis(Items.SNOWBALL, List.of(Items.GLASS_BOTTLE, ModItems.CRYSTALS.get(EssenceType.GELUM)),
-            new ItemStack(ModItems.FROST_FLASK, 2), EssenceType.GELUM, 12, EssenceType.AQUA, 8),
-        synthesis(Items.HONEY_BOTTLE, List.of(ModItems.PURIFIED_WATER, ModItems.CRYSTALS.get(EssenceType.ORDO)),
-            new ItemStack(ModItems.PURIFYING_FLASK, 2), EssenceType.ORDO, 12, EssenceType.AQUA, 8),
         // Intermediate resources from the Transmutator are useful as Matrix bases.
         synthesis(Items.FLINT, List.of(Items.IRON_NUGGET, Items.FEATHER), new ItemStack(Items.ARROW, 8),
             EssenceType.METALLUM, 4, EssenceType.AER, 4),

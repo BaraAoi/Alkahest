@@ -173,20 +173,10 @@ for block in ('MatrixPillarBlock', 'AlchemicalBrickBlock', 'MatrixCoreBlock'):
 check('MatrixRecipe.all()' in journal, 'the journal must list the matrix syntheses')
 check('recipes.size() * 17' in journal and 'rowY = top + i * 17 - scroll' in journal,
       'the synthesis list must scroll instead of silently hiding later recipes')
-check('new ItemStack(ModItems.MIASMA)' in recipe_source and 'Items.GLASS_BOTTLE, List.of(ModItems.CAUSTIC_SLIME)' in recipe_source,
-      'the specification miasma synthesis needs a bottle and a pedestal slime')
-check('EssenceType.POTENTIA, 15, EssenceType.AER, 10' in recipe_source, 'the crystal lightning synthesis must retain its specification price')
+for item in ('MIASMA', 'LIGHTNING_IN_A_BOTTLE', 'MIDAS_ELIXIR', 'NAPALM', 'ACID_BOMB', 'FROST_FLASK', 'PURIFYING_FLASK'):
+    check(f'new ItemStack(ModItems.{item}' not in recipe_source, f'{item} must not be a Matrix output')
 check('StartedRecipe' in core and 'startedRecipeKey' in core, 'an active synthesis must retain its recipe identity')
 check('uniqueForBase' in hud and 'matrix.recipe()' in hud, 'the monocle must use the matched recipe, not guess a shared base')
-check('new ItemStack(ModItems.MIDAS_ELIXIR)' in recipe_source and 'Items.GOLDEN_APPLE, List.of(ModItems.PURIFIED_WATER, Items.GOLD_INGOT, ModItems.CRYSTALS.get(EssenceType.ORDO))' in recipe_source,
-      'Midas elixir requires all three pedestal ingredients'
-)
-check('synthesis(ModItems.FIRE_DUST, List.of(Items.SLIME_BALL, Items.BLAZE_POWDER)' in recipe_source and 'new ItemStack(ModItems.NAPALM, 3)' in recipe_source,
-      'the new napalm synthesis must need two components and produce three')
-check('synthesis(ModItems.CAUSTIC_SLIME, List.of(Items.GUNPOWDER, Items.IRON_NUGGET)' in recipe_source and 'new ItemStack(ModItems.ACID_BOMB, 3)' in recipe_source,
-      'the acid bomb batch needs two pedestal ingredients and produces three')
-check('EssenceType.VITIUM, 12, EssenceType.PERDITIO, 8, EssenceType.METALLUM, 4' in recipe_source,
-      'the acid bomb batch must have its full price')
 
 check('MidasTouchEffect.progressStep' in core and 'before / 10 != self.progress / 10' in core,
       'Midas speed must preserve every essence prefill crossing')
@@ -211,7 +201,7 @@ check('net.alkahest.test.MatrixGameTests' in gametest_mod['entrypoints']['fabric
 tests = (GAMETEST / 'java/net/alkahest/test/MatrixGameTests.java').read_text()
 test_count = len(re.findall(r'@GameTest', tests))
 check(test_count >= 11, f'expected at least eleven matrix game tests, found {test_count}')
-check('acidBombBatchNeedsBothComponentsAndExactEssence' in tests, 'acid batch needs gameplay conservation tests')
+check('removedBottleRecipesCannotStart' in tests, 'removed bottle recipes need a gameplay regression test')
 
 # --- report ----------------------------------------------------------------------------------------
 if failures:

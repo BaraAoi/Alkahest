@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "alkahest:purified_water"
+    },
+    {
+      "item": "minecraft:golden_apple"
+    },
+    {
+      "item": "minecraft:gold_ingot"
+    },
+    {
+      "item": "alkahest:crystal_ordo"
+    }
+  ],
+  "result": {
+    "id": "alkahest:midas_elixir",
+    "count": 1
+  }
+}

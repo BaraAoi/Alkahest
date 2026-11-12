@@ -35,7 +35,8 @@ class PracticalResearchPlanTest {
         assertEquals(0, resolve(0, 0, TRANSMUTATOR));
         assertEquals(parent | TRANSMUTATOR, resolve(parent, 0, TRANSMUTATOR));
         assertEquals(MATRIX | AMULET | TRANSMUTATOR, resolve(AMULET | TRANSMUTATOR, 0, MATRIX));
-        assertEquals(MATRIX | AMULET | TRANSMUTATOR | FROST, resolve(AMULET | TRANSMUTATOR, FROST, MATRIX));
+        assertEquals(MATRIX | AMULET | TRANSMUTATOR, resolve(AMULET | TRANSMUTATOR, FROST, MATRIX));
+        assertEquals(WATER | FROST, resolve(WATER, FROST, 0));
         assertFalse(visible(CHAMBER)); assertFalse(visible(PEDESTAL));
         assertTrue(visible(MATRIX)); assertTrue(visible(SEPARATOR));
     }

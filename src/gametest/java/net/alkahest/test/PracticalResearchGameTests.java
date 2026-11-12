@@ -119,7 +119,8 @@ public class PracticalResearchGameTests implements FabricGameTest {
         PracticalResearchStorage.assembly(player, PracticalResearchPlan.MATRIX);
         PracticalResearchStorage.observe(player, new ItemStack(ModItems.FROST_FLASK));
         c.assertTrue((PracticalResearchStorage.observed(player) & PracticalResearchPlan.FROST) != 0, "Early reagent is remembered");
-        c.assertTrue((PracticalResearchStorage.completed(player) & PracticalResearchPlan.FROST) == 0, "It cannot finish before the Matrix path");
+        c.assertTrue((PracticalResearchStorage.completed(player) & PracticalResearchPlan.FROST) == 0, "It cannot finish before purified water");
+        player.getAdvancementTracker().grantCriterion(player.getServer().getAdvancementLoader().get(Alkahest.id("practice/completed_water")), "done");
         for (var item : new net.minecraft.item.ItemConvertible[]{ModBlocks.ALCHEMY_PIPE, ModBlocks.ESSENCE_CHARGER,
                 ModItems.ALKAHEST_AMULET, ModBlocks.TRANSMUTATOR_CORE, ModBlocks.TRANSMUTATOR_CHAMBER,
                 ModBlocks.TRANSMUTATOR_CROWN, ModBlocks.MATRIX_CORE, ModBlocks.MATRIX_PEDESTAL})
