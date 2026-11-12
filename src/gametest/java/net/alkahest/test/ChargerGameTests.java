@@ -138,7 +138,19 @@ public class ChargerGameTests implements FabricGameTest {
         for(int n=0;n<12;n++) net.alkahest.block.entity.TransmutatorCoreBlockEntity.tick(c.getWorld(),core.getPos(),core);
         int before=core.progress();
         c.assertTrue(before>0,"The machine is processing");
-        c.assertTrue(EssenceChargerBlockEntity.chargeMachineNearby(c.getWorld(),jar,charger)==core,"The awakened machine is selected");
+        var farther=tower(c,7,y,3,10,true);
+        boolean[] loadedBefore=new boolean[25]; int index=0;
+        for(int cx=(charger.getX()-32)>>4; cx<=(charger.getX()+32)>>4; cx++)
+            for(int cz=(charger.getZ()-32)>>4; cz<=(charger.getZ()+32)>>4; cz++)
+                loadedBefore[index++]=c.getWorld().getChunkManager().isChunkLoaded(cx,cz);
+        c.assertTrue(EssenceChargerBlockEntity.chargeMachineNearby(c.getWorld(),jar,charger)==core,"The nearest awakened machine is selected");
+        c.assertTrue(farther.getStack(net.alkahest.block.entity.TransmutatorCoreBlockEntity.AMULET).get(ModDataComponents.ESSENCE_CHARGE)==10,
+            "A more distant machine is not charged in the same cycle");
+        index=0;
+        for(int cx=(charger.getX()-32)>>4; cx<=(charger.getX()+32)>>4; cx++)
+            for(int cz=(charger.getZ()-32)>>4; cz<=(charger.getZ()+32)>>4; cz++)
+                c.assertTrue(loadedBefore[index++]==c.getWorld().getChunkManager().isChunkLoaded(cx,cz),"Scanning does not load chunks");
+        c.getWorld().setBlockState(farther.getPos(),net.minecraft.block.Blocks.AIR.getDefaultState());
         var amulet=core.getStack(net.alkahest.block.entity.TransmutatorCoreBlockEntity.AMULET);
         c.assertTrue(amulet.get(ModDataComponents.ESSENCE_CHARGE)==45 && jar.contents().total()==3,"One Ordo becomes ten charge");
         c.assertTrue(core.progress()==before,"Charging does not restart processing");
