@@ -30,6 +30,7 @@ public final class Tier2DistilleryScreen extends HandledScreen<Tier2DistillerySc
         return Text.translatable(switch (handler.status()) {
             case 1 -> "screen.alkahest.distillery_tier2.working";
             case 2 -> "screen.alkahest.distillery_tier2.blocked";
+            case 3 -> "screen.alkahest.distillery_tier2.no_bellows";
             default -> "screen.alkahest.distillery_tier2.ready";
         });
     }
@@ -72,7 +73,7 @@ public final class Tier2DistilleryScreen extends HandledScreen<Tier2DistillerySc
         c.drawTextWithShadow(textRenderer, title, titleX, titleY, 0xFFF1D8A3);
         c.drawTextWithShadow(textRenderer, playerInventoryTitle, playerInventoryTitleX, playerInventoryTitleY, 0xFFDFD0AB);
         c.drawTextWithShadow(textRenderer, Text.translatable("screen.alkahest.distillery_tier2.input"), 14, 34, 0xFFE3D1A5);
-        int color = handler.status() == 2 ? 0xFFFFC27D : handler.status() == 1 ? 0xFFC9A6FF : 0xFFD1C6AC;
+        int color = (handler.status() == 2 || handler.status() == 3) ? 0xFFFFC27D : handler.status() == 1 ? 0xFFC9A6FF : 0xFFD1C6AC;
         c.drawCenteredTextWithShadow(textRenderer, statusText(), 88, 64, color);
         c.drawTextWithShadow(textRenderer, percent() + "%", 118, 52, 0xFFE9D9AE);
     }

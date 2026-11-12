@@ -256,6 +256,8 @@ public final class ItemEssenceMap {
     /** Protect stored items, loot, bees, other saved entities and filled essence jars. */
     public static boolean safeToConsume(ItemStack stack) {
         if (stack.isEmpty()) return false;
+        var distillery = stack.get(net.alkahest.registry.ModDataComponents.DISTILLERY_CONTENTS);
+        if (distillery != null && distillery.total() > 0) return false;
         var container = stack.get(net.minecraft.component.DataComponentTypes.CONTAINER);
         if (container != null && container.streamNonEmpty().findAny().isPresent()) return false;
         var bundle = stack.get(net.minecraft.component.DataComponentTypes.BUNDLE_CONTENTS);

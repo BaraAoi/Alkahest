@@ -283,7 +283,7 @@
   "screen.alkahest.practice.charger.title": "Essence Charger",
   "screen.alkahest.practice.charger.recipe": "Place the charger on a jar. While you are nearby it recharges compatible wands and the amulet from the jar.",
   "screen.alkahest.practice.tier2.title": "Tier II Distillery and Bellows",
-  "screen.alkahest.practice.tier2.recipe": "Distillery: copper block — copper ingot — copper block / glass — Alkahest vial — glass / copper block — crude distillery — copper block. Bellows (2): glass — copper — glass / copper — iron ingot — copper / glass — copper — glass. Place at least one bellow on top, insert valid material and wait for the machine to start with its screen open.",
+  "screen.alkahest.practice.tier2.recipe": "Distillery: copper block — copper ingot — copper block / glass — Alkahest vial — glass / copper block — crude distillery — copper block. Bellows (2): glass — copper — glass / copper — iron ingot — copper / glass — copper — glass. Place at least one bellow on top, insert valid material and wait for the machine to start with its screen open. Bellows retain their essence when moved. If output is blocked, the core retains queued essence when moved; input drops separately. Matching bellows fill before empty ones.",
   "screen.alkahest.practice.bellows.title": "Glass Bellows",
   "screen.alkahest.practice.bellows.recipe": "Grid: glass — copper — glass / copper — iron ingot — copper / glass — copper — glass. Makes 2 bellows; each holds one essence type.",
   "screen.alkahest.practice.amulet.title": "Alkahest Amulet",
@@ -507,5 +507,7 @@
   "message.alkahest.faucet_removed": "Old focus returned.",
   "message.alkahest.faucet_on": "Faucet opened.",
   "message.alkahest.faucet_off": "Faucet closed or paused by redstone.",
-  "message.alkahest.faucet_no_legacy": "There is no old focus inside."
+  "message.alkahest.faucet_no_legacy": "There is no old focus inside.",
+  "screen.alkahest.distillery_tier2.no_bellows": "Add bellows",
+  "tooltip.alkahest.distillery_saved_contents": "Stored essence:"
 }

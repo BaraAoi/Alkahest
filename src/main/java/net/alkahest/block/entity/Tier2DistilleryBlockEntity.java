@@ -5,6 +5,9 @@ import net.alkahest.effect.MidasTouchEffect;
 import net.alkahest.essence.EssenceStack;
 import net.alkahest.essence.EssenceType;
 import net.alkahest.essence.ItemEssenceMap;
+import net.alkahest.essence.JarContentsComponent;
+import net.alkahest.registry.ModDataComponents;
+import net.minecraft.component.ComponentMap;
 import net.alkahest.registry.ModBlockEntities;
 import net.alkahest.screen.Tier2DistilleryScreenHandler;
 import net.minecraft.block.Block;
@@ -40,7 +43,7 @@ import java.util.List;
 public class Tier2DistilleryBlockEntity extends BlockEntity implements Inventory, NamedScreenHandlerFactory {
     public static final int DURATION = 300;
     public static final int MAX_BELLOWS = 8;
-    public static final int STATUS_IDLE = 0, STATUS_WORKING = 1, STATUS_BLOCKED = 2;
+    public static final int STATUS_IDLE = 0, STATUS_WORKING = 1, STATUS_BLOCKED = 2, STATUS_NO_BELLOWS = 3;
 
     private final DefaultedList<ItemStack> stacks = DefaultedList.ofSize(1, ItemStack.EMPTY);
     private final List<EssenceStack> pending = new ArrayList<>();
@@ -67,8 +70,9 @@ public class Tier2DistilleryBlockEntity extends BlockEntity implements Inventory
     public List<EssenceStack> pending() { return pending; }
 
     public int status() {
-        if (!depositDryRun()) return STATUS_BLOCKED;
         ItemStack input = stacks.get(0);
+        if (bellows().isEmpty() && (!pending.isEmpty() || (!input.isEmpty() && accepts(input, world)))) return STATUS_NO_BELLOWS;
+        if (!depositDryRun()) return STATUS_BLOCKED;
         if (input.isEmpty() || !accepts(input, world)) return STATUS_IDLE;
         return STATUS_WORKING;
     }
@@ -109,8 +113,9 @@ public class Tier2DistilleryBlockEntity extends BlockEntity implements Inventory
         }
         for (EssenceStack stack : pending) {
             int left = stack.amount();
-            for (int i = 0; i < bellows.size() && left > 0; i++) {
-                if (kinds[i] != null && kinds[i] != stack.type()) continue;
+            // Fill same-type flasks before claiming an empty one for a new type.
+            for (int pass = 0; pass < 2 && left > 0; pass++) for (int i = 0; i < bellows.size() && left > 0; i++) {
+                if (pass == 0 ? kinds[i] != stack.type() : kinds[i] != null) continue;
                 int take = Math.min(left, free[i]);
                 if (take <= 0) continue;
                 if (kinds[i] == null) kinds[i] = stack.type();
@@ -129,8 +134,9 @@ public class Tier2DistilleryBlockEntity extends BlockEntity implements Inventory
         for (int i = 0; i < pending.size(); i++) {
             EssenceStack stack = pending.get(i);
             int left = stack.amount();
-            for (DistilleryBellowsBlockEntity bellow : bellows) {
+            for (int pass = 0; pass < 2 && left > 0; pass++) for (DistilleryBellowsBlockEntity bellow : bellows) {
                 if (left <= 0) break;
+                if (pass == 0 ? bellow.empty() || bellow.storedType() != stack.type() : !bellow.empty()) continue;
                 left -= bellow.accept(stack.type(), left, stack.stability());
             }
             if (left <= 0) {
@@ -224,6 +230,18 @@ public class Tier2DistilleryBlockEntity extends BlockEntity implements Inventory
     @Override public Text getDisplayName() { return Text.translatable("screen.alkahest.distillery_tier2.title"); }
     @Override public ScreenHandler createMenu(int syncId, PlayerInventory playerInventory, PlayerEntity player) {
         return new Tier2DistilleryScreenHandler(syncId, playerInventory, this, properties);
+    }
+
+    @Override protected void addComponents(ComponentMap.Builder builder) {
+        super.addComponents(builder);
+        if (!pending.isEmpty()) builder.add(ModDataComponents.DISTILLERY_CONTENTS, new JarContentsComponent(pending));
+    }
+    @Override protected void readComponents(ComponentsAccess components) {
+        super.readComponents(components);
+        var saved = components.getOrDefault(ModDataComponents.DISTILLERY_CONTENTS, JarContentsComponent.EMPTY);
+        pending.clear();
+        saved.contents().stream().filter(entry -> entry.type() != EssenceType.VACUUM).forEach(pending::add);
+        markDirty();
     }
 
     @Override protected void writeNbt(NbtCompound nbt, RegistryWrapper.WrapperLookup registries) {

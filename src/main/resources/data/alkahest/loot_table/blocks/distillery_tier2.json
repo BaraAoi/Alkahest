@@ -6,7 +6,16 @@
       "entries": [
         {
           "type": "minecraft:item",
-          "name": "alkahest:distillery_tier2"
+          "name": "alkahest:distillery_tier2",
+          "functions": [
+            {
+              "function": "minecraft:copy_components",
+              "source": "block_entity",
+              "include": [
+                "alkahest:distillery_contents"
+              ]
+            }
+          ]
         }
       ],
       "conditions": [

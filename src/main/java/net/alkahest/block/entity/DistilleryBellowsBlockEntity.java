@@ -7,6 +7,8 @@ import net.alkahest.essence.JarContentsComponent;
 import net.alkahest.item.custom.JarItem;
 import net.alkahest.registry.ModBlockEntities;
 import net.minecraft.block.Block;
+import net.minecraft.component.ComponentMap;
+import net.alkahest.registry.ModDataComponents;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.entity.player.PlayerEntity;
@@ -139,6 +141,22 @@ public class DistilleryBellowsBlockEntity extends BlockEntity {
         } else {
             // The fill level did not change but the type or stability may have: resend the data.
             world.updateListeners(pos, state, state, Block.NOTIFY_LISTENERS);
+        }
+    }
+
+    @Override protected void addComponents(ComponentMap.Builder builder) {
+        super.addComponents(builder);
+        if (!empty()) builder.add(ModDataComponents.DISTILLERY_CONTENTS,
+            new JarContentsComponent(List.of(new EssenceStack(type, amount, stability))));
+    }
+    @Override protected void readComponents(ComponentsAccess components) {
+        super.readComponents(components);
+        var saved = components.getOrDefault(ModDataComponents.DISTILLERY_CONTENTS, JarContentsComponent.EMPTY);
+        if (saved.contents().size() == 1) {
+            var entry = saved.contents().getFirst();
+            if (entry.type() != EssenceType.VACUUM && entry.amount() <= CAPACITY) {
+                type = entry.type(); amount = entry.amount(); stability = entry.stability(); changed();
+            }
         }
     }
 

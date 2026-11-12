@@ -93,6 +93,7 @@ public class Tier2DistilleryGameTests implements FabricGameTest {
         Tier2DistilleryBlockEntity core = core(c);
         core.setStack(0, new ItemStack(Items.APPLE));
         distil(c, Tier2DistilleryBlockEntity.DURATION * 2);
+        c.assertTrue(core.status() == Tier2DistilleryBlockEntity.STATUS_NO_BELLOWS, "Missing bellows has a distinct status");
         c.assertTrue(core.progress() == 0, "Without bellows the cube must not progress");
         c.assertTrue(core.pending().isEmpty(), "Nothing may be produced without bellows");
         c.assertTrue(core.getStack(0).getCount() == 1, "The input must not be consumed");
@@ -110,5 +111,75 @@ public class Tier2DistilleryGameTests implements FabricGameTest {
         c.assertTrue(bellows.accept(EssenceType.IGNIS, 100, 0.6f) == DistilleryBellowsBlockEntity.CAPACITY - 10,
             "Only the free capacity may be filled");
         c.complete();
+    }
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void matchingBellowsFillBeforeEmptyBellows(TestContext c) {
+        build(c); var core=core(c); var bellows=core.bellows();
+        bellows.get(1).accept(EssenceType.IGNIS,60,.4f);
+        bellows.get(2).accept(EssenceType.AQUA,64,.7f);
+        core.pending().add(new EssenceStack(EssenceType.IGNIS,4,.8f));
+        core.pending().add(new EssenceStack(EssenceType.TERRA,5,.6f));
+        core.setStack(0,new ItemStack(Items.APPLE));
+        c.assertTrue(core.status()==Tier2DistilleryBlockEntity.STATUS_WORKING,"Dry-run sees space for both types");
+        distil(c,1);
+        c.assertTrue(core.pending().isEmpty(),"Both queued types delivered instead of blocking");
+        c.assertTrue(bellows.get(1).amount()==64 && bellows.get(1).storedType()==EssenceType.IGNIS,"Matching non-empty bellow is filled first");
+        c.assertTrue(Math.abs(bellows.get(1).stability()-.425f)<.0001,"Matching liquid uses weighted stability");
+        c.assertTrue(bellows.get(0).storedType()==EssenceType.TERRA && bellows.get(0).amount()==5,"Empty bellow is reserved for new type");
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE, tickLimit = 80)
+    public void bellowsRetainContentsOnBreakAndPlacement(TestContext c) {
+        c.setBlockState(3,2,3,ModBlocks.DISTILLERY_BELLOWS); BlockPos pos=corePos(c); var world=c.getWorld();
+        var b=(DistilleryBellowsBlockEntity)world.getBlockEntity(pos); b.accept(EssenceType.HERBA,37,.42f);
+        var expected=new JarContentsComponent(List.of(new EssenceStack(EssenceType.HERBA,37,.42f)));
+        var saved=b.createNbt(world.getRegistryManager()); var restored=new DistilleryBellowsBlockEntity(pos,b.getCachedState());
+        restored.readComponentlessNbt(saved,world.getRegistryManager());
+        c.assertTrue(restored.amount()==37 && restored.storedType()==EssenceType.HERBA,"Old-style world NBT remains valid");
+        world.breakBlock(pos,true);
+        c.runAtTick(5,()->{
+            var drops=world.getEntitiesByClass(net.minecraft.entity.ItemEntity.class,new net.minecraft.util.math.Box(pos).expand(2),e->e.getStack().isOf(ModBlocks.DISTILLERY_BELLOWS.asItem()));
+            c.assertTrue(drops.size()==1 && drops.getFirst().getStack().get(net.alkahest.registry.ModDataComponents.DISTILLERY_CONTENTS).equals(expected),"One dropped bellow retains amount, type and stability");
+            ItemStack item=drops.getFirst().getStack().copy(); drops.getFirst().discard();
+            c.assertTrue(!ItemEssenceMap.safeToConsume(item) && !Tier2DistilleryBlockEntity.accepts(item,world),"Stored essence cannot be destroyed by alchemical recycling");
+            BlockPos base=c.getAbsolutePos(new BlockPos(5,1,3)); world.setBlockState(base,net.minecraft.block.Blocks.STONE.getDefaultState());
+            var player=c.createMockPlayer(GameMode.SURVIVAL); player.setStackInHand(Hand.MAIN_HAND,item);
+            var hit=new net.minecraft.util.hit.BlockHitResult(net.minecraft.util.math.Vec3d.ofCenter(base),net.minecraft.util.math.Direction.UP,base,false);
+            var ctx=new net.minecraft.item.ItemPlacementContext(player,Hand.MAIN_HAND,item,hit);
+            c.assertTrue(((net.minecraft.item.BlockItem)item.getItem()).place(ctx).isAccepted(),"Place the real dropped bellow");
+            var placed=(DistilleryBellowsBlockEntity)world.getBlockEntity(base.up());
+            c.assertTrue(placed.amount()==37 && placed.storedType()==EssenceType.HERBA && Math.abs(placed.stability()-.42f)<.0001,"Placed flask restores contents");
+            c.complete();
+        });
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE, tickLimit = 80)
+    public void blockedCoreRetainsPendingAndDropsInputOnce(TestContext c) {
+        c.setBlockState(3,2,3,ModBlocks.DISTILLERY_TIER2); var world=c.getWorld(); BlockPos pos=corePos(c);
+        var machine=core(c); machine.setStack(0,new ItemStack(Items.APPLE,3));
+        var queued=List.of(new EssenceStack(EssenceType.IGNIS,8,.61f),new EssenceStack(EssenceType.AQUA,5,.73f));
+        machine.pending().addAll(queued);
+        world.breakBlock(pos,true);
+        c.runAtTick(5,()->{
+            var area=new net.minecraft.util.math.Box(pos).expand(3);
+            var drops=world.getEntitiesByClass(net.minecraft.entity.ItemEntity.class,area,e->e.getStack().isOf(ModBlocks.DISTILLERY_TIER2.asItem()));
+            c.assertTrue(drops.size()==1,"Exactly one core drops"); ItemStack item=drops.getFirst().getStack().copy();
+            var stored=item.get(net.alkahest.registry.ModDataComponents.DISTILLERY_CONTENTS);
+            c.assertTrue(stored!=null && stored.contents().equals(queued),"Both queued fractions and their stability survive on core item");
+            int apples=world.getEntitiesByClass(net.minecraft.entity.ItemEntity.class,area,e->e.getStack().isOf(Items.APPLE)).stream().mapToInt(e->e.getStack().getCount()).sum();
+            c.assertTrue(apples==3 && !ItemEssenceMap.safeToConsume(item),"Input drops exactly once and queued product cannot be recycled away");
+            drops.getFirst().discard();
+            BlockPos base=c.getAbsolutePos(new BlockPos(5,1,3)); world.setBlockState(base,net.minecraft.block.Blocks.STONE.getDefaultState());
+            var player=c.createMockPlayer(GameMode.SURVIVAL); player.setStackInHand(Hand.MAIN_HAND,item);
+            var hit=new net.minecraft.util.hit.BlockHitResult(net.minecraft.util.math.Vec3d.ofCenter(base),net.minecraft.util.math.Direction.UP,base,false);
+            c.assertTrue(((net.minecraft.item.BlockItem)item.getItem()).place(new net.minecraft.item.ItemPlacementContext(player,Hand.MAIN_HAND,item,hit)).isAccepted(),"Core can be placed again");
+            var placed=(Tier2DistilleryBlockEntity)world.getBlockEntity(base.up());
+            c.assertTrue(placed.pending().equals(queued) && placed.getStack(0).isEmpty() && placed.status()==Tier2DistilleryBlockEntity.STATUS_NO_BELLOWS,"Queued output restored without duplicating input");
+            c.setBlockState(5,3,3,ModBlocks.DISTILLERY_BELLOWS); c.setBlockState(5,4,3,ModBlocks.DISTILLERY_BELLOWS);
+            Tier2DistilleryBlockEntity.tick(world,base.up(),placed);
+            c.assertTrue(placed.pending().isEmpty() && placed.bellows().stream().mapToInt(DistilleryBellowsBlockEntity::amount).sum()==13,"Queued output resumes into new bellows");
+            c.complete();
+        });
     }
 }

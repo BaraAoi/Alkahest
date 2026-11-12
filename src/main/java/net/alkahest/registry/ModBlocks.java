@@ -44,9 +44,9 @@ public final class ModBlocks {
         AbstractBlock.Settings.copy(Blocks.COPPER_BLOCK).nonOpaque().luminance(state -> state.get(StabilizerCoreBlock.ACTIVE) ? 7 : 0)));
     public static final Block STABILIZER_CREST = register("stabilizer_crest", new StabilizerCrestBlock(
         AbstractBlock.Settings.copy(Blocks.AMETHYST_BLOCK).nonOpaque().luminance(state -> 3)));
-    public static final Block DISTILLERY_TIER2 = register("distillery_tier2", new Tier2DistilleryBlock(
+    public static final Block DISTILLERY_TIER2 = distilleryStorage("distillery_tier2", new Tier2DistilleryBlock(
         AbstractBlock.Settings.copy(Blocks.COPPER_BLOCK).nonOpaque().luminance(state -> state.get(Tier2DistilleryBlock.WORKING) ? 6 : 0)));
-    public static final Block DISTILLERY_BELLOWS = register("distillery_bellows",
+    public static final Block DISTILLERY_BELLOWS = distilleryStorage("distillery_bellows",
         new DistilleryBellowsBlock(AbstractBlock.Settings.copy(Blocks.OAK_PLANKS).nonOpaque()));
     public static final Block TRANSMUTATOR_CORE = register("transmutator_core", new TransmutatorCoreBlock(
         AbstractBlock.Settings.copy(Blocks.COPPER_BLOCK).nonOpaque().requiresTool().strength(3.5f, 6f)
@@ -82,6 +82,11 @@ public final class ModBlocks {
     private static Block jar() {
         Block block = Registry.register(Registries.BLOCK, Alkahest.id("jar"), new JarBlock(AbstractBlock.Settings.copy(Blocks.GLASS).nonOpaque()));
         Registry.register(Registries.ITEM, Alkahest.id("jar"), new JarItem(block, new Item.Settings()));
+        return block;
+    }
+    private static Block distilleryStorage(String name, Block block) {
+        Registry.register(Registries.BLOCK, Alkahest.id(name), block);
+        Registry.register(Registries.ITEM, Alkahest.id(name), new net.alkahest.item.custom.DistilleryStorageItem(block, new Item.Settings()));
         return block;
     }
     private static Block register(String name, Block block) {
