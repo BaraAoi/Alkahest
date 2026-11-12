@@ -123,6 +123,77 @@ public class DistilleryGameTests implements FabricGameTest {
         });
     }
 
+    @GameTest(templateName=EMPTY_STRUCTURE, tickLimit=100)
+    public void sideHopperSwitchesModeDuringRawCycleWithoutPrematureOutput(TestContext c) {
+        c.setBlockState(3,2,3,ModBlocks.DISTILLERY); var world=c.getWorld();
+        BlockPos pos=c.getAbsolutePos(new BlockPos(3,2,3));
+        var d=(DistilleryBlockEntity)world.getBlockEntity(pos);
+        d.setStack(0,new ItemStack(Items.APPLE,3));
+        var nbt=d.createNbt(world.getRegistryManager()); nbt.putInt("Progress",900);
+        d.readComponentlessNbt(nbt,world.getRegistryManager());
+        BlockPos side=pos.west();
+        world.setBlockState(side,net.minecraft.block.Blocks.HOPPER.getDefaultState().with(net.minecraft.block.HopperBlock.FACING,Direction.EAST));
+        var hopper=(net.minecraft.block.entity.HopperBlockEntity)world.getBlockEntity(side);
+        hopper.setStack(0,new ItemStack(ModItems.ALKAHEST_VIAL));
+        var p=c.createMockPlayer(GameMode.SURVIVAL);
+        var screen=(DistilleryScreenHandler)d.createMenu(1,p.getInventory(),p);
+        c.runAtTick(30,()->{
+            c.assertTrue(d.hasAlkahest() && hopper.isEmpty(),"Real hopper can install catalyst during continuous raw processing");
+            c.assertTrue(d.getStack(0).getCount()==3 && d.getStack(1).isEmpty(),"No instant product or consumption when old progress exceeded the solvent duration");
+            c.assertTrue(screen.progress() > 0 && screen.progress() < 40 && screen.maxProgress()==100,"New mode started its own cycle");
+            c.assertTrue(net.alkahest.item.custom.AlkahestVialItem.charges(d.getStack(DistilleryBlockEntity.CATALYST))==32,"No catalyst charge was spent early");
+            c.complete();
+        });
+    }
+
+    @GameTest(templateName=EMPTY_STRUCTURE)
+    public void changingModesRestartsProgressEvenForOrganicInputs(TestContext c) {
+        c.setBlockState(3,2,3,ModBlocks.DISTILLERY); var world=c.getWorld();
+        BlockPos pos=c.getAbsolutePos(new BlockPos(3,2,3)); var d=(DistilleryBlockEntity)world.getBlockEntity(pos);
+        var player=c.createMockPlayer(GameMode.SURVIVAL);
+        var screen=(DistilleryScreenHandler)d.createMenu(1,player.getInventory(),player);
+        d.setStack(0,new ItemStack(Items.APPLE,4));
+        for(int i=0;i<300;i++) DistilleryBlockEntity.tick(world,pos,d);
+        c.assertTrue(screen.progress()==300,"Raw cycle has accumulated progress");
+        d.setStack(DistilleryBlockEntity.CATALYST,new ItemStack(ModItems.ALKAHEST_VIAL));
+        c.assertTrue(screen.progress()==0 && screen.maxProgress()==100,"Installing catalyst resets raw progress");
+        for(int i=0;i<99;i++) DistilleryBlockEntity.tick(world,pos,d);
+        c.assertTrue(d.getStack(0).getCount()==4 && screen.progress()==99,"A full solvent cycle is required");
+        DistilleryBlockEntity.tick(world,pos,d);
+        c.assertTrue(d.getStack(0).getCount()==3 && net.alkahest.item.custom.AlkahestVialItem.charges(d.getStack(9))==31,"Exactly one item and one charge are spent");
+        for(int i=0;i<40;i++) DistilleryBlockEntity.tick(world,pos,d);
+        c.assertTrue(screen.progress()==40,"Next solvent cycle started");
+        c.assertFalse(screen.quickMove(player,DistilleryScreenHandler.CATALYST_SCREEN_SLOT).isEmpty(),"Player shift-clicks catalyst out");
+        c.assertTrue(!d.hasAlkahest() && screen.progress()==0 && screen.maxProgress()==1200,"Shift-click mode change resets progress");
+        for(int i=0;i<40;i++) DistilleryBlockEntity.tick(world,pos,d);
+        d.setStack(9,new ItemStack(ModItems.ALKAHEST_VIAL));
+        c.assertTrue(screen.progress()==0,"Manual replacement also resets raw progress");
+        for(int i=0;i<40;i++) DistilleryBlockEntity.tick(world,pos,d);
+        d.removeStack(9,1);
+        c.assertTrue(screen.progress()==0 && !d.hasAlkahest(),"Inventory removal resets solvent progress");
+        c.complete();
+    }
+
+    @GameTest(templateName=EMPTY_STRUCTURE)
+    public void changingModeNeverDestroysAlreadyQueuedOutput(TestContext c) {
+        c.setBlockState(3,2,3,ModBlocks.DISTILLERY); var world=c.getWorld();
+        BlockPos pos=c.getAbsolutePos(new BlockPos(3,2,3)); var d=(DistilleryBlockEntity)world.getBlockEntity(pos);
+        d.setStack(0,new ItemStack(Items.APPLE,2));
+        for(int i=1;i<8;i++) d.setStack(i,new ItemStack(Items.STONE,64));
+        var nbt=d.createNbt(world.getRegistryManager()); nbt.putInt("Progress",1199);
+        d.readComponentlessNbt(nbt,world.getRegistryManager());
+        DistilleryBlockEntity.tick(world,pos,d); var queued=d.getStack(DistilleryBlockEntity.PENDING).copy();
+        c.assertTrue(!queued.isEmpty() && d.getStack(0).getCount()==1,"A completed raw batch is queued when output is full");
+        d.setStack(DistilleryBlockEntity.CATALYST,new ItemStack(ModItems.ALKAHEST_VIAL));
+        for(int i=0;i<150;i++) DistilleryBlockEntity.tick(world,pos,d);
+        c.assertTrue(ItemStack.areEqual(queued,d.getStack(DistilleryBlockEntity.PENDING)) && d.getStack(0).getCount()==1,
+            "Switching modes does not consume input, reroll or lose blocked output");
+        c.assertTrue(net.alkahest.item.custom.AlkahestVialItem.charges(d.getStack(9))==32,"The pending old batch does not cost a catalyst charge");
+        d.removeStack(1); DistilleryBlockEntity.tick(world,pos,d);
+        c.assertTrue(ItemStack.areEqual(queued,d.getStack(1)) && d.getStack(8).isEmpty(),"Original batch is delivered before the new cycle");
+        c.complete();
+    }
+
     @GameTest(templateName=EMPTY_STRUCTURE)
     public void hopperRulesAndMerge(TestContext c) {
         c.setBlockState(3,2,3,ModBlocks.DISTILLERY); BlockPos pos=c.getAbsolutePos(new BlockPos(3,2,3));
@@ -133,7 +204,7 @@ public class DistilleryGameTests implements FabricGameTest {
         c.assertTrue(d.canInsert(DistilleryBlockEntity.CATALYST,new ItemStack(ModItems.ALKAHEST_VIAL),Direction.NORTH), "Side accepts charged catalyst while idle");
         c.assertFalse(d.canInsert(DistilleryBlockEntity.CATALYST,new ItemStack(ModItems.ALKAHEST_VIAL),Direction.DOWN), "Bottom cannot insert catalyst");
         d.setStack(0,new ItemStack(Items.APPLE)); DistilleryBlockEntity.tick(c.getWorld(),pos,d);
-        c.assertFalse(d.canInsert(DistilleryBlockEntity.CATALYST,new ItemStack(ModItems.ALKAHEST_VIAL),Direction.NORTH), "Catalyst cannot change mode during a raw cycle");
+        c.assertTrue(d.canInsert(DistilleryBlockEntity.CATALYST,new ItemStack(ModItems.ALKAHEST_VIAL),Direction.NORTH), "Side can install catalyst during a raw cycle without starvation");
         d.setStack(0,new ItemStack(Items.APPLE,3));
         c.assertTrue(d.canInsert(0,new ItemStack(Items.APPLE),Direction.UP), "Hopper can add to input stack");
         c.assertFalse(d.canExtract(0,new ItemStack(Items.APPLE),Direction.DOWN), "Hopper cannot extract input");

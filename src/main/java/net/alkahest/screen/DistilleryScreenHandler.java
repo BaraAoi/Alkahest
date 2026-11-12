@@ -70,6 +70,12 @@ public class DistilleryScreenHandler extends ScreenHandler {
         addSlot(new Slot(inventory, DistilleryBlockEntity.CATALYST, CATALYST_X, CATALYST_Y) {
             @Override public boolean canInsert(ItemStack stack) { return DistilleryBlockEntity.acceptsCatalyst(stack); }
             @Override public int getMaxItemCount() { return 1; }
+            @Override public void onTakeItem(PlayerEntity player, ItemStack stack) {
+                // quickMove may mutate the stack in place before setStack observes it.
+                if (inventory instanceof DistilleryBlockEntity distillery
+                    && DistilleryBlockEntity.acceptsCatalyst(stack) && !distillery.hasAlkahest()) distillery.cancelProgress();
+                super.onTakeItem(player, stack);
+            }
         });
 
         addProperties(properties);

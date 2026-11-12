@@ -141,18 +141,20 @@ public class DistilleryBlockEntity extends BlockEntity implements SidedInventory
     @Override public ItemStack getStack(int slot) { return stacks.get(slot); }
 
     @Override public ItemStack removeStack(int slot, int amount) {
+        boolean wasAlkahest = hasAlkahest();
         ItemStack removed = Inventories.splitStack(stacks, slot, amount);
         if (!removed.isEmpty()) {
-            if (slot == 0 || (slot == CATALYST && !canProcess(stacks.get(0)))) progress = 0;
+            if (slot == 0 || (slot == CATALYST && wasAlkahest != hasAlkahest())) progress = 0;
             markDirty();
         }
         return removed;
     }
 
     @Override public ItemStack removeStack(int slot) {
+        boolean wasAlkahest = hasAlkahest();
         ItemStack removed = Inventories.removeStack(stacks, slot);
         if (!removed.isEmpty()) {
-            if (slot == 0 || (slot == CATALYST && !canProcess(stacks.get(0)))) progress = 0;
+            if (slot == 0 || (slot == CATALYST && wasAlkahest != hasAlkahest())) progress = 0;
             markDirty();
         }
         return removed;
@@ -162,10 +164,11 @@ public class DistilleryBlockEntity extends BlockEntity implements SidedInventory
         if (slot == 0 && (stack.isEmpty() || stacks.get(0).isEmpty() || !ItemStack.areItemsAndComponentsEqual(stacks.get(0), stack))) {
             progress = 0;
         }
+        boolean wasAlkahest = hasAlkahest();
         stacks.set(slot, stack);
-        if (slot == CATALYST && !canProcess(stacks.get(0))) {
-            progress = 0;
-        }
+        // Raw and solvent modes have different durations and output; never reuse progress
+        // from the other mode, even when the same organic input is valid for both.
+        if (slot == CATALYST && wasAlkahest != hasAlkahest()) progress = 0;
         markDirty();
     }
 
@@ -179,8 +182,7 @@ public class DistilleryBlockEntity extends BlockEntity implements SidedInventory
     @Override public int[] getAvailableSlots(Direction side) { return side == Direction.UP ? INPUT_SLOTS : OUTPUT_AND_CATALYST_SLOTS; }
     @Override public boolean canInsert(int slot, ItemStack stack, Direction side) {
         if (side == Direction.UP) return slot == 0 && canProcess(stack);
-        // A mode change during a raw cycle would otherwise reuse its accumulated progress.
-        return side != Direction.DOWN && slot == CATALYST && progress == 0 && acceptsCatalyst(stack);
+        return side != Direction.DOWN && slot == CATALYST && acceptsCatalyst(stack);
     }
     @Override public boolean canExtract(int slot, ItemStack stack, Direction side) {
         return side != Direction.UP && ((slot >= OUTPUT_START && slot < OUTPUT_END)
