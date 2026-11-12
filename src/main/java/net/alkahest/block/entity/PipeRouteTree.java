@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;
+import java.util.function.BiPredicate;
 
 /** Immutable-in-use, multi-entry breadth-first tree for one source and essence type.
  * Created for one transfer pulse only, never retained across world or filter changes.
@@ -17,13 +18,22 @@ import java.util.function.Predicate;
 final class PipeRouteTree {
     private final Map<BlockPos, BlockPos> previous;
     private final Map<BlockPos, Integer> distance;
+    private final BiPredicate<BlockPos, BlockPos> allowsExit;
 
-    private PipeRouteTree(Map<BlockPos, BlockPos> previous, Map<BlockPos, Integer> distance) {
+    private PipeRouteTree(Map<BlockPos, BlockPos> previous, Map<BlockPos, Integer> distance,
+                          BiPredicate<BlockPos, BlockPos> allowsExit) {
         this.previous = previous;
         this.distance = distance;
+        this.allowsExit = allowsExit;
     }
 
+    /** Compatibility overload for unrestricted, undirected networks. */
     static PipeRouteTree build(BlockPos source, Predicate<BlockPos> allows) {
+        return build(source, allows, (from, to) -> true);
+    }
+
+    static PipeRouteTree build(BlockPos source, Predicate<BlockPos> allows,
+                               BiPredicate<BlockPos, BlockPos> allowsExit) {
         Map<BlockPos, BlockPos> previous = new HashMap<>();
         Map<BlockPos, Integer> distance = new HashMap<>();
         Deque<BlockPos> queue = new ArrayDeque<>();
@@ -39,14 +49,14 @@ final class PipeRouteTree {
             BlockPos pos = queue.remove();
             for (Direction direction : Direction.values()) {
                 BlockPos next = pos.offset(direction);
-                if (!previous.containsKey(next) && allows.test(next)) {
+                if (!previous.containsKey(next) && allowsExit.test(pos, next) && allows.test(next)) {
                     previous.put(next, pos);
                     distance.put(next, distance.get(pos) + 1);
                     queue.add(next);
                 }
             }
         }
-        return new PipeRouteTree(previous, distance);
+        return new PipeRouteTree(previous, distance, allowsExit);
     }
 
     /** Empty means unreachable. Otherwise path runs from the destination to the source. */
@@ -56,7 +66,7 @@ final class PipeRouteTree {
         for (Direction direction : Direction.values()) {
             BlockPos candidate = target.offset(direction);
             Integer d = distance.get(candidate);
-            if (d != null && d < best) {
+            if (d != null && d < best && allowsExit.test(candidate, target)) {
                 best = d;
                 end = candidate;
             }

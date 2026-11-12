@@ -4,6 +4,7 @@ import com.mojang.serialization.Codec;
 import net.alkahest.Alkahest;
 import net.alkahest.essence.EssenceType;
 import net.alkahest.block.entity.PipeValveMode;
+import net.alkahest.block.entity.PipeDirection;
 import net.alkahest.essence.JarContentsComponent;
 import net.minecraft.component.ComponentType;
 import net.minecraft.network.codec.PacketCodecs;
@@ -16,6 +17,7 @@ public final class ModDataComponents {
     public static final ComponentType<Integer> ESSENCE_CHARGE = register("essence_charge", Codec.intRange(0, 100));
     public static final ComponentType<Integer> SOUL_CHARGES = register("soul_charges", Codec.intRange(0, 100));
     public static final ComponentType<Boolean> SOULBOUND = register("soulbound", Codec.BOOL);
+    public static final ComponentType<PipeDirection> PIPE_DIRECTION = register("pipe_direction", PipeDirection.CODEC);
     public static final ComponentType<PipeValveMode> PIPE_VALVE = register("pipe_valve", PipeValveMode.CODEC);
     public static final ComponentType<EssenceType> PIPE_FILTER = register("pipe_filter", EssenceType.CODEC);
     public static final ComponentType<Float> ESSENCE_STABILITY = register("essence_stability", Codec.floatRange(0.0f, 1.0f));

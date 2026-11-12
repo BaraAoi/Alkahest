@@ -57,6 +57,7 @@ public class AlchemyPipeBlockEntity extends BlockEntity {
     private EssenceType flowing;
     private EssenceType filter;
     private PipeValveMode valveMode = PipeValveMode.OPEN;
+    private PipeDirection direction = PipeDirection.AUTO;
     private int activeTicks;
 
     public AlchemyPipeBlockEntity(BlockPos pos, BlockState state) {
@@ -78,6 +79,27 @@ public class AlchemyPipeBlockEntity extends BlockEntity {
             BlockState state = getCachedState();
             world.updateListeners(pos, state, state, Block.NOTIFY_LISTENERS);
         }
+    }
+
+    public PipeDirection direction() { return direction; }
+
+    public void setDirection(PipeDirection value) {
+        if (value == null) throw new IllegalArgumentException("null pipe direction");
+        if (direction == value) return;
+        direction = value;
+        markDirty();
+        if (world != null && !world.isClient)
+            world.updateListeners(pos, getCachedState(), getCachedState(), Block.NOTIFY_LISTENERS);
+    }
+
+    /** Ordinary wand click cycles output direction; setting it never spends charge. */
+    public void cycleDirection(PlayerEntity player) {
+        setDirection(direction.next());
+        player.sendMessage(Text.translatable("message.alkahest.pipe_direction_changed", direction.displayText()), true);
+    }
+
+    public Text directionStatus() {
+        return Text.translatable("message.alkahest.pipe_direction_status", direction.displayText());
     }
 
     public PipeValveMode valveMode() { return valveMode; }
@@ -147,6 +169,7 @@ public class AlchemyPipeBlockEntity extends BlockEntity {
         }
         player.sendMessage(Text.translatable("message.alkahest.pipe_filter", filterText()), false);
         player.sendMessage(valveStatus(), false);
+        player.sendMessage(directionStatus(), false);
         if (active() && flowing != null) {
             player.sendMessage(Text.translatable("message.alkahest.pipe_flowing",
                 Text.literal(flowing.displayName()).styled(style -> style.withColor(flowing.color()))), false);
@@ -158,6 +181,7 @@ public class AlchemyPipeBlockEntity extends BlockEntity {
         super.addComponents(builder);
         if (filter != null) builder.add(ModDataComponents.PIPE_FILTER, filter);
         if (valveMode != PipeValveMode.OPEN) builder.add(ModDataComponents.PIPE_VALVE, valveMode);
+        if (direction != PipeDirection.AUTO) builder.add(ModDataComponents.PIPE_DIRECTION, direction);
     }
 
     @Override protected void readComponents(ComponentsAccess components) {
@@ -165,6 +189,7 @@ public class AlchemyPipeBlockEntity extends BlockEntity {
         EssenceType saved = components.getOrDefault(ModDataComponents.PIPE_FILTER, EssenceType.VACUUM);
         setFilter(saved == EssenceType.VACUUM ? null : saved);
         setValveMode(components.getOrDefault(ModDataComponents.PIPE_VALVE, PipeValveMode.OPEN));
+        setDirection(components.getOrDefault(ModDataComponents.PIPE_DIRECTION, PipeDirection.AUTO));
     }
 
     @Override protected void writeNbt(NbtCompound nbt, RegistryWrapper.WrapperLookup registries) {
@@ -172,6 +197,7 @@ public class AlchemyPipeBlockEntity extends BlockEntity {
         if (flowing != null) nbt.putString("Flowing", flowing.asString());
         if (filter != null) nbt.putString("Filter", filter.asString());
         if (valveMode != PipeValveMode.OPEN) nbt.putString("Valve", valveMode.asString());
+        if (direction != PipeDirection.AUTO) nbt.putString("Direction", direction.asString());
         nbt.putInt("ActiveTicks", activeTicks);
     }
 
@@ -180,6 +206,7 @@ public class AlchemyPipeBlockEntity extends BlockEntity {
         flowing = null;
         filter = null;
         valveMode = PipeValveMode.fromId(nbt.getString("Valve"));
+        direction = PipeDirection.fromId(nbt.getString("Direction"));
         for (EssenceType type : EssenceType.values()) {
             if (type != EssenceType.VACUUM && type.asString().equals(nbt.getString("Flowing"))) flowing = type;
             if (type != EssenceType.VACUUM && type.asString().equals(nbt.getString("Filter"))) filter = type;
@@ -400,7 +427,8 @@ public class AlchemyPipeBlockEntity extends BlockEntity {
             if (type == EssenceType.VACUUM) return List.of();
             RouteKey key = new RouteKey(from.getPos(), type);
             PipeRouteTree tree = routes.computeIfAbsent(key,
-                ignored -> PipeRouteTree.build(key.source(), pos -> allows(world, pos, key.type())));
+                ignored -> PipeRouteTree.build(key.source(), pos -> allows(world, pos, key.type()),
+                    (fromPos, toPos) -> allowsExit(world, fromPos, toPos)));
             return tree.routeTo(to.getPos());
         }
 
@@ -408,6 +436,12 @@ public class AlchemyPipeBlockEntity extends BlockEntity {
             if (!pipeSet.contains(pos) || !world.isChunkLoaded(pos)) return false;
             if (!(world.getBlockEntity(pos) instanceof AlchemyPipeBlockEntity pipe)) return false;
             return pipe.valveOpen() && (pipe.filter == null || pipe.filter == type);
+        }
+
+        /** An output face restricts leaving a segment, including the final hop into a port. */
+        private boolean allowsExit(World world, BlockPos from, BlockPos to) {
+            return world.getBlockEntity(from) instanceof AlchemyPipeBlockEntity pipe
+                && pipe.direction.permits(from, to);
         }
 
         /** Receivers win, then jars already holding the type, then empty jars. */

@@ -531,5 +531,14 @@
   "message.alkahest.pipe_valve_status": "Valve: %s · %s",
   "message.alkahest.pipe_valve_item": "Valve mode: %s",
   "message.alkahest.pipe_network_unavailable": "Network unavailable: it may exceed %s pipes or be unloaded.",
-  "message.alkahest.pipe_ports": "Bellows: %s · jars: %s · receivers: %s · Transmutators: %s"
+  "message.alkahest.pipe_ports": "Bellows: %s · jars: %s · receivers: %s · Transmutators: %s",
+  "message.alkahest.pipe_direction.auto": "automatic",
+  "message.alkahest.pipe_direction.down": "down",
+  "message.alkahest.pipe_direction.up": "up",
+  "message.alkahest.pipe_direction.north": "north",
+  "message.alkahest.pipe_direction.south": "south",
+  "message.alkahest.pipe_direction.west": "west",
+  "message.alkahest.pipe_direction.east": "east",
+  "message.alkahest.pipe_direction_status": "Output: %s",
+  "message.alkahest.pipe_direction_changed": "Pipe output direction: %s"
 }

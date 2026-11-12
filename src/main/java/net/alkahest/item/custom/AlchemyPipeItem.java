@@ -2,6 +2,7 @@ package net.alkahest.item.custom;
 
 import net.alkahest.essence.EssenceType;
 import net.alkahest.block.entity.PipeValveMode;
+import net.alkahest.block.entity.PipeDirection;
 import net.alkahest.registry.ModDataComponents;
 import net.minecraft.block.Block;
 import net.minecraft.item.BlockItem;
@@ -27,5 +28,8 @@ public final class AlchemyPipeItem extends BlockItem {
         PipeValveMode mode = stack.getOrDefault(ModDataComponents.PIPE_VALVE, PipeValveMode.OPEN);
         if (mode != PipeValveMode.OPEN)
             tooltip.add(Text.translatable("message.alkahest.pipe_valve_item", mode.displayText()).formatted(Formatting.GRAY));
+        PipeDirection direction = stack.getOrDefault(ModDataComponents.PIPE_DIRECTION, PipeDirection.AUTO);
+        if (direction != PipeDirection.AUTO)
+            tooltip.add(Text.translatable("message.alkahest.pipe_direction_status", direction.displayText()).formatted(Formatting.GRAY));
     }
 }

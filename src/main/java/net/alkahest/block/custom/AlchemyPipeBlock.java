@@ -81,6 +81,13 @@ public class AlchemyPipeBlock extends Block implements BlockEntityProvider {
                 player.sendMessage(Text.translatable("message.alkahest.pipe_no_space"), true);
             return ItemActionResult.success(world.isClient);
         }
+        // Normal wand or amulet click cycles the exit face. Sneak-use remains the filter.
+        if (!player.isSneaking() && (stack.getItem() instanceof net.alkahest.item.custom.CrystalWandItem
+            || stack.getItem() instanceof net.alkahest.item.custom.AlkahestAmuletItem)) {
+            if (!world.isClient && world.getBlockEntity(pos) instanceof AlchemyPipeBlockEntity pipe)
+                pipe.cycleDirection(player);
+            return ItemActionResult.success(world.isClient);
+        }
         // Select a filter directly with a crystal, without consuming it.
         for (var entry : net.alkahest.registry.ModItems.CRYSTALS.entrySet()) {
             if (entry.getKey() != net.alkahest.essence.EssenceType.VACUUM && stack.isOf(entry.getValue())) {

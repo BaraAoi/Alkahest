@@ -531,5 +531,14 @@
   "message.alkahest.pipe_valve_status": "Клапан: %s · %s",
   "message.alkahest.pipe_valve_item": "Режим клапана: %s",
   "message.alkahest.pipe_network_unavailable": "Сеть недоступна: она может превышать предел %s труб или быть выгружена.",
-  "message.alkahest.pipe_ports": "Меха: %s · банки: %s · приёмники: %s · Трансмутаторы: %s"
+  "message.alkahest.pipe_ports": "Меха: %s · банки: %s · приёмники: %s · Трансмутаторы: %s",
+  "message.alkahest.pipe_direction.auto": "автоматически",
+  "message.alkahest.pipe_direction.down": "вниз",
+  "message.alkahest.pipe_direction.up": "вверх",
+  "message.alkahest.pipe_direction.north": "на север",
+  "message.alkahest.pipe_direction.south": "на юг",
+  "message.alkahest.pipe_direction.west": "на запад",
+  "message.alkahest.pipe_direction.east": "на восток",
+  "message.alkahest.pipe_direction_status": "Выход: %s",
+  "message.alkahest.pipe_direction_changed": "Направление выхода трубы: %s"
 }

@@ -13,7 +13,8 @@
               "source": "block_entity",
               "include": [
                 "alkahest:pipe_filter",
-                "alkahest:pipe_valve"
+                "alkahest:pipe_valve",
+                "alkahest:pipe_direction"
               ]
             }
           ]
