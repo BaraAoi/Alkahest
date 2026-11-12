@@ -73,3 +73,4 @@ for output, inputs in {
     assert recipe['type'] == 'minecraft:crafting_shapeless'
     assert [entry['item'] for entry in recipe['ingredients']] == inputs
     assert recipe['result'] == {'id': f'alkahest:{output}', 'count': 1}
+subprocess.run(['python3', 'scripts/generate_journal_recipes.py', '--check'], check=True)

@@ -54,6 +54,25 @@ public class ReagentGameTests implements FabricGameTest {
         context.complete();
     }
 
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void formerMatrixFlasksHaveWorkingCraftingRecipes(TestContext c) {
+        var gelum = ModItems.CRYSTALS.get(net.alkahest.essence.EssenceType.GELUM);
+        var ordo = ModItems.CRYSTALS.get(net.alkahest.essence.EssenceType.ORDO);
+        var inputs = java.util.List.of(
+            java.util.List.of(new ItemStack(Items.GLASS_BOTTLE), new ItemStack(Items.SNOWBALL), new ItemStack(gelum), ItemStack.EMPTY),
+            java.util.List.of(new ItemStack(Items.HONEY_BOTTLE), new ItemStack(ModItems.PURIFIED_WATER), new ItemStack(ordo), ItemStack.EMPTY),
+            java.util.List.of(new ItemStack(ModItems.PURIFIED_WATER), new ItemStack(Items.GOLDEN_APPLE), new ItemStack(Items.GOLD_INGOT), new ItemStack(ordo)));
+        var outputs = java.util.List.of(ModItems.FROST_FLASK, ModItems.PURIFYING_FLASK, ModItems.MIDAS_ELIXIR);
+        for (int i = 0; i < inputs.size(); i++) {
+            var input = net.minecraft.recipe.input.CraftingRecipeInput.create(2, 2, inputs.get(i));
+            var found = c.getWorld().getServer().getRecipeManager().getFirstMatch(net.minecraft.recipe.RecipeType.CRAFTING, input, c.getWorld());
+            c.assertTrue(found.isPresent(), "Replacement crafting recipe must be registered");
+            var result = found.get().value().craft(input, c.getWorld().getRegistryManager());
+            c.assertTrue(result.isOf(outputs.get(i)) && result.getCount() == 1, "Replacement recipe makes exactly its expected flask");
+        }
+        c.complete();
+    }
+
     @GameTest(templateName = EMPTY_STRUCTURE, tickLimit = 80)
     public void acidProjectile(TestContext context) {
         context.setBlockState(2, 1, 2, Blocks.STONE);

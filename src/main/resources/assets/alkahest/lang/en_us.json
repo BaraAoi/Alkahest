@@ -479,5 +479,11 @@
   "message.alkahest.matrix_asleep": "Matrix asleep: the rings settle into a row",
   "message.alkahest.pedestal_empty": "The pedestal is empty: hold an item to place it",
   "message.alkahest.pedestal_status": "On the pedestal: %s × %s",
-  "message.alkahest.matrix_already_awake": "The Matrix is already awake"
+  "message.alkahest.matrix_already_awake": "The Matrix is already awake",
+  "screen.alkahest.journal.shapeless": "Crafting: any order",
+  "screen.alkahest.journal.shaped": "Crafting grid",
+  "screen.alkahest.journal.inventory_mix": "Inventory: right-click",
+  "screen.alkahest.journal.cauldron_diagram": "Heated cauldron + water",
+  "screen.alkahest.journal.cauldron_hint": "Dissolve essences, then right-click with catalyst.",
+  "screen.alkahest.journal.alkahest_hint": "Dissolve moss first; right-click with the diamond."
 }

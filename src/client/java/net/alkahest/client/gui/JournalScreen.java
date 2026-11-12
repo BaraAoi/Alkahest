@@ -46,10 +46,11 @@ public final class JournalScreen extends Screen {
     private final long researchFlags;
     private boolean guide;
     private Node selected;
-    private int guidePage;
+    private int guidePage, guideSubPage, detailPage, detailPages = 1;
     private int scroll, maxScroll;
     private final net.alkahest.research.ResearchMapView camera = new net.alkahest.research.ResearchMapView();
     private boolean dragging;
+    private ItemStack diagramTooltip = ItemStack.EMPTY;
     private int left, top, bookWidth, bookHeight;
 
     public JournalScreen(long researchFlags) { super(Text.translatable("screen.alkahest.journal")); this.researchFlags = researchFlags; }
@@ -83,7 +84,7 @@ public final class JournalScreen extends Screen {
         tab(context, left + 14, top + 32, 116, "screen.alkahest.journal.map", !guide);
         tab(context, left + 134, top + 32, 100, "screen.alkahest.journal.notes", guide);
         if (guide) renderGuide(context, mouseX, mouseY);
-        else if (selected != null) renderDetails(context, selected);
+        else if (selected != null) renderDetails(context, selected, mouseX, mouseY);
         else renderMap(context, mouseX, mouseY);
         super.render(context, mouseX, mouseY, delta);
     }
@@ -148,52 +149,166 @@ public final class JournalScreen extends Screen {
         c.drawTextWrapped(textRenderer, text, x, y, w, color);
         return textRenderer.wrapLines(text, w).size() * textRenderer.fontHeight;
     }
-    private void renderDetails(DrawContext c, Node node) {
-        int x = mapX(), y = mapY(), w = mapW(), h = mapH();
+    private void paper(DrawContext c, int x, int y, int w, int h) {
         panel(c, x, y, w, h);
-        c.fill(x + 5, y + 5, x + w - 5, y + h - 5, 0xF4E7D4A7);
-        c.enableScissor(x + 7, y + 7, x + w - 7, y + h - 7);
+        c.fill(x + 5, y + 5, x + w / 2 - 1, y + h - 5, 0xFFF0DFB7);
+        c.fill(x + w / 2 + 1, y + 5, x + w - 5, y + h - 5, 0xFFF0DFB7);
+        c.fill(x + w / 2 - 1, y + 6, x + w / 2 + 1, y + h - 6, 0xFFAC956A);
+    }
+    private List<net.minecraft.text.OrderedText> detailLines(Node node, int width) {
         String state = state(node);
-        c.drawText(textRenderer, label(node), x + 12, y + 11, 0xFF4F3520, false);
-        c.fill(x + 12, y + 23, x + w - 12, y + 24, 0xFFB19A6E);
-        int line = y + 31 - scroll;
         String stateKey = state.equals("active") && PracticalResearchPlan.isAssembly(node.completed()) ? "assembly_active"
             : state.equals("completed") && PracticalResearchPlan.isAssembly(node.completed()) ? "assembly_completed" : state;
-        line += wrapped(c, Text.translatable("screen.alkahest.practice." + stateKey), x + 12, line, w - 24, 0xFF594633) + 6;
-        line += wrapped(c, Text.translatable("screen.alkahest.practice." + node.key() + ".recipe"), x + 12, line, w - 24, 0xFF30251C) + 6;
-        line += wrapped(c, Text.translatable("screen.alkahest.practice.free_recipes"), x + 12, line, w - 24, 0xFF594633);
-        maxScroll = Math.max(0, line + scroll - (y + h - 9));
-        c.disableScissor();
-        if (maxScroll > 0) c.drawTextWithShadow(textRenderer, Text.translatable("screen.alkahest.journal.scroll"), left + bookWidth - 100, top + bookHeight - 21, 0xFFD8C69D);
-        button(c, left + 15, top + bookHeight - 25, 92, "screen.alkahest.journal.back");
+        List<net.minecraft.text.OrderedText> lines = new ArrayList<>();
+        for (Text paragraph : List.of(Text.translatable("screen.alkahest.practice." + stateKey),
+                Text.translatable("screen.alkahest.practice." + node.key() + ".recipe"),
+                Text.translatable("screen.alkahest.practice.free_recipes"))) {
+            lines.addAll(textRenderer.wrapLines(paragraph, Math.max(20, width)));
+            lines.add(net.minecraft.text.OrderedText.EMPTY);
+        }
+        return lines;
     }
+    private int diagramCount(Node node) {
+        int crafts = JournalCraftingRecipes.BY_RESEARCH.getOrDefault(node.key(), List.of()).size();
+        if (crafts > 0) return crafts;
+        if (node.key().equals("alkahest") || node.key().equals("napalm") || node.key().equals("acid")) return 1;
+        return (int)net.alkahest.recipe.CauldronEssenceRecipes.all().stream().filter(r -> r.result() == node.icon().getItem()).count();
+    }
+    private void renderDetails(DrawContext c, Node node, int mouseX, int mouseY) {
+        int x = mapX(), y = mapY(), w = mapW(), h = mapH(), half = w / 2;
+        paper(c, x, y, w, h);
+        int textWidth = Math.max(20, half - 23);
+        int rows = Math.max(1, (h - 34) / textRenderer.fontHeight);
+        var lines = detailLines(node, textWidth);
+        detailPages = Math.max(1, Math.max((lines.size() + rows - 1) / rows, diagramCount(node)));
+        detailPage = MathHelper.clamp(detailPage, 0, detailPages - 1);
+        c.enableScissor(x + 7, y + 7, x + half - 4, y + h - 7);
+        c.drawText(textRenderer, textRenderer.trimToWidth(label(node).getString(), textWidth), x + 11, y + 10, 0xFF4F3520, false);
+        for (int i = 0; i < rows && detailPage * rows + i < lines.size(); i++)
+            c.drawText(textRenderer, lines.get(detailPage * rows + i), x + 11, y + 25 + i * textRenderer.fontHeight, 0xFF30251C, false);
+        c.disableScissor();
+        c.enableScissor(x + half + 3, y + 6, x + w - 6, y + h - 6);
+        diagramTooltip = ItemStack.EMPTY;
+        renderDiagram(c, node, detailPage, x + half + 9, y + 10, half - 20, mouseX, mouseY);
+        c.disableScissor();
+        if (!diagramTooltip.isEmpty()) c.drawTooltip(textRenderer, diagramTooltip.getName(), mouseX, mouseY);
+        button(c, left + 15, top + bookHeight - 25, 70, "screen.alkahest.journal.back");
+        button(c, left + bookWidth - 110, top + bookHeight - 25, 44, "screen.alkahest.journal.prev");
+        button(c, left + bookWidth - 59, top + bookHeight - 25, 44, "screen.alkahest.journal.next");
+        c.drawCenteredTextWithShadow(textRenderer, (detailPage + 1) + " / " + detailPages, left + bookWidth / 2, top + bookHeight - 21, 0xFFD8C69D);
+    }
+    private void diagramItem(DrawContext c, int mouseX, int mouseY, ItemStack stack, int x, int y) {
+        c.drawItem(stack, x, y);
+        if (within(mouseX, mouseY, x, y, x + 16, y + 16)
+                && within(mouseX, mouseY, mapX() + mapW() / 2 + 3, mapY() + 6, mapX() + mapW() - 6, mapY() + mapH() - 6))
+            diagramTooltip = stack;
+    }
+    private void renderDiagram(DrawContext c, Node node, int page, int x, int y, int width, int mouseX, int mouseY) {
+        var crafts = JournalCraftingRecipes.BY_RESEARCH.getOrDefault(node.key(), List.of());
+        if (page < crafts.size()) {
+            var recipe = crafts.get(page);
+            c.drawText(textRenderer, Text.translatable(recipe.shapeless() ? "screen.alkahest.journal.shapeless" : "screen.alkahest.journal.shaped"), x, y, 0xFF4F3520, false);
+            for (int i = 0; i < 9; i++) {
+                int sx = x + (i % 3) * 18, sy = y + 15 + (i / 3) * 18;
+                c.fill(sx, sy, sx + 17, sy + 17, 0xFFBDA77D);
+                String id = recipe.grid().get(i);
+                if (!id.isEmpty()) diagramItem(c, mouseX, mouseY, new ItemStack(net.minecraft.registry.Registries.ITEM.get(Identifier.of(id))), sx, sy);
+            }
+            c.drawText(textRenderer, "→", x + 58, y + 37, 0xFF594633, false);
+            var output = new ItemStack(net.minecraft.registry.Registries.ITEM.get(Identifier.of(recipe.output())), recipe.count());
+            diagramItem(c, mouseX, mouseY, output, x + 72, y + 33);
+            if (recipe.count() > 1) c.drawText(textRenderer, Integer.toString(recipe.count()), x + 81, y + 43, 0xFF30251C, false);
+            return;
+        }
+        if (page != 0) return;
+        if (node.key().equals("napalm") || node.key().equals("acid")) {
+            c.drawText(textRenderer, Text.translatable("screen.alkahest.journal.inventory_mix"), x, y, 0xFF4F3520, false);
+            diagramItem(c, mouseX, mouseY, new ItemStack(node.key().equals("napalm") ? ModItems.FIRE_DUST : ModItems.CAUSTIC_SLIME), x, y + 18);
+            c.drawText(textRenderer, "+", x + 20, y + 22, 0xFF594633, false);
+            diagramItem(c, mouseX, mouseY, new ItemStack(node.key().equals("napalm") ? Items.SLIME_BALL : Items.GUNPOWDER), x + 30, y + 18);
+            c.drawText(textRenderer, "→", x + 50, y + 22, 0xFF594633, false);
+            diagramItem(c, mouseX, mouseY, node.icon(), x + 65, y + 18);
+            return;
+        }
+        if (node.key().equals("alkahest")) {
+            c.drawText(textRenderer, Text.translatable("screen.alkahest.journal.cauldron_diagram"), x, y, 0xFF4F3520, false);
+            Item[] dissolved = {ModBlocks.ALCHEMICAL_MOSS.asItem(), Items.ENDER_PEARL,
+                ModItems.CRYSTALS.get(EssenceType.IGNIS), ModItems.CRYSTALS.get(EssenceType.AQUA),
+                ModItems.CRYSTALS.get(EssenceType.TERRA), ModItems.CRYSTALS.get(EssenceType.AER),
+                ModItems.CRYSTALS.get(EssenceType.ORDO), ModItems.CRYSTALS.get(EssenceType.PERDITIO)};
+            for (int i = 0; i < dissolved.length; i++) diagramItem(c, mouseX, mouseY, new ItemStack(dissolved[i]), x + i % 4 * 19, y + 15 + i / 4 * 19);
+            c.drawText(textRenderer, "↓", x + 35, y + 53, 0xFF594633, false);
+            diagramItem(c, mouseX, mouseY, new ItemStack(Items.DIAMOND), x, y + 66);
+            c.drawText(textRenderer, "→", x + 19, y + 70, 0xFF594633, false);
+            diagramItem(c, mouseX, mouseY, new ItemStack(ModBlocks.ALCHEMY_CAULDRON), x + 35, y + 66);
+            c.drawText(textRenderer, "→", x + 55, y + 70, 0xFF594633, false);
+            diagramItem(c, mouseX, mouseY, node.icon(), x + 70, y + 66);
+            wrapped(c, Text.translatable("screen.alkahest.journal.alkahest_hint"), x, y + 87, Math.max(20, width), 0xFF594633);
+            return;
+        }
+        var recipe = net.alkahest.recipe.CauldronEssenceRecipes.all().stream().filter(r -> r.result() == node.icon().getItem()).findFirst();
+        if (recipe.isPresent()) {
+            var brew = recipe.get();
+            c.drawText(textRenderer, Text.translatable("screen.alkahest.journal.cauldron_diagram"), x, y, 0xFF4F3520, false);
+            diagramItem(c, mouseX, mouseY, new ItemStack(ModBlocks.ALCHEMY_CAULDRON), x + 35, y + 35);
+            diagramItem(c, mouseX, mouseY, new ItemStack(brew.catalyst()), x, y + 35);
+            c.drawText(textRenderer, "→", x + 19, y + 39, 0xFF594633, false);
+            c.drawText(textRenderer, "→", x + 55, y + 39, 0xFF594633, false);
+            diagramItem(c, mouseX, mouseY, new ItemStack(brew.result(), brew.count()), x + 70, y + 35);
+            if (brew.count() > 1) c.drawText(textRenderer, Integer.toString(brew.count()), x + 79, y + 45, 0xFF30251C, false);
+            int i = 0;
+            for (EssenceType type : EssenceType.values()) if (brew.cost().containsKey(type)) {
+                int sx = x + (i % 4) * 22, sy = y + 65 + (i / 4) * 23;
+                diagramItem(c, mouseX, mouseY, new ItemStack(ModItems.CRYSTALS.get(type)), sx, sy);
+                c.drawText(textRenderer, Integer.toString(brew.cost().get(type)), sx + 10, sy + 10, 0xFF30251C, false);
+                i++;
+            }
+            wrapped(c, Text.translatable("screen.alkahest.journal.cauldron_hint"), x, y + 90, Math.max(20, width), 0xFF594633);
+        }
+    }
+    private int guidePageCount(int chapter) {
+        int h = mapH();
+        if (chapter == RECIPES_PAGE) return Math.max(1, (MatrixRecipe.all().size() + listRows(17) - 1) / listRows(17));
+        if (chapter == TRANSMUTATION_PAGE) return Math.max(1, (TransmutationRecipe.all().size() + listRows(19) - 1) / listRows(19));
+        int rows = Math.max(1, (h - 24) / textRenderer.fontHeight);
+        int count = textRenderer.wrapLines(Text.translatable("screen.alkahest.journal.page." + chapter), Math.max(20, mapW() / 2 - 24)).size();
+        return Math.max(1, (count + rows * 2 - 1) / (rows * 2));
+    }
+    private int listRows(int height) { return Math.max(1, (mapH() - 33) / height); }
     private void renderGuide(DrawContext c, int mouseX, int mouseY) {
         int x = mapX(), y = mapY(), w = mapW(), h = mapH();
-        panel(c, x, y, w, h);
-        c.fill(x + 5, y + 5, x + w - 5, y + h - 5, 0xF4E7D4A7);
+        paper(c, x, y, w, h);
+        guideSubPage = MathHelper.clamp(guideSubPage, 0, guidePageCount(guidePage) - 1);
         if (guidePage == RECIPES_PAGE) {
+            scroll = guideSubPage * listRows(17) * 17;
             renderRecipes(c, x, y, w, h, mouseX, mouseY);
         } else if (guidePage == TRANSMUTATION_PAGE) {
+            scroll = guideSubPage * listRows(19) * 19;
             renderTransmutations(c, x, y, w, h, mouseX, mouseY);
         } else {
-            c.enableScissor(x + 7, y + 7, x + w - 7, y + h - 7);
-            int contentHeight = wrapped(c, Text.translatable("screen.alkahest.journal.page." + guidePage), x + 12, y + 12 - scroll, w - 24, 0xFF30251C);
-            maxScroll = Math.max(0, contentHeight - (h - 21));
-            c.disableScissor();
+            int half = w / 2, rows = Math.max(1, (h - 24) / textRenderer.fontHeight);
+            var lines = textRenderer.wrapLines(Text.translatable("screen.alkahest.journal.page." + guidePage), Math.max(20, half - 24));
+            for (int column = 0; column < 2; column++) {
+                int px = x + column * half + 12;
+                c.enableScissor(px - 2, y + 7, x + (column + 1) * half - 5, y + h - 7);
+                for (int i = 0; i < rows; i++) {
+                    int line = guideSubPage * rows * 2 + column * rows + i;
+                    if (line < lines.size()) c.drawText(textRenderer, lines.get(line), px, y + 12 + i * textRenderer.fontHeight, 0xFF30251C, false);
+                }
+                c.disableScissor();
+            }
         }
-        if (maxScroll > 0) c.drawTextWithShadow(textRenderer, Text.translatable("screen.alkahest.journal.scroll"), left + bookWidth / 2 - 45, top + bookHeight - 34, 0xFFD8C69D);
         button(c, left + 15, top + bookHeight - 25, 44, "screen.alkahest.journal.prev");
         button(c, left + bookWidth - 59, top + bookHeight - 25, 44, "screen.alkahest.journal.next");
-        c.drawCenteredTextWithShadow(textRenderer, (guidePage + 1) + " / " + GUIDE_PAGES, left + bookWidth / 2, top + bookHeight - 21, 0xFFD8C69D);
+        c.drawCenteredTextWithShadow(textRenderer, (guidePage + 1) + "." + (guideSubPage + 1) + " / " + GUIDE_PAGES + "." + guidePageCount(guidePage), left + bookWidth / 2, top + bookHeight - 21, 0xFFD8C69D);
     }
     /** The synthesis page: one row per Matrix recipe, icons first, names and prices on hover. */
     private void renderRecipes(DrawContext c, int x, int y, int w, int h, int mouseX, int mouseY) {
         c.drawText(textRenderer, Text.translatable("screen.alkahest.journal.recipes"), x + 12, y + 10, 0xFF4F3520, false);
         c.fill(x + 12, y + 22, x + w - 12, y + 23, 0xFFB19A6E);
         List<MatrixRecipe> recipes = MatrixRecipe.all();
-        int top = y + 27, bottom = y + h - 6;
+        int top = y + 27, bottom = Math.min(y + h - 6, y + 27 + listRows(17) * 17);
         maxScroll = Math.max(0, recipes.size() * 17 - Math.max(0, bottom - top));
-        scroll = MathHelper.clamp(scroll, 0, maxScroll);
         c.enableScissor(x + 7, top, x + w - 7, bottom);
         for (int i = 0; i < recipes.size(); i++) {
             int rowY = top + i * 17 - scroll;
@@ -220,9 +335,8 @@ public final class JournalScreen extends Screen {
         c.drawText(textRenderer, Text.translatable("screen.alkahest.journal.transmutations"), x + 12, y + 10, 0xFF4F3520, false);
         c.fill(x + 12, y + 22, x + w - 12, y + 23, 0xFFB19A6E);
         var recipes = TransmutationRecipe.all();
-        int top = y + 27, bottom = y + h - 6;
+        int top = y + 27, bottom = Math.min(y + h - 6, y + 27 + listRows(19) * 19);
         maxScroll = Math.max(0, recipes.size() * 19 - Math.max(0, bottom - top));
-        scroll = MathHelper.clamp(scroll, 0, maxScroll);
         c.enableScissor(x + 7, top, x + w - 7, bottom);
         for (int i = 0; i < recipes.size(); i++) {
             int row = top + i * 19 - scroll;
@@ -310,12 +424,14 @@ public final class JournalScreen extends Screen {
         if (within(x, y, left + 14, top + 32, left + 130, top + 52)) { guide = false; selected = null; scroll = 0; return true; }
         if (within(x, y, left + 134, top + 32, left + 234, top + 52)) { guide = true; selected = null; scroll = 0; return true; }
         if (guide) {
-            if (within(x, y, left + 15, top + bookHeight - 25, left + 59, top + bookHeight - 9)) { guidePage = Math.floorMod(guidePage - 1, GUIDE_PAGES); scroll = 0; return true; }
-            if (within(x, y, left + bookWidth - 59, top + bookHeight - 25, left + bookWidth - 15, top + bookHeight - 9)) { guidePage = (guidePage + 1) % GUIDE_PAGES; scroll = 0; return true; }
+            if (within(x, y, left + 15, top + bookHeight - 25, left + 59, top + bookHeight - 9)) { if (guideSubPage > 0) guideSubPage--; else if (guidePage > 0) { guidePage--; guideSubPage = guidePageCount(guidePage) - 1; } scroll = 0; return true; }
+            if (within(x, y, left + bookWidth - 59, top + bookHeight - 25, left + bookWidth - 15, top + bookHeight - 9)) { if (guideSubPage + 1 < guidePageCount(guidePage)) guideSubPage++; else if (guidePage + 1 < GUIDE_PAGES) { guidePage++; guideSubPage = 0; } scroll = 0; return true; }
         } else if (selected != null) {
-            if (within(x, y, left + 15, top + bookHeight - 25, left + 107, top + bookHeight - 9)) { selected = null; scroll = 0; return true; }
+            if (within(x, y, left + 15, top + bookHeight - 25, left + 85, top + bookHeight - 9)) { selected = null; scroll = 0; return true; }
+            if (within(x, y, left + bookWidth - 110, top + bookHeight - 25, left + bookWidth - 66, top + bookHeight - 9)) { detailPage = Math.max(0, detailPage - 1); return true; }
+            if (within(x, y, left + bookWidth - 59, top + bookHeight - 25, left + bookWidth - 15, top + bookHeight - 9)) { detailPage = Math.min(detailPages - 1, detailPage + 1); return true; }
         } else if (within(x, y, mapX(), mapY(), mapX() + mapW(), mapY() + mapH())) {
-            for (Node node : NODES) if (!state(node).equals("hidden") && hitNode(node, x, y)) { selected = node; scroll = 0; return true; }
+            for (Node node : NODES) if (!state(node).equals("hidden") && hitNode(node, x, y)) { selected = node; scroll = 0; detailPage = 0; return true; }
             dragging = true; return true;
         }
         return super.mouseClicked(x, y, button);
@@ -348,7 +464,14 @@ public final class JournalScreen extends Screen {
             return true;
         }
         if ((guide || selected != null) && within(x, y, mapX(), mapY(), mapX() + mapW(), mapY() + mapH())) {
-            scroll = MathHelper.clamp(scroll - (int)(verticalAmount * 18), 0, maxScroll);
+            if (verticalAmount != 0 && selected != null) detailPage = MathHelper.clamp(detailPage + (verticalAmount < 0 ? 1 : -1), 0, detailPages - 1);
+            else if (verticalAmount != 0 && guide) {
+                if (verticalAmount < 0) {
+                    if (guideSubPage + 1 < guidePageCount(guidePage)) guideSubPage++;
+                    else if (guidePage + 1 < GUIDE_PAGES) { guidePage++; guideSubPage = 0; }
+                } else if (guideSubPage > 0) guideSubPage--;
+                else if (guidePage > 0) { guidePage--; guideSubPage = guidePageCount(guidePage) - 1; }
+            }
             return true;
         }
         return super.mouseScrolled(x, y, horizontalAmount, verticalAmount);
