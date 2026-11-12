@@ -134,6 +134,7 @@ public final class MonocleHud {
             }
             lines.add(Text.translatable("screen.alkahest.monocle.progress",
                 receiver.progress() * 100 / StabilizerReceiverBlockEntity.TICKS_PER_TYPE));
+            if (receiver.waitingForOutput()) lines.add(Text.translatable("message.alkahest.stabilizer_waiting_output"));
         } else if (blockEntity instanceof AlchemyPipeBlockEntity pipe && client.world.getBlockState(hit.getBlockPos()).getBlock() instanceof AlchemyPipeBlock) {
             lines.add(Text.translatable("screen.alkahest.monocle.pipe"));
             lines.add(Text.translatable("screen.alkahest.monocle.pipe_auto", pipe.active()

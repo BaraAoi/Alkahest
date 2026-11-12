@@ -44,6 +44,8 @@ public class StabilizerReceiverBlockEntity extends BlockEntity {
     /** Search area for empty/matching jars; keeps the mechanism simple and predictable. */
     public static final int RADIUS = 4;
     public static final int CAPACITY = JarItem.CAPACITY;
+    /** A ready batch retries output at most twice per second while blocked. */
+    public static final int OUTPUT_RETRY_TICKS = 10;
     public static final float OUTPUT_STABILITY = 0.90f;
     private static final float LOSS_THRESHOLD = 0.20f;
     private static final float LOSS_CHANCE = 0.15f;
@@ -63,6 +65,7 @@ public class StabilizerReceiverBlockEntity extends BlockEntity {
 
     public JarContentsComponent contents() { return JarItem.contents(tank()); }
     public int progress() { return progress; }
+    public boolean waitingForOutput() { return progress >= TICKS_PER_TYPE && contents().total() > 0; }
 
     /** Used by tests and by the break handler; keeps the liquid exactly as it is. */
     public void setContents(JarContentsComponent contents) {
@@ -82,14 +85,18 @@ public class StabilizerReceiverBlockEntity extends BlockEntity {
     public int acceptFromPipe(EssenceStack incoming) {
         int accepted = Math.min(incoming.amount(), pipeFree(incoming.type()));
         if (accepted <= 0) return 0;
-        EssenceType sorting = currentType();
         JarContentsComponent addition = new JarContentsComponent(List.of(
             new EssenceStack(incoming.type(), accepted, incoming.stability())));
+        mergeInput(addition);
+        return accepted;
+    }
+
+    /** Adding the same current type continues its work; a reordered type starts its own cycle. */
+    private void mergeInput(JarContentsComponent addition) {
+        EssenceType sorting = currentType();
         JarItem.set(tank(), contents().merge(addition, CAPACITY));
-        // Merging may reorder types; do not credit work performed on a different type.
         if (sorting != null && currentType() != sorting) progress = 0;
         changed();
-        return accepted;
     }
 
     public boolean structureFormed() {
@@ -134,7 +141,7 @@ public class StabilizerReceiverBlockEntity extends BlockEntity {
         }
         if (accepted.isEmpty()) { message(player, "message.alkahest.stabilizer_full"); return; }
         JarContentsComponent addition = new JarContentsComponent(accepted);
-        setContents(current.merge(addition, CAPACITY));
+        mergeInput(addition);
         // The jar is not consumed: it stays in hand, now empty or holding what did not fit.
         JarItem.set(held, new JarContentsComponent(remainder));
         if (world != null && !world.isClient && active() && player instanceof net.minecraft.server.network.ServerPlayerEntity researcher)
@@ -150,6 +157,7 @@ public class StabilizerReceiverBlockEntity extends BlockEntity {
             Text.translatable(active() ? "message.alkahest.stabilizer_running" : "message.alkahest.stabilizer_idle")), false);
         player.sendMessage(Text.translatable("message.alkahest.stabilizer_contents",
             contents.total(), CAPACITY, progress * 100 / TICKS_PER_TYPE), false);
+        if (waitingForOutput()) player.sendMessage(Text.translatable("message.alkahest.stabilizer_waiting_output"), false);
         for (EssenceStack stack : contents.contents())
             player.sendMessage(Text.literal("◆ " + stack.type().displayName() + ": " + stack.amount()
                 + " · " + Math.round(stack.stability() * 100) + "%").styled(style -> style.withColor(stack.type().color())), false);
@@ -250,20 +258,42 @@ public class StabilizerReceiverBlockEntity extends BlockEntity {
     static void tickWithMidas(World world, BlockPos pos, StabilizerReceiverBlockEntity be, boolean midas, long time) {
         if (world.isClient) return;
         if (!be.active() || be.contents().total() == 0) {
-            if (be.progress != 0) { be.progress = 0; be.markDirty(); }
+            if (be.progress != 0) {
+                be.progress = 0;
+                be.markDirty();
+                be.syncProgress();
+            }
             return;
         }
         int before = be.progress;
-        be.progress += MidasTouchEffect.progressStep(midas, time);
-        // A boosted step can skip a multiple of 20; do not skip its visual effect.
-        if (before / 20 != be.progress / 20 && world instanceof ServerWorld serverWorld) {
-            serverWorld.spawnParticles(ParticleTypes.ENCHANT,
-                pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5, 2, 0.2, 0.1, 0.2, 0.01);
+        if (before < TICKS_PER_TYPE) {
+            be.progress = Math.min(TICKS_PER_TYPE, before + MidasTouchEffect.progressStep(midas, time));
+            boolean crossedCheckpoint = before / 20 != be.progress / 20;
+            if (crossedCheckpoint && world instanceof ServerWorld serverWorld) {
+                serverWorld.spawnParticles(ParticleTypes.ENCHANT,
+                    pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5, 2, 0.2, 0.1, 0.2, 0.01);
+            }
+            be.markDirty();
+            if (be.progress < TICKS_PER_TYPE) {
+                if (crossedCheckpoint) be.syncProgress();
+                return;
+            }
         }
-        if (be.progress < TICKS_PER_TYPE) { be.markDirty(); return; }
-        be.progress = 0;
-        be.extractCurrent(midas);
-        be.markDirty();
+        // A completed batch waits in the receiver. Retry cheaply and never restart the cycle
+        // merely because every suitable jar is full or missing. extractCurrent resets progress
+        // only after it actually processes a batch, even if an unstable last unit is lost.
+        if (before < TICKS_PER_TYPE || time % OUTPUT_RETRY_TICKS == 0) {
+            be.extractCurrent(midas);
+        }
+        if (before < TICKS_PER_TYPE && be.progress == TICKS_PER_TYPE) be.syncProgress();
+    }
+
+    /** Keep the monocle's progress up to date without a block packet every tick. */
+    private void syncProgress() {
+        if (world == null || world.isClient) return;
+        BlockState state = world.getBlockState(pos);
+        if (state.getBlock() instanceof StabilizerReceiverBlock)
+            world.updateListeners(pos, state, state, Block.NOTIFY_LISTENERS);
     }
 
     private void message(PlayerEntity player, String key, Object... args) {
@@ -290,7 +320,7 @@ public class StabilizerReceiverBlockEntity extends BlockEntity {
     @Override protected void readNbt(NbtCompound nbt, RegistryWrapper.WrapperLookup registries) {
         super.readNbt(nbt, registries);
         Inventories.readNbt(nbt, storage, registries);
-        progress = nbt.getInt("Progress");
+        progress = Math.max(0, Math.min(TICKS_PER_TYPE, nbt.getInt("Progress")));
     }
 
     @Override public BlockEntityUpdateS2CPacket toUpdatePacket() { return BlockEntityUpdateS2CPacket.create(this); }

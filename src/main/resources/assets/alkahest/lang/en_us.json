@@ -519,5 +519,6 @@
   "message.alkahest.pipe_filter": "Filter: %s",
   "message.alkahest.pipe_filter_changed": "Pipe filter: %s",
   "message.alkahest.pipe_filter_any": "any essence",
-  "tooltip.alkahest.pipe_invalid_filter": "Unsupported filter: cleared on placement"
+  "tooltip.alkahest.pipe_invalid_filter": "Unsupported filter: cleared on placement",
+  "message.alkahest.stabilizer_waiting_output": "Ready: waiting for a suitable jar."
 }
