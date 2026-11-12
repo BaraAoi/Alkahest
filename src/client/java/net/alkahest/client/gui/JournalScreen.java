@@ -7,6 +7,7 @@ import net.alkahest.transmutation.TransmutationRecipe;
 import net.alkahest.registry.ModBlocks;
 import net.alkahest.registry.ModItems;
 import net.alkahest.research.PracticalResearchPlan;
+import net.alkahest.research.BookPagination;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.item.Item;
@@ -180,7 +181,7 @@ public final class JournalScreen extends Screen {
         int textWidth = Math.max(20, half - 23);
         int rows = Math.max(1, (h - 34) / textRenderer.fontHeight);
         var lines = detailLines(node, textWidth);
-        detailPages = Math.max(1, Math.max((lines.size() + rows - 1) / rows, diagramCount(node)));
+        detailPages = Math.max(BookPagination.pages(lines.size(), rows), diagramCount(node));
         detailPage = MathHelper.clamp(detailPage, 0, detailPages - 1);
         c.enableScissor(x + 7, y + 7, x + half - 4, y + h - 7);
         c.drawText(textRenderer, textRenderer.trimToWidth(label(node).getString(), textWidth), x + 11, y + 10, 0xFF4F3520, false);
@@ -189,7 +190,14 @@ public final class JournalScreen extends Screen {
         c.disableScissor();
         c.enableScissor(x + half + 3, y + 6, x + w - 6, y + h - 6);
         diagramTooltip = ItemStack.EMPTY;
-        renderDiagram(c, node, detailPage, x + half + 9, y + 10, half - 20, mouseX, mouseY);
+        int diagramX = x + half + 9, diagramY = y + 10;
+        float scale = Math.max(0.1f, Math.min(1f, Math.min((half - 20) / 92f, (h - 20) / 120f)));
+        c.getMatrices().push();
+        c.getMatrices().translate(diagramX, diagramY, 0);
+        c.getMatrices().scale(scale, scale, 1);
+        renderDiagram(c, node, detailPage, 0, 0, Math.max(20, (int)((half - 20) / scale)),
+            (int)((mouseX - diagramX) / scale), (int)((mouseY - diagramY) / scale));
+        c.getMatrices().pop();
         c.disableScissor();
         if (!diagramTooltip.isEmpty()) c.drawTooltip(textRenderer, diagramTooltip.getName(), mouseX, mouseY);
         button(c, left + 15, top + bookHeight - 25, 70, "screen.alkahest.journal.back");
@@ -199,9 +207,7 @@ public final class JournalScreen extends Screen {
     }
     private void diagramItem(DrawContext c, int mouseX, int mouseY, ItemStack stack, int x, int y) {
         c.drawItem(stack, x, y);
-        if (within(mouseX, mouseY, x, y, x + 16, y + 16)
-                && within(mouseX, mouseY, mapX() + mapW() / 2 + 3, mapY() + 6, mapX() + mapW() - 6, mapY() + mapH() - 6))
-            diagramTooltip = stack;
+        if (within(mouseX, mouseY, x, y, x + 16, y + 16)) diagramTooltip = stack;
     }
     private void renderDiagram(DrawContext c, Node node, int page, int x, int y, int width, int mouseX, int mouseY) {
         var crafts = JournalCraftingRecipes.BY_RESEARCH.getOrDefault(node.key(), List.of());
@@ -256,6 +262,7 @@ public final class JournalScreen extends Screen {
             c.drawText(textRenderer, "→", x + 55, y + 39, 0xFF594633, false);
             diagramItem(c, mouseX, mouseY, new ItemStack(brew.result(), brew.count()), x + 70, y + 35);
             if (brew.count() > 1) c.drawText(textRenderer, Integer.toString(brew.count()), x + 79, y + 45, 0xFF30251C, false);
+            c.drawText(textRenderer, "↑", x + 36, y + 54, 0xFF594633, false);
             int i = 0;
             for (EssenceType type : EssenceType.values()) if (brew.cost().containsKey(type)) {
                 int sx = x + (i % 4) * 22, sy = y + 65 + (i / 4) * 23;
@@ -268,11 +275,11 @@ public final class JournalScreen extends Screen {
     }
     private int guidePageCount(int chapter) {
         int h = mapH();
-        if (chapter == RECIPES_PAGE) return Math.max(1, (MatrixRecipe.all().size() + listRows(17) - 1) / listRows(17));
-        if (chapter == TRANSMUTATION_PAGE) return Math.max(1, (TransmutationRecipe.all().size() + listRows(19) - 1) / listRows(19));
+        if (chapter == RECIPES_PAGE) return Math.max(1, BookPagination.pages(MatrixRecipe.all().size(), listRows(17)));
+        if (chapter == TRANSMUTATION_PAGE) return Math.max(1, BookPagination.pages(TransmutationRecipe.all().size(), listRows(19)));
         int rows = Math.max(1, (h - 24) / textRenderer.fontHeight);
         int count = textRenderer.wrapLines(Text.translatable("screen.alkahest.journal.page." + chapter), Math.max(20, mapW() / 2 - 24)).size();
-        return Math.max(1, (count + rows * 2 - 1) / (rows * 2));
+        return BookPagination.pages(count, rows * 2);
     }
     private int listRows(int height) { return Math.max(1, (mapH() - 33) / height); }
     private void renderGuide(DrawContext c, int mouseX, int mouseY) {
@@ -292,7 +299,7 @@ public final class JournalScreen extends Screen {
                 int px = x + column * half + 12;
                 c.enableScissor(px - 2, y + 7, x + (column + 1) * half - 5, y + h - 7);
                 for (int i = 0; i < rows; i++) {
-                    int line = guideSubPage * rows * 2 + column * rows + i;
+                    int line = BookPagination.index(guideSubPage, column * rows + i, rows * 2);
                     if (line < lines.size()) c.drawText(textRenderer, lines.get(line), px, y + 12 + i * textRenderer.fontHeight, 0xFF30251C, false);
                 }
                 c.disableScissor();
