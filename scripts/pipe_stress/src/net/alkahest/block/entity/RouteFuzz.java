@@ -15,7 +15,10 @@ public class RouteFuzz {
         }return -1;
     }
     public static void main(String[] args)throws Exception{
-        long cases=Long.parseLong(args[0]), count=0; Random rnd=new Random(0x5a17ab1e2026L);
+        long cases=Long.parseLong(args[0]), count=0;
+        if(cases<=0) throw new IllegalArgumentException("Case count must be positive");
+        long seed=args.length>1 ? Long.decode(args[1]) : 0x5a17ab1e2026L;
+        Random rnd=new Random(seed);
         while(count<cases){
             boolean[] cells=new boolean[SIZE]; int source=rnd.nextInt(SIZE),target;
             do target=rnd.nextInt(SIZE); while(target==source);
@@ -34,6 +37,6 @@ public class RouteFuzz {
             count++;
             if(count%20000==0) System.out.println("Verified random 3D layouts: "+count);
         }
-        System.out.println("PASS random 3D layouts: "+count);
+        System.out.println("PASS random 3D layouts: "+count+", seed="+seed);
     }
 }

@@ -9,4 +9,4 @@ javac --release 21 -d "$tmp" \
   scripts/pipe_stress/src/net/minecraft/util/math/Direction.java \
   src/main/java/net/alkahest/block/entity/PipeRouteTree.java \
   scripts/pipe_stress/src/net/alkahest/block/entity/RouteFuzz.java
-java -Xmx512m -cp "$tmp" net.alkahest.block.entity.RouteFuzz "${1:-100000}"
+java -Xmx512m -cp "$tmp" net.alkahest.block.entity.RouteFuzz "${1:-100000}" "${2:-0x5a17ab1e2026}"
