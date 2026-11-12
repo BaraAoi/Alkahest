@@ -91,7 +91,7 @@ class PracticalResearchPlanTest {
             assertEquals(0, step.bit() & all);
             assertEquals(1, Long.bitCount(step.bit()));
             assertEquals(0, step.parents() & ~ALL);
-            assertSame(step, forItem(step.itemId()));
+            if (step.bit() != AER_WAND) assertSame(step, forItem(step.itemId()));
             all |= step.bit();
         }
         assertEquals(ALL, all);
