@@ -25,7 +25,11 @@ public final class PracticalResearchPlan {
     public static final long NAPALM = 1L << 20, ACID = 1L << 21, MIASMA = 1L << 22, LIGHTNING = 1L << 23;
     public static final long FROST = 1L << 24, PURIFICATION = 1L << 25;
     public static final long JAR = 1L << 26, STABILIZER_RECEIVER = 1L << 27, STABILIZER_CREST = 1L << 28;
-    public static final long ALL = (1L << 29) - 1;
+    public static final long SEPARATOR = 1L << 29, CRYSTALLIZATION = 1L << 30;
+    public static final long ALL = (1L << 31) - 1;
+    public static final long ASSEMBLIES = STABILIZER | TIER2 | TRANSMUTATOR | MATRIX;
+    // Keep obsolete flags for saves, but group the component entries into their machine.
+    public static final long HIDDEN_COMPONENTS = BELLOWS | CHAMBER | CROWN | PEDESTAL | STABILIZER_RECEIVER | STABILIZER_CREST;
 
     /** Legacy completion bits belong to EarlyResearch's saved advancement mapping. */
     public static final List<Step> STEPS = List.of(
@@ -46,18 +50,20 @@ public final class PracticalResearchPlan {
         new Step("transmutator", "alkahest:transmutator_core", TRANSMUTATOR, PIPE | CHARGER, 0),
         new Step("chamber", "alkahest:transmutator_chamber", CHAMBER, TRANSMUTATOR, 0),
         new Step("crown", "alkahest:transmutator_crown", CROWN, TRANSMUTATOR, 0),
-        new Step("matrix", "alkahest:matrix_core", MATRIX, AMULET | CHAMBER | CROWN, 0),
+        new Step("matrix", "alkahest:matrix_core", MATRIX, AMULET | TRANSMUTATOR, 0),
         new Step("pedestal", "alkahest:matrix_pedestal", PEDESTAL, MATRIX, 0),
-        new Step("midas", "alkahest:midas_elixir", MIDAS, PEDESTAL, 0),
-        new Step("napalm", "alkahest:napalm", NAPALM, PEDESTAL, 0),
-        new Step("acid", "alkahest:acid_bomb", ACID, PEDESTAL, 0),
-        new Step("miasma", "alkahest:miasma", MIASMA, PEDESTAL, 0),
-        new Step("lightning", "alkahest:lightning_in_a_bottle", LIGHTNING, PEDESTAL, 0),
-        new Step("frost", "alkahest:frost_flask", FROST, PEDESTAL, 0),
-        new Step("purification", "alkahest:purifying_flask", PURIFICATION, PEDESTAL, 0),
+        new Step("midas", "alkahest:midas_elixir", MIDAS, MATRIX, 0),
+        new Step("napalm", "alkahest:napalm", NAPALM, MATRIX, 0),
+        new Step("acid", "alkahest:acid_bomb", ACID, MATRIX, 0),
+        new Step("miasma", "alkahest:miasma", MIASMA, MATRIX, 0),
+        new Step("lightning", "alkahest:lightning_in_a_bottle", LIGHTNING, MATRIX, 0),
+        new Step("frost", "alkahest:frost_flask", FROST, MATRIX, 0),
+        new Step("purification", "alkahest:purifying_flask", PURIFICATION, MATRIX, 0),
         new Step("jar", "alkahest:jar", JAR, DISTILLERY, 0),
         new Step("stabilizer_receiver", "alkahest:stabilizer_receiver", STABILIZER_RECEIVER, STABILIZER, 0),
-        new Step("stabilizer_crest", "alkahest:stabilizer_crest", STABILIZER_CREST, STABILIZER, 0)
+        new Step("stabilizer_crest", "alkahest:stabilizer_crest", STABILIZER_CREST, STABILIZER, 0),
+        new Step("separator", "alkahest:essence_separator", SEPARATOR, JAR, 0),
+        new Step("crystallization", "alkahest:crystallization_powder", CRYSTALLIZATION, WATER, 0)
     );
 
     public static Step forItem(String itemId) {
@@ -65,6 +71,8 @@ public final class PracticalResearchPlan {
         return null;
     }
 
+    public static boolean isAssembly(long bit) { return (ASSEMBLIES & bit) != 0; }
+    public static boolean visible(long bit) { return (HIDDEN_COMPONENTS & bit) == 0; }
     public static boolean available(Step step, long completed) {
         return (completed & step.parents()) == step.parents();
     }
@@ -77,13 +85,13 @@ public final class PracticalResearchPlan {
     }
 
     /** Resolves all currently observed, eligible items, including cascades through both branches. */
-    public static long resolve(long completed, long observed) {
+    public static long resolve(long completed, long observed, long actions) {
         long result = completed & ALL;
         boolean changed;
         do {
             changed = false;
             for (Step step : STEPS) {
-                if ((result & step.bit()) == 0 && (observed & step.bit()) != 0 && available(step, result)) {
+                if ((result & step.bit()) == 0 && ((isAssembly(step.bit()) ? actions : observed) & step.bit()) != 0 && available(step, result)) {
                     result |= step.bit();
                     changed = true;
                 }

@@ -8,25 +8,36 @@ import static net.alkahest.research.PracticalResearchPlan.*;
 class PracticalResearchPlanTest {
     @Test void branchParentsAndEarlyObservations() {
         long observed = CAULDRON | MONOCLE | WATER;
-        long completed = resolve(0, observed);
+        long completed = resolve(0, observed, 0);
         assertEquals(CAULDRON | WATER, completed);
-        completed = resolve(completed, observed | DISTILLERY);
+        completed = resolve(completed, observed | DISTILLERY, 0);
         assertEquals(CAULDRON | WATER | DISTILLERY | MONOCLE, completed);
-        assertEquals(completed, resolve(completed, 0));
-        assertEquals(ALL, resolve(0, ALL));
+        assertEquals(completed, resolve(completed, 0, 0));
+        assertEquals(ALL, resolve(0, ALL, ASSEMBLIES));
     }
 
     @Test void newStorageAndStabilizerBranchesDoNotRelockOldProgress() {
         long old = (1L << 26) - 1;
-        assertEquals(old, resolve(old, 0));
+        assertEquals(old, resolve(old, 0, 0));
         long observed = JAR | STABILIZER_RECEIVER | STABILIZER_CREST;
-        assertEquals(0, resolve(0, observed));
-        assertEquals(DISTILLERY | JAR, resolve(DISTILLERY, observed));
-        long completed = resolve(STABILIZER | DISTILLERY, observed);
+        assertEquals(0, resolve(0, observed, 0));
+        assertEquals(DISTILLERY | JAR, resolve(DISTILLERY, observed, 0));
+        long completed = resolve(STABILIZER | DISTILLERY, observed, 0);
         assertEquals(STABILIZER | DISTILLERY | observed, completed);
         assertEquals(STABILIZER, STEPS.get(27).parents());
         assertEquals(STABILIZER, STEPS.get(28).parents());
         assertNotEquals(STABILIZER_RECEIVER, STEPS.get(28).parents());
+    }
+
+    @Test void assembledActionsWaitForParentsAndAreSeparateFromItemOwnership() {
+        long parent = PIPE | CHARGER;
+        assertEquals(parent, resolve(parent, TRANSMUTATOR, 0));
+        assertEquals(0, resolve(0, 0, TRANSMUTATOR));
+        assertEquals(parent | TRANSMUTATOR, resolve(parent, 0, TRANSMUTATOR));
+        assertEquals(MATRIX | AMULET | TRANSMUTATOR, resolve(AMULET | TRANSMUTATOR, 0, MATRIX));
+        assertEquals(MATRIX | AMULET | TRANSMUTATOR | FROST, resolve(AMULET | TRANSMUTATOR, FROST, MATRIX));
+        assertFalse(visible(CHAMBER)); assertFalse(visible(PEDESTAL));
+        assertTrue(visible(MATRIX)); assertTrue(visible(SEPARATOR));
     }
 
     @Test void legacyCompletedOnlyAndHighBits() {

@@ -12,11 +12,11 @@ data = root / 'src/main/resources/data/alkahest'
 java = root / 'src/main/java/net/alkahest'
 plan = (java / 'research/PracticalResearchPlan.java').read_text()
 steps = re.findall(r'new Step\("([a-z0-9_]+)", "alkahest:([a-z0-9_]+)",', plan)
-assert len(steps) == 29 and len(set(steps)) == len(steps), 'all 29 steps must exist and be unique'
+assert len(steps) == 31 and len(set(steps)) == len(steps), 'all 31 steps must exist and be unique'
 # Every visible node must exist exactly once and have its own clickable area.
 journal = (root / 'src/client/java/net/alkahest/client/gui/JournalScreen.java').read_text()
 nodes = [(int(i), int(x), int(y)) for i, x, y in re.findall(r'node\((\d+),\s*(-?\d+),\s*(-?\d+)\)', journal)]
-assert sorted(i for i, _, _ in nodes) == list(range(len(steps))), 'one map node per research step'
+assert sorted(i for i, _, _ in nodes) == [i for i in range(len(steps)) if i not in {12, 15, 16, 18, 27, 28}], 'one visible node per grouped research'
 for n, (i, x, y) in enumerate(nodes):
     for j, xx, yy in nodes[n + 1:]:
         assert abs(x - xx) >= 32 or abs(y - yy) >= 32, (i, j, 'overlapping nodes')
@@ -25,6 +25,10 @@ for item, material, count in [('jar', 'minecraft:glass_pane', 7), ('stabilizer_r
     recipe = json.loads((data / f'recipe/{item}.json').read_text())
     symbol = next(k for k, v in recipe['key'].items() if v.get('item') == material)
     assert ''.join(recipe['pattern']).count(symbol) == count and recipe['result']['id'] == f'alkahest:{item}'
+for name in ('stabilizer', 'tier2', 'transmutator', 'matrix'):
+    advancement = json.loads((data / f'advancement/practice/action_{name}.json').read_text())
+    assert advancement['criteria']['done']['trigger'] == 'minecraft:impossible'
+assert 'camera.zoomAt(' in journal and 'camera.radius()' in journal, 'zoom and hit detection must agree'
 for name, item in steps:
     for kind in ('observed', 'completed'):
         advancement = json.loads((data / f'advancement/practice/{kind}_{name}.json').read_text())

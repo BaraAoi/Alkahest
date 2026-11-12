@@ -57,7 +57,12 @@ public class TransmutatorCoreBlock extends Block implements BlockEntityProvider 
                 player.sendMessage(Text.translatable("message.alkahest.transmutator_unformed"), true);
                 return;
             }
-            if (core.verticalFormed() && held.getItem() instanceof CrystalWandItem) { core.wake(); return; }
+            if (core.verticalFormed() && held.getItem() instanceof CrystalWandItem) {
+                core.wake();
+                if (core.awake() && player instanceof net.minecraft.server.network.ServerPlayerEntity serverPlayer)
+                    net.alkahest.research.PracticalResearchStorage.assembly(serverPlayer, net.alkahest.research.PracticalResearchPlan.TRANSMUTATOR);
+                return;
+            }
             if (core.verticalFormed() && !core.awake()) {
                 player.sendMessage(Text.translatable("message.alkahest.transmutator_dormant"), true);
                 return;

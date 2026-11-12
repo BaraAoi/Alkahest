@@ -37,18 +37,18 @@ public final class JournalScreen extends Screen {
     private static final Node[] NODES = {
         node(0, 24, 0), node(1, 100, -40), node(2, 100, 40), node(3, 176, 0),
         node(4, 252, -40), node(5, 252, 40), node(6, 328, 0), node(7, 404, 0), node(8, 480, 0),
-        node(9, 556, -90), node(10, 556, -30), node(11, 556, 30), node(12, 632, 30),
-        node(13, 556, 90), node(14, 632, -60), node(15, 708, -90), node(16, 708, -30),
-        node(17, 784, 0), node(18, 860, 0), node(19, 936, -108), node(20, 936, -72),
+        node(9, 556, -90), node(10, 556, -30), node(11, 556, 30),
+        node(13, 556, 90), node(14, 632, -60),
+        node(17, 784, 0), node(19, 936, -108), node(20, 936, -72),
         node(21, 936, -36), node(22, 936, 0), node(23, 936, 36), node(24, 936, 72), node(25, 936, 108),
-        node(26, 176, 80), node(27, 480, -70), node(28, 480, 70)
+        node(26, 176, 80), node(29, 252, 110), node(30, 176, -80)
     };
     private final long researchFlags;
     private boolean guide;
     private Node selected;
     private int guidePage;
     private int scroll, maxScroll;
-    private double panX, panY;
+    private final net.alkahest.research.ResearchMapView camera = new net.alkahest.research.ResearchMapView();
     private boolean dragging;
     private int left, top, bookWidth, bookHeight;
 
@@ -64,8 +64,8 @@ public final class JournalScreen extends Screen {
     private int mapY() { return top + 57; }
     private int mapW() { return bookWidth - 30; }
     private int mapH() { return bookHeight - 89; }
-    private int nx(Node node) { return mapX() + node.x() + (int)panX; }
-    private int ny(Node node) { return mapY() + mapH() / 2 + node.y() + (int)panY; }
+    private int nx(Node node) { return mapX() + (int)Math.round(camera.x(node.x())); }
+    private int ny(Node node) { return mapY() + mapH() / 2 + (int)Math.round(camera.y(node.y())); }
     private boolean within(double x, double y, int x1, int y1, int x2, int y2) { return x >= x1 && x < x2 && y >= y1 && y < y2; }
     private String state(Node node) {
         if ((researchFlags & node.completed()) != 0) return "completed";
@@ -122,19 +122,27 @@ public final class JournalScreen extends Screen {
         c.drawVerticalLine(middle, Math.min(y1, y2), Math.max(y1, y2), color);
         c.drawHorizontalLine(Math.min(middle, x2), Math.max(middle, x2), y2, color);
     }
-    private boolean hitNode(Node n, double x, double y) { return within(x, y, nx(n) - 16, ny(n) - 16, nx(n) + 16, ny(n) + 16); }
+    private boolean hitNode(Node n, double x, double y) {
+        double r = camera.radius();
+        return x >= nx(n) - r && x < nx(n) + r && y >= ny(n) - r && y < ny(n) + r;
+    }
     private void drawNode(DrawContext c, Node node, int mx, int my) {
         int x = nx(node), y = ny(node);
         String state = state(node);
         boolean hover = hitNode(node, mx, my) && within(mx, my, mapX(), mapY(), mapX() + mapW(), mapY() + mapH());
         int border = state.equals("completed") ? 0xFFE5C16E : state.equals("active") ? 0xFF82DCD9 : 0xFF76716C;
-        if (hover) { c.fill(x - 19, y - 19, x + 19, y + 19, 0x664FD3D4); border = 0xFFFFE6AA; }
-        c.fill(x - 16, y - 16, x + 16, y + 16, border);
-        c.fill(x - 14, y - 14, x + 14, y + 14, 0xFF1A2231);
-        c.fill(x - 12, y - 12, x + 12, y + 12, 0xFF30384B);
-        if (state.equals("locked")) c.drawCenteredTextWithShadow(textRenderer, "?", x, y - 4, 0xFFD0CAC2);
-        else c.drawItem(node.icon(), x - 8, y - 8);
-        if (state.equals("active")) c.fill(x + 11, y - 17, x + 17, y - 11, 0xFF90EBE2);
+        c.getMatrices().push();
+        c.getMatrices().translate(x, y, 0);
+        float zoom = (float) camera.zoom();
+        c.getMatrices().scale(zoom, zoom, 1);
+        if (hover) { c.fill(-19, -19, 19, 19, 0x664FD3D4); border = 0xFFFFE6AA; }
+        c.fill(-16, -16, 16, 16, border);
+        c.fill(-14, -14, 14, 14, 0xFF1A2231);
+        c.fill(-12, -12, 12, 12, 0xFF30384B);
+        if (state.equals("locked")) c.drawCenteredTextWithShadow(textRenderer, "?", 0, -4, 0xFFD0CAC2);
+        else c.drawItem(node.icon(), -8, -8);
+        if (state.equals("active")) c.fill(11, -17, 17, -11, 0xFF90EBE2);
+        c.getMatrices().pop();
     }
     private int wrapped(DrawContext c, Text text, int x, int y, int w, int color) {
         c.drawTextWrapped(textRenderer, text, x, y, w, color);
@@ -149,7 +157,9 @@ public final class JournalScreen extends Screen {
         c.drawText(textRenderer, label(node), x + 12, y + 11, 0xFF4F3520, false);
         c.fill(x + 12, y + 23, x + w - 12, y + 24, 0xFFB19A6E);
         int line = y + 31 - scroll;
-        line += wrapped(c, Text.translatable("screen.alkahest.practice." + state), x + 12, line, w - 24, 0xFF594633) + 6;
+        String stateKey = state.equals("active") && PracticalResearchPlan.isAssembly(node.completed()) ? "assembly_active"
+            : state.equals("completed") && PracticalResearchPlan.isAssembly(node.completed()) ? "assembly_completed" : state;
+        line += wrapped(c, Text.translatable("screen.alkahest.practice." + stateKey), x + 12, line, w - 24, 0xFF594633) + 6;
         line += wrapped(c, Text.translatable("screen.alkahest.practice." + node.key() + ".recipe"), x + 12, line, w - 24, 0xFF30251C) + 6;
         line += wrapped(c, Text.translatable("screen.alkahest.practice.free_recipes"), x + 12, line, w - 24, 0xFF594633);
         maxScroll = Math.max(0, line + scroll - (y + h - 9));
@@ -312,11 +322,8 @@ public final class JournalScreen extends Screen {
     }
     @Override public boolean mouseDragged(double x, double y, int button, double dx, double dy) {
         if (button == 0 && dragging && !guide && selected == null) {
-            // Include every node, not just the last, if the layout gains new branches.
-            int farthest = java.util.Arrays.stream(NODES).mapToInt(Node::x).max().orElse(0);
-            double minPanX = Math.min(-300, mapW() - farthest - 36);
-            panX = MathHelper.clamp(panX + dx, minPanX, 120);
-            panY = MathHelper.clamp(panY + dy, -160, 160);
+            camera.pan(dx, dy);
+            clampCamera();
             return true;
         }
         return super.mouseDragged(x, y, button, dx, dy);
@@ -325,7 +332,21 @@ public final class JournalScreen extends Screen {
         if (button == 0 && dragging) { dragging = false; return true; }
         return super.mouseReleased(x, y, button);
     }
+    private void clampCamera() {
+        int minX = java.util.Arrays.stream(NODES).mapToInt(Node::x).min().orElse(0);
+        int maxX = java.util.Arrays.stream(NODES).mapToInt(Node::x).max().orElse(0);
+        int minY = java.util.Arrays.stream(NODES).mapToInt(Node::y).min().orElse(0);
+        int maxY = java.util.Arrays.stream(NODES).mapToInt(Node::y).max().orElse(0);
+        camera.clamp(mapW(), mapH(), minX, maxX, minY, maxY);
+    }
     @Override public boolean mouseScrolled(double x, double y, double horizontalAmount, double verticalAmount) {
+        if (!guide && selected == null && within(x, y, mapX(), mapY(), mapX() + mapW(), mapY() + mapH())) {
+            if (verticalAmount != 0) {
+                camera.zoomAt(Math.pow(1.15, verticalAmount), x - mapX(), y - (mapY() + mapH() / 2.0));
+                clampCamera();
+            }
+            return true;
+        }
         if ((guide || selected != null) && within(x, y, mapX(), mapY(), mapX() + mapW(), mapY() + mapH())) {
             scroll = MathHelper.clamp(scroll - (int)(verticalAmount * 18), 0, maxScroll);
             return true;

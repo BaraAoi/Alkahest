@@ -764,6 +764,8 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
         for (BlockPos candidate : BlockPos.iterate(clicked.add(-2, -2, -2), clicked.add(2, 2, 2))) {
             if (!(world.getBlockEntity(candidate) instanceof MatrixCoreBlockEntity core) || !core.formed()) continue;
             if (!core.awake()) core.setAwake(world, candidate, true);
+            if (player instanceof net.minecraft.server.network.ServerPlayerEntity serverPlayer && core.pedestals().size() >= 2)
+                net.alkahest.research.PracticalResearchStorage.assembly(serverPlayer, net.alkahest.research.PracticalResearchPlan.MATRIX);
             return true;
         }
         return false;

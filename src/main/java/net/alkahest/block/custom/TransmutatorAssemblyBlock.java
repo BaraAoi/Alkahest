@@ -32,7 +32,11 @@ public final class TransmutatorAssemblyBlock extends Block {
         if (world.isClient) return;
         BlockPos below = pos.down(coreDistance);
         if (!(world.getBlockEntity(below) instanceof TransmutatorCoreBlockEntity core) || !core.verticalFormed()) return;
-        if (stack.getItem() instanceof CrystalWandItem) core.wake();
+        if (stack.getItem() instanceof CrystalWandItem) {
+            core.wake();
+            if (core.awake() && player instanceof net.minecraft.server.network.ServerPlayerEntity serverPlayer)
+                net.alkahest.research.PracticalResearchStorage.assembly(serverPlayer, net.alkahest.research.PracticalResearchPlan.TRANSMUTATOR);
+        }
         else if (core.awake()) player.openHandledScreen(core);
         else player.sendMessage(net.minecraft.text.Text.translatable("message.alkahest.transmutator_dormant"), true);
     }

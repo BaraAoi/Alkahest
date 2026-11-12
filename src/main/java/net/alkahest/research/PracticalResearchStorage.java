@@ -33,14 +33,25 @@ public final class PracticalResearchStorage {
     public static void observe(ServerPlayerEntity player, ItemStack stack) {
         if (stack.isEmpty()) return;
         var step = PracticalResearchPlan.forItem(Registries.ITEM.getId(stack.getItem()).toString());
-        if (step == null || has(player, "observed", step)) return;
+        if (step == null || PracticalResearchPlan.isAssembly(step.bit()) || has(player, "observed", step)) return;
         grant(player, "observed", step);
         settle(player);
+    }
+
+    /** Record a successful real interaction, independently of currently unlocked parents. */
+    public static void assembly(ServerPlayerEntity player, long bit) {
+        if (!PracticalResearchPlan.isAssembly(bit)) return;
+        for (var step : PracticalResearchPlan.STEPS) if (step.bit() == bit) {
+            if (grant(player, "action", step)) settle(player);
+            return;
+        }
     }
 
     /** Scan only items belonging to the player, not items in an open container. */
     public static void scan(ServerPlayerEntity player) {
         long before = completed(player);
+        if (player.currentScreenHandler instanceof net.alkahest.screen.Tier2DistilleryScreenHandler screen
+                && screen.runningForResearch()) assembly(player, PracticalResearchPlan.TIER2);
         for (int i = 0; i < player.getInventory().size(); i++) observe(player, player.getInventory().getStack(i));
         observe(player, player.currentScreenHandler.getCursorStack());
         dev.emi.trinkets.api.TrinketsApi.getTrinketComponent(player).ifPresent(component -> {
@@ -69,7 +80,9 @@ public final class PracticalResearchStorage {
         long observed = observed(player);
         for (var step : PracticalResearchPlan.STEPS) {
             long completed = completed(player);
-            if ((observed & step.bit()) != 0 && (completed & step.bit()) == 0
+            boolean achieved = PracticalResearchPlan.isAssembly(step.bit()) ? has(player, "action", step)
+                : (observed & step.bit()) != 0;
+            if (achieved && (completed & step.bit()) == 0
                 && PracticalResearchPlan.available(step, completed)) grant(player, "completed", step);
         }
     }

@@ -50,6 +50,8 @@ public class StabilizerCoreBlockEntity extends BlockEntity {
             return;
         }
         activated = !activated;
+        if (activated && player instanceof net.minecraft.server.network.ServerPlayerEntity serverPlayer)
+            net.alkahest.research.PracticalResearchStorage.assembly(serverPlayer, net.alkahest.research.PracticalResearchPlan.STABILIZER);
         markDirty();
         syncState();
         world.playSound(null, pos, activated ? SoundEvents.BLOCK_BEACON_ACTIVATE : SoundEvents.BLOCK_BEACON_DEACTIVATE,

@@ -45,6 +45,12 @@ public class Tier2DistilleryScreenHandler extends ScreenHandler {
         addProperties(properties);
     }
 
+    /** Checked only server-side for the player actually using a running assembled machine. */
+    public boolean runningForResearch() {
+        return inventory instanceof Tier2DistilleryBlockEntity machine && machine.progress() > 0
+            && machine.status() == Tier2DistilleryBlockEntity.STATUS_WORKING && !machine.bellows().isEmpty();
+    }
+
     public int progress() { return properties.get(0); }
     public int maxProgress() { return properties.get(1); }
     public int status() { return properties.get(2); }

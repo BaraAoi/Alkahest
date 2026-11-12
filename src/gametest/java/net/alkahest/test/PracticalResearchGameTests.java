@@ -14,6 +14,8 @@ public class PracticalResearchGameTests implements FabricGameTest {
     @GameTest(templateName = EMPTY_STRUCTURE)
     public void observationsPersistAndWaitForParents(TestContext c) {
         var player = c.createMockCreativeServerPlayerInWorld();
+        for (String name : new String[]{"stabilizer", "tier2", "transmutator", "matrix"})
+            player.getAdvancementTracker().revokeCriterion(player.getServer().getAdvancementLoader().get(Alkahest.id("practice/action_" + name)), "done");
         for (var step : PracticalResearchPlan.STEPS) for (String kind : new String[]{"observed", "completed"}) {
             var entry = player.getServer().getAdvancementLoader().get(Alkahest.id("practice/" + kind + "_" + step.id()));
             c.assertTrue(entry != null, "Every practical flag has a persistent criterion");
@@ -40,6 +42,8 @@ public class PracticalResearchGameTests implements FabricGameTest {
     @GameTest(templateName = EMPTY_STRUCTURE)
     public void completedLegacyResearchMigratesWithoutDeletingOldState(TestContext c) {
         var player = c.createMockCreativeServerPlayerInWorld();
+        for (String name : new String[]{"stabilizer", "tier2", "transmutator", "matrix"})
+            player.getAdvancementTracker().revokeCriterion(player.getServer().getAdvancementLoader().get(Alkahest.id("practice/action_" + name)), "done");
         for (var step : PracticalResearchPlan.STEPS) for (String kind : new String[]{"observed", "completed"}) {
             var entry = player.getServer().getAdvancementLoader().get(Alkahest.id("practice/" + kind + "_" + step.id()));
             player.getAdvancementTracker().revokeCriterion(entry, "done");
@@ -72,6 +76,8 @@ public class PracticalResearchGameTests implements FabricGameTest {
     @GameTest(templateName = EMPTY_STRUCTURE)
     public void inventoryScanAndCauldronNoLongerTriggerHypotheses(TestContext c) {
         var player = c.createMockCreativeServerPlayerInWorld();
+        for (String name : new String[]{"stabilizer", "tier2", "transmutator", "matrix"})
+            player.getAdvancementTracker().revokeCriterion(player.getServer().getAdvancementLoader().get(Alkahest.id("practice/action_" + name)), "done");
         for (var step : PracticalResearchPlan.STEPS) for (String kind : new String[]{"observed", "completed"}) {
             var entry = player.getServer().getAdvancementLoader().get(Alkahest.id("practice/" + kind + "_" + step.id()));
             player.getAdvancementTracker().revokeCriterion(entry, "done");
@@ -98,6 +104,8 @@ public class PracticalResearchGameTests implements FabricGameTest {
     @GameTest(templateName = EMPTY_STRUCTURE)
     public void expandedBranchesRememberItemsBeforeTheirParents(TestContext c) {
         var player = c.createMockCreativeServerPlayerInWorld();
+        for (String name : new String[]{"stabilizer", "tier2", "transmutator", "matrix"})
+            player.getAdvancementTracker().revokeCriterion(player.getServer().getAdvancementLoader().get(Alkahest.id("practice/action_" + name)), "done");
         for (var step : PracticalResearchPlan.STEPS) for (String kind : new String[]{"observed", "completed"}) {
             var entry = player.getServer().getAdvancementLoader().get(Alkahest.id("practice/" + kind + "_" + step.id()));
             player.getAdvancementTracker().revokeCriterion(entry, "done");
@@ -106,6 +114,9 @@ public class PracticalResearchGameTests implements FabricGameTest {
         var alkahest = player.getServer().getAdvancementLoader().get(Alkahest.id("practice/completed_alkahest"));
         player.getAdvancementTracker().grantCriterion(stabilizer, "done");
         player.getAdvancementTracker().grantCriterion(alkahest, "done");
+        // Completed machinery actions are remembered even before the paths to them are open.
+        PracticalResearchStorage.assembly(player, PracticalResearchPlan.TRANSMUTATOR);
+        PracticalResearchStorage.assembly(player, PracticalResearchPlan.MATRIX);
         PracticalResearchStorage.observe(player, new ItemStack(ModItems.FROST_FLASK));
         c.assertTrue((PracticalResearchStorage.observed(player) & PracticalResearchPlan.FROST) != 0, "Early reagent is remembered");
         c.assertTrue((PracticalResearchStorage.completed(player) & PracticalResearchPlan.FROST) == 0, "It cannot finish before the Matrix path");
@@ -126,6 +137,8 @@ public class PracticalResearchGameTests implements FabricGameTest {
     @GameTest(templateName = EMPTY_STRUCTURE)
     public void stabilizerAndJarBranchesRememberEarlyItemsWithoutRelocking(TestContext c) {
         var player = c.createMockCreativeServerPlayerInWorld();
+        for (String name : new String[]{"stabilizer", "tier2", "transmutator", "matrix"})
+            player.getAdvancementTracker().revokeCriterion(player.getServer().getAdvancementLoader().get(Alkahest.id("practice/action_" + name)), "done");
         for (var step : PracticalResearchPlan.STEPS) for (String kind : new String[]{"observed", "completed"}) {
             var entry = player.getServer().getAdvancementLoader().get(Alkahest.id("practice/" + kind + "_" + step.id()));
             player.getAdvancementTracker().revokeCriterion(entry, "done");
@@ -151,6 +164,74 @@ public class PracticalResearchGameTests implements FabricGameTest {
         player.getAdvancementTracker().reload(c.getWorld().getServer().getAdvancementLoader());
         c.assertTrue((PracticalResearchStorage.completed(player) & (branches | PracticalResearchPlan.PIPE)) == (branches | PracticalResearchPlan.PIPE),
             "New and existing completions survive reload");
+        c.complete();
+    }
+
+    private void clearResearch(net.minecraft.server.network.ServerPlayerEntity player) {
+        for (var step : PracticalResearchPlan.STEPS) for (String kind : new String[]{"observed", "completed"})
+            player.getAdvancementTracker().revokeCriterion(player.getServer().getAdvancementLoader().get(Alkahest.id("practice/" + kind + "_" + step.id())), "done");
+        for (String name : new String[]{"stabilizer", "tier2", "transmutator", "matrix"})
+            player.getAdvancementTracker().revokeCriterion(player.getServer().getAdvancementLoader().get(Alkahest.id("practice/action_" + name)), "done");
+    }
+    private void grant(net.minecraft.server.network.ServerPlayerEntity player, String id) {
+        player.getAdvancementTracker().grantCriterion(player.getServer().getAdvancementLoader().get(Alkahest.id("practice/completed_" + id)), "done");
+    }
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void assembledMatrixRequiresWandAndTwoPedestals(TestContext c) {
+        var player = c.createMockCreativeServerPlayerInWorld(); clearResearch(player); grant(player, "amulet"); grant(player, "transmutator");
+        c.setBlockState(3,3,3,ModBlocks.MATRIX_CORE);
+        var pos = c.getAbsolutePos(new net.minecraft.util.math.BlockPos(3,3,3));
+        PracticalResearchStorage.observe(player, new ItemStack(ModBlocks.MATRIX_CORE));
+        c.assertTrue((PracticalResearchStorage.completed(player) & PracticalResearchPlan.MATRIX)==0, "The core alone does not complete a full machine");
+        var wand = new ItemStack(ModItems.WANDS.get(net.alkahest.essence.EssenceType.IGNIS));
+        net.alkahest.block.entity.MatrixCoreBlockEntity.interactNearby(c.getWorld(),pos,player,wand);
+        c.assertTrue((PracticalResearchStorage.completed(player) & PracticalResearchPlan.MATRIX)==0, "An incomplete shell is rejected");
+        for (int x=-1;x<=1;x++) for (int y=-1;y<=1;y++) for (int z=-1;z<=1;z++) {
+            if (x==0 && y==0 && z==0) continue;
+            c.setBlockState(3+x,3+y,3+z,x!=0 && y!=0 && z!=0 ? ModBlocks.MATRIX_PILLAR : ModBlocks.ALCHEMICAL_BRICK);
+        }
+        net.alkahest.block.entity.MatrixCoreBlockEntity.interactNearby(c.getWorld(),pos,player,wand);
+        c.assertTrue((PracticalResearchStorage.completed(player) & PracticalResearchPlan.MATRIX)==0, "Two usable pedestals are part of the complete set");
+        c.setBlockState(0,2,3,ModBlocks.MATRIX_PEDESTAL); c.setBlockState(6,2,3,ModBlocks.MATRIX_PEDESTAL);
+        net.alkahest.block.entity.MatrixCoreBlockEntity.interactNearby(c.getWorld(),pos,player,wand);
+        c.assertTrue((PracticalResearchStorage.completed(player) & PracticalResearchPlan.MATRIX)!=0, "Using a wand on the awakened complete assembly is credited");
+        c.complete();
+    }
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void stabilizerAndTransmutatorRecordRealActivation(TestContext c) {
+        var player = c.createMockCreativeServerPlayerInWorld(); clearResearch(player);
+        grant(player,"alkahest"); grant(player,"pipe"); grant(player,"charger");
+        c.setBlockState(2,2,2,ModBlocks.STABILIZER_RECEIVER); c.setBlockState(2,3,2,ModBlocks.STABILIZER_CORE); c.setBlockState(2,4,2,ModBlocks.STABILIZER_CREST);
+        var p = c.getAbsolutePos(new net.minecraft.util.math.BlockPos(2,3,2));
+        var stabilizer = (net.alkahest.block.entity.StabilizerCoreBlockEntity)c.getWorld().getBlockEntity(p);
+        PracticalResearchStorage.observe(player,new ItemStack(ModBlocks.STABILIZER_CORE));
+        c.assertTrue((PracticalResearchStorage.completed(player) & PracticalResearchPlan.STABILIZER)==0,"Core item is not the assembly");
+        stabilizer.toggle(player);
+        c.assertTrue((PracticalResearchStorage.completed(player) & PracticalResearchPlan.STABILIZER)!=0,"Real activation credits complete tower");
+        c.setBlockState(5,2,4,ModBlocks.TRANSMUTATOR_CORE); c.setBlockState(5,3,4,ModBlocks.TRANSMUTATOR_CHAMBER); c.setBlockState(5,4,4,ModBlocks.TRANSMUTATOR_CROWN);
+        var q = c.getAbsolutePos(new net.minecraft.util.math.BlockPos(5,3,4));
+        var wand = new ItemStack(ModItems.WANDS.get(net.alkahest.essence.EssenceType.AQUA));
+        var hit = new net.minecraft.util.hit.BlockHitResult(net.minecraft.util.math.Vec3d.ofCenter(q), net.minecraft.util.math.Direction.NORTH, q, false);
+        c.getWorld().getBlockState(q).onUseWithItem(wand,c.getWorld(),player,net.minecraft.util.Hand.MAIN_HAND,hit);
+        c.assertTrue((PracticalResearchStorage.completed(player) & PracticalResearchPlan.TRANSMUTATOR)!=0,"Wand on chamber awakens and records the assembled tower");
+        c.complete();
+    }
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void tierTwoResearchRequiresActualRunningMachine(TestContext c) {
+        var player = c.createMockCreativeServerPlayerInWorld(); clearResearch(player); grant(player,"stabilizer");
+        c.setBlockState(3,2,3,ModBlocks.DISTILLERY_TIER2);
+        var pos=c.getAbsolutePos(new net.minecraft.util.math.BlockPos(3,2,3));
+        var cube=(net.alkahest.block.entity.Tier2DistilleryBlockEntity)c.getWorld().getBlockEntity(pos);
+        PracticalResearchStorage.observe(player,new ItemStack(ModBlocks.DISTILLERY_TIER2));
+        cube.setStack(0,new ItemStack(net.minecraft.item.Items.STONE));
+        player.currentScreenHandler=cube.createMenu(1,player.getInventory(),player);
+        net.alkahest.block.entity.Tier2DistilleryBlockEntity.tick(c.getWorld(),pos,cube);
+        PracticalResearchStorage.scan(player);
+        c.assertTrue((PracticalResearchStorage.completed(player)&PracticalResearchPlan.TIER2)==0,"A cube without bellows has not started");
+        c.setBlockState(3,3,3,ModBlocks.DISTILLERY_BELLOWS);
+        net.alkahest.block.entity.Tier2DistilleryBlockEntity.tick(c.getWorld(),pos,cube);
+        PracticalResearchStorage.scan(player);
+        c.assertTrue((PracticalResearchStorage.completed(player)&PracticalResearchPlan.TIER2)!=0,"Watching a valid assembled cube start credits the player");
         c.complete();
     }
 
