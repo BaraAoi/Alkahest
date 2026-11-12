@@ -35,7 +35,7 @@ public final class ModBlocks {
     public static final Block WATER_FAUCET = register("water_faucet", new net.alkahest.block.custom.WaterFaucetBlock(
         AbstractBlock.Settings.copy(Blocks.COPPER_BLOCK).nonOpaque().noCollision().strength(2.0f)));
     public static final Block JAR = jar();
-    public static final Block ALCHEMY_PIPE = register("alchemy_pipe", new AlchemyPipeBlock(AbstractBlock.Settings.copy(Blocks.GLASS).strength(0.8f).nonOpaque()));
+    public static final Block ALCHEMY_PIPE = pipe();
     public static final Block ESSENCE_SEPARATOR = register("essence_separator", new EssenceSeparatorBlock(AbstractBlock.Settings.copy(Blocks.COPPER_BLOCK).nonOpaque()));
     public static final Block ESSENCE_CHARGER = register("essence_charger", new EssenceChargerBlock(AbstractBlock.Settings.copy(Blocks.COPPER_BLOCK).nonOpaque()));
     public static final Block DISTILLERY = register("distillery", new DistilleryBlock(AbstractBlock.Settings.copy(Blocks.COPPER_BLOCK).nonOpaque().luminance(state -> state.get(DistilleryBlock.WORKING) ? 5 : 0)));
@@ -79,6 +79,13 @@ public final class ModBlocks {
     public static final Block NAPALM_FLAME = Registry.register(Registries.BLOCK, Alkahest.id("napalm_flame"),
         new Block(AbstractBlock.Settings.create().noCollision().nonOpaque().breakInstantly().dropsNothing()
             .replaceable().luminance(state -> 14)));
+    private static Block pipe() {
+        Block block = Registry.register(Registries.BLOCK, Alkahest.id("alchemy_pipe"),
+            new AlchemyPipeBlock(AbstractBlock.Settings.copy(Blocks.GLASS).strength(0.8f).nonOpaque()));
+        Registry.register(Registries.ITEM, Alkahest.id("alchemy_pipe"),
+            new net.alkahest.item.custom.AlchemyPipeItem(block, new Item.Settings()));
+        return block;
+    }
     private static Block jar() {
         Block block = Registry.register(Registries.BLOCK, Alkahest.id("jar"), new JarBlock(AbstractBlock.Settings.copy(Blocks.GLASS).nonOpaque()));
         Registry.register(Registries.ITEM, Alkahest.id("jar"), new JarItem(block, new Item.Settings()));

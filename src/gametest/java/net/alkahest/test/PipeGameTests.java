@@ -515,4 +515,68 @@ public class PipeGameTests implements FabricGameTest {
         c.complete();
     }
 
+    @GameTest(templateName=EMPTY_STRUCTURE, tickLimit=80)
+    public void minedFilterSurvivesInventoryAndPlacementAndStillRoutes(TestContext c) {
+        c.setBlockState(2,2,3,ModBlocks.ALCHEMY_PIPE);
+        var world=c.getWorld(); BlockPos pos=c.getAbsolutePos(new BlockPos(2,2,3));
+        var pipe=(AlchemyPipeBlockEntity)world.getBlockEntity(pos);
+        pipe.setFilter(EssenceType.HERBA);
+        world.breakBlock(pos,true);
+        c.runAtTick(5,()->{
+            var drops=world.getEntitiesByClass(net.minecraft.entity.ItemEntity.class,
+                new net.minecraft.util.math.Box(pos).expand(2), e->e.getStack().isOf(ModBlocks.ALCHEMY_PIPE.asItem()));
+            c.assertTrue(drops.size()==1,"One pipe drops on ordinary break");
+            ItemStack item=drops.getFirst().getStack().copy(); drops.getFirst().discard();
+            c.assertTrue(item.get(net.alkahest.registry.ModDataComponents.PIPE_FILTER)==EssenceType.HERBA,
+                "The actual dropped pipe retains its filter");
+            var slots=net.minecraft.util.collection.DefaultedList.ofSize(1,ItemStack.EMPTY); slots.set(0,item);
+            var nbt=new net.minecraft.nbt.NbtCompound();
+            net.minecraft.inventory.Inventories.writeNbt(nbt,slots,world.getRegistryManager());
+            var loaded=net.minecraft.util.collection.DefaultedList.ofSize(1,ItemStack.EMPTY);
+            net.minecraft.inventory.Inventories.readNbt(nbt,loaded,world.getRegistryManager());
+            item=loaded.get(0);
+            c.assertTrue(item.get(net.alkahest.registry.ModDataComponents.PIPE_FILTER)==EssenceType.HERBA,
+                "The filter survives inventory save and load");
+            BlockPos base=c.getAbsolutePos(new BlockPos(5,1,3)); world.setBlockState(base,net.minecraft.block.Blocks.STONE.getDefaultState());
+            var player=c.createMockPlayer(GameMode.SURVIVAL); player.setStackInHand(Hand.MAIN_HAND,item);
+            var hit=new BlockHitResult(Vec3d.ofCenter(base),Direction.UP,base,false);
+            c.assertTrue(((net.minecraft.item.BlockItem)item.getItem()).place(new net.minecraft.item.ItemPlacementContext(player,Hand.MAIN_HAND,item,hit)).isAccepted(),
+                "The saved pipe can be placed again");
+            BlockPos placed=base.up(); var restored=(AlchemyPipeBlockEntity)world.getBlockEntity(placed);
+            c.assertTrue(restored.filter()==EssenceType.HERBA && !restored.active(),"Placement restores the filter, not temporary flow");
+            world.setBlockState(placed.west(),ModBlocks.DISTILLERY_BELLOWS.getDefaultState());
+            world.setBlockState(placed.east(),ModBlocks.JAR.getDefaultState());
+            var source=(DistilleryBellowsBlockEntity)world.getBlockEntity(placed.west());
+            var jar=(JarBlockEntity)world.getBlockEntity(placed.east());
+            source.accept(EssenceType.AQUA,1,.4f);
+            c.assertTrue(AlchemyPipeBlockEntity.pulse(world,placed)==0 && source.amount()==1,"Restored filter blocks another type without loss");
+            source.drain(1); source.accept(EssenceType.HERBA,1,.6f);
+            c.assertTrue(AlchemyPipeBlockEntity.pulse(world,placed)==1 && jar.contents().total()==1,"Restored filter allows its own type");
+            c.complete();
+        });
+    }
+
+    @GameTest(templateName=EMPTY_STRUCTURE)
+    public void portablePipeStackComponentsAndInvalidFilterAreSafe(TestContext c) {
+        ItemStack plain=new ItemStack(ModBlocks.ALCHEMY_PIPE,8);
+        ItemStack fire=new ItemStack(ModBlocks.ALCHEMY_PIPE,3);
+        ItemStack water=new ItemStack(ModBlocks.ALCHEMY_PIPE,2);
+        fire.set(net.alkahest.registry.ModDataComponents.PIPE_FILTER,EssenceType.IGNIS);
+        water.set(net.alkahest.registry.ModDataComponents.PIPE_FILTER,EssenceType.AQUA);
+        c.assertTrue(plain.getMaxCount()==64 && fire.getMaxCount()==64,"All pipes retain the normal stack limit");
+        c.assertFalse(ItemStack.areItemsAndComponentsEqual(plain,fire),"Filtered and plain stacks do not merge");
+        c.assertFalse(ItemStack.areItemsAndComponentsEqual(fire,water),"Different filters do not merge");
+        c.assertTrue(ItemStack.areItemsAndComponentsEqual(fire,fire.copy()),"Matching filters can stack");
+        ItemStack unsupported=new ItemStack(ModBlocks.ALCHEMY_PIPE);
+        unsupported.set(net.alkahest.registry.ModDataComponents.PIPE_FILTER,EssenceType.VACUUM);
+        BlockPos base=c.getAbsolutePos(new BlockPos(4,1,3));
+        c.getWorld().setBlockState(base,net.minecraft.block.Blocks.STONE.getDefaultState());
+        var player=c.createMockPlayer(GameMode.SURVIVAL); player.setStackInHand(Hand.MAIN_HAND,unsupported);
+        var hit=new BlockHitResult(Vec3d.ofCenter(base),Direction.UP,base,false);
+        c.assertTrue(((net.minecraft.item.BlockItem)unsupported.getItem()).place(new net.minecraft.item.ItemPlacementContext(player,Hand.MAIN_HAND,unsupported,hit)).isAccepted(),"Invalid old item can be placed safely");
+        var placed=(AlchemyPipeBlockEntity)c.getWorld().getBlockEntity(base.up());
+        c.assertTrue(placed.filter()==null,"Unsupported Vacuum filter is cleared on placement");
+        c.complete();
+    }
+
 }

@@ -6,9 +6,11 @@ import net.alkahest.essence.EssenceType;
 import net.alkahest.essence.JarContentsComponent;
 import net.alkahest.item.custom.JarItem;
 import net.alkahest.registry.ModBlockEntities;
+import net.alkahest.registry.ModDataComponents;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.entity.BlockEntity;
+import net.minecraft.component.ComponentMap;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.network.packet.s2c.play.BlockEntityUpdateS2CPacket;
@@ -108,6 +110,18 @@ public class AlchemyPipeBlockEntity extends BlockEntity {
             player.sendMessage(Text.translatable("message.alkahest.pipe_flowing",
                 Text.literal(flowing.displayName()).styled(style -> style.withColor(flowing.color()))), false);
         }
+    }
+
+    /** Only the durable configuration travels with a mined block, never its temporary flow. */
+    @Override protected void addComponents(ComponentMap.Builder builder) {
+        super.addComponents(builder);
+        if (filter != null) builder.add(ModDataComponents.PIPE_FILTER, filter);
+    }
+
+    @Override protected void readComponents(ComponentsAccess components) {
+        super.readComponents(components);
+        EssenceType saved = components.getOrDefault(ModDataComponents.PIPE_FILTER, EssenceType.VACUUM);
+        setFilter(saved == EssenceType.VACUUM ? null : saved);
     }
 
     @Override protected void writeNbt(NbtCompound nbt, RegistryWrapper.WrapperLookup registries) {

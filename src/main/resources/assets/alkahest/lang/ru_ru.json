@@ -518,5 +518,6 @@
   "screen.alkahest.distillery_tier2.queue_details": "Ожидает выгрузки: %s",
   "message.alkahest.pipe_filter": "Фильтр: %s",
   "message.alkahest.pipe_filter_changed": "Фильтр трубы: %s",
-  "message.alkahest.pipe_filter_any": "любая эссенция"
+  "message.alkahest.pipe_filter_any": "любая эссенция",
+  "tooltip.alkahest.pipe_invalid_filter": "Неподдерживаемый фильтр: при установке будет сброшен"
 }

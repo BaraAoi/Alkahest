@@ -518,5 +518,6 @@
   "screen.alkahest.distillery_tier2.queue_details": "Waiting to be delivered: %s",
   "message.alkahest.pipe_filter": "Filter: %s",
   "message.alkahest.pipe_filter_changed": "Pipe filter: %s",
-  "message.alkahest.pipe_filter_any": "any essence"
+  "message.alkahest.pipe_filter_any": "any essence",
+  "tooltip.alkahest.pipe_invalid_filter": "Unsupported filter: cleared on placement"
 }
