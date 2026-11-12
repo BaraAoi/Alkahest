@@ -579,4 +579,37 @@ public class PipeGameTests implements FabricGameTest {
         c.complete();
     }
 
+    @GameTest(templateName=EMPTY_STRUCTURE)
+    public void placingFilteredPipeAgainstJarPreservesItsSetting(TestContext c) {
+        c.setBlockState(2,2,3,ModBlocks.JAR); BlockPos jar=c.getAbsolutePos(new BlockPos(2,2,3));
+        var player=c.createMockPlayer(GameMode.SURVIVAL); player.setPosition(jar.getX()-2,jar.getY(),jar.getZ());
+        var stack=new ItemStack(ModBlocks.ALCHEMY_PIPE,3);
+        stack.set(net.alkahest.registry.ModDataComponents.PIPE_FILTER,EssenceType.ORDO);
+        player.setStackInHand(Hand.MAIN_HAND,stack);
+        var hit=new BlockHitResult(Vec3d.ofCenter(jar).add(.5,0,0),Direction.EAST,jar,false);
+        c.getWorld().getBlockState(jar).onUseWithItem(stack,c.getWorld(),player,Hand.MAIN_HAND,hit);
+        var pipe=(AlchemyPipeBlockEntity)c.getWorld().getBlockEntity(jar.east());
+        c.assertTrue(pipe!=null && pipe.filter()==EssenceType.ORDO,"The normal click-on-jar placement restores the filter");
+        c.assertTrue(stack.getCount()==2 && stack.get(net.alkahest.registry.ModDataComponents.PIPE_FILTER)==EssenceType.ORDO,
+            "The remaining stack retains its filter");
+        c.complete();
+    }
+
+    @GameTest(templateName=EMPTY_STRUCTURE, tickLimit=80)
+    public void unfilteredPipeDropsAsAnOrdinaryStackableItem(TestContext c) {
+        c.setBlockState(2,2,3,ModBlocks.ALCHEMY_PIPE);
+        var world=c.getWorld(); BlockPos pos=c.getAbsolutePos(new BlockPos(2,2,3));
+        world.breakBlock(pos,true);
+        c.runAtTick(5,()->{
+            var drops=world.getEntitiesByClass(net.minecraft.entity.ItemEntity.class,
+                new net.minecraft.util.math.Box(pos).expand(2), e->e.getStack().isOf(ModBlocks.ALCHEMY_PIPE.asItem()));
+            c.assertTrue(drops.size()==1,"The plain pipe drops normally");
+            var dropped=drops.getFirst().getStack();
+            c.assertTrue(dropped.get(net.alkahest.registry.ModDataComponents.PIPE_FILTER)==null
+                && ItemStack.areItemsAndComponentsEqual(dropped,new ItemStack(ModBlocks.ALCHEMY_PIPE)),
+                "Old and unconfigured pipes remain compatible with crafted stacks");
+            drops.getFirst().discard(); c.complete();
+        });
+    }
+
 }

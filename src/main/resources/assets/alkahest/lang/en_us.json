@@ -279,7 +279,7 @@
   "screen.alkahest.practice.completed": "Completed! The item was obtained.",
   "screen.alkahest.practice.free_recipes": "Crafting is always available. Tasks reveal the next journal entries.",
   "screen.alkahest.practice.pipe.title": "Essence Flow",
-  "screen.alkahest.practice.pipe.recipe": "Connect bellows to a jar or receiver. Pipes route automatically. Use a crystal to select its segment filter; use the same crystal again to clear it. Sneak-use a wand or amulet to cycle filters. Neither costs resources.",
+  "screen.alkahest.practice.pipe.recipe": "Connect bellows to a jar or receiver. Pipes route automatically. Use a crystal to select its segment filter; use the same crystal again to clear it. Sneak-use a wand or amulet to cycle filters. Neither costs resources. A mined pipe keeps its filter on the item.",
   "screen.alkahest.practice.charger.title": "Essence Charger",
   "screen.alkahest.practice.charger.recipe": "Place the charger on a jar. While you are nearby it recharges compatible wands and the amulet from the jar.",
   "screen.alkahest.practice.tier2.title": "Tier II Distillery and Bellows",
