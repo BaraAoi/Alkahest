@@ -11,14 +11,19 @@ import java.util.Map;
 /** Contents are immutable and contain at most one entry per type. Capacity is enforced by the container. */
 public record JarContentsComponent(List<EssenceStack> contents) {
     public static final JarContentsComponent EMPTY = new JarContentsComponent(List.of());
-    public static final Codec<JarContentsComponent> CODEC = RecordCodecBuilder.<JarContentsComponent>create(instance -> instance.group(
+    public static final Codec<JarContentsComponent> CODEC = codec(500);
+    // One product batch may contain up to 500 of each type; old item data has the same structure.
+    public static final Codec<JarContentsComponent> DISTILLERY_CODEC = codec(500 * EssenceType.values().length);
+    private static Codec<JarContentsComponent> codec(int maximum) {
+        return RecordCodecBuilder.<JarContentsComponent>create(instance -> instance.group(
         EssenceStack.CODEC.listOf().fieldOf("contents").forGetter(JarContentsComponent::contents)
     ).apply(instance, JarContentsComponent::new)).validate(value -> {
         long total = value.contents.stream().mapToLong(EssenceStack::amount).sum();
         long types = value.contents.stream().map(EssenceStack::type).distinct().count();
-        return total <= 500 && types == value.contents.size()
-            ? DataResult.success(value) : DataResult.error(() -> "Invalid jar contents");
-    });
+        return total <= maximum && types == value.contents.size()
+            ? DataResult.success(value) : DataResult.error(() -> "Invalid essence contents");
+        });
+    }
 
     public JarContentsComponent {
         contents = List.copyOf(contents);

@@ -131,6 +131,7 @@ public class Tier2DistilleryBlockEntity extends BlockEntity implements Inventory
     private boolean deposit() {
         if (pending.isEmpty()) return true;
         List<DistilleryBellowsBlockEntity> bellows = bellows();
+        boolean changed = false;
         for (int i = 0; i < pending.size(); i++) {
             EssenceStack stack = pending.get(i);
             int left = stack.amount();
@@ -140,13 +141,13 @@ public class Tier2DistilleryBlockEntity extends BlockEntity implements Inventory
                 left -= bellow.accept(stack.type(), left, stack.stability());
             }
             if (left <= 0) {
-                pending.remove(i--);
+                pending.remove(i--); changed = true;
             } else if (left != stack.amount()) {
-                pending.set(i, new EssenceStack(stack.type(), left, stack.stability()));
+                pending.set(i, new EssenceStack(stack.type(), left, stack.stability())); changed = true;
             }
         }
-        markDirty();
-        if (world != null && !world.isClient) {
+        if (changed) markDirty();
+        if (changed && world != null && !world.isClient) {
             BlockState state = world.getBlockState(pos);
             world.updateListeners(pos, state, state, Block.NOTIFY_LISTENERS);
         }
@@ -161,7 +162,8 @@ public class Tier2DistilleryBlockEntity extends BlockEntity implements Inventory
         List<EssenceStack> result = new ArrayList<>();
         for (EssenceStack essence : ItemEssenceMap.get(input, world)) {
             if (essence.type() == EssenceType.VACUUM || essence.amount() <= 0) continue;
-            int total = Math.max(1, Math.min(8, essence.amount()));
+            // Preserve the previously approved Gelum output; other types use the full item composition.
+            int total = essence.type() == EssenceType.GELUM ? Math.min(8, essence.amount()) : essence.amount();
             result.add(new EssenceStack(essence.type(), total, MidasTouchEffect.outputStability(0.55f + random.nextFloat() * 0.15f, midas)));
         }
         return result;

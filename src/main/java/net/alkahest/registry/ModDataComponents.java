@@ -10,7 +10,7 @@ import net.minecraft.registry.Registries;
 import net.minecraft.registry.Registry;
 
 public final class ModDataComponents {
-    public static final ComponentType<JarContentsComponent> DISTILLERY_CONTENTS = register("distillery_contents", JarContentsComponent.CODEC);
+    public static final ComponentType<JarContentsComponent> DISTILLERY_CONTENTS = register("distillery_contents", JarContentsComponent.DISTILLERY_CODEC);
     public static final ComponentType<JarContentsComponent> JAR_CONTENTS = register("jar_contents", JarContentsComponent.CODEC);
     public static final ComponentType<Integer> ESSENCE_CHARGE = register("essence_charge", Codec.intRange(0, 100));
     public static final ComponentType<Integer> SOUL_CHARGES = register("soul_charges", Codec.intRange(0, 100));

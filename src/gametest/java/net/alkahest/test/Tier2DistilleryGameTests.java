@@ -192,4 +192,73 @@ public class Tier2DistilleryGameTests implements FabricGameTest {
             c.complete();
         });
     }
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void largeBatchDrainsInPortionsWithoutLossOrExtraInputs(TestContext c) {
+        c.setBlockState(3,2,3,ModBlocks.DISTILLERY_TIER2);
+        c.setBlockState(3,3,3,ModBlocks.DISTILLERY_BELLOWS);
+        var core=core(c); var bellows=core.bellows().getFirst(); var world=c.getWorld();
+        var input=new ItemStack(Items.DIAMOND_BLOCK,2);
+        var expected=new java.util.EnumMap<EssenceType,Integer>(EssenceType.class);
+        Tier2DistilleryBlockEntity.outputs(input,world.random,false,world).forEach(e->expected.put(e.type(),e.amount()));
+        c.assertTrue(expected.getOrDefault(EssenceType.TERRA,0)>64,"A complex item yields more than one bellow of Terra");
+        core.setStack(0,input); distil(c,Tier2DistilleryBlockEntity.DURATION);
+        c.assertTrue(core.getStack(0).getCount()==1 && !core.pending().isEmpty() && bellows.amount()==64,
+            "First item is processed once; overflow remains queued");
+        var stability=new java.util.EnumMap<EssenceType,Float>(EssenceType.class);
+        if(!bellows.empty()) stability.put(bellows.storedType(),bellows.stability());
+        core.pending().forEach(e->stability.put(e.type(),e.stability()));
+        var restored=new Tier2DistilleryBlockEntity(corePos(c),core.getCachedState());
+        restored.readComponentlessNbt(core.createNbt(world.getRegistryManager()),world.getRegistryManager());
+        c.assertTrue(restored.pending().equals(core.pending()),"Partial batch and its stability survive world NBT");
+        var obtained=new java.util.EnumMap<EssenceType,Integer>(EssenceType.class);
+        for(int i=0;i<100 && (!core.pending().isEmpty() || !bellows.empty());i++) {
+            if(!bellows.empty()) {
+                var type=bellows.storedType(); int count=bellows.amount();
+                c.assertTrue(Math.abs(bellows.stability()-stability.get(type))<.0001,"Partial output keeps its original stability");
+                obtained.merge(type,bellows.drain(count),Integer::sum);
+            }
+            distil(c,1);
+            c.assertTrue(core.getStack(0).getCount()==1,"Blocked queue cannot consume a second item");
+        }
+        c.assertTrue(core.pending().isEmpty() && bellows.empty() && obtained.equals(expected),
+            "Every type is eventually extracted in full exactly once: expected="+expected+" obtained="+obtained);
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE, tickLimit = 80)
+    public void hugeQueuedCoreRemainsPortableAndSafe(TestContext c) {
+        c.setBlockState(3,2,3,ModBlocks.DISTILLERY_TIER2); var world=c.getWorld(); BlockPos pos=corePos(c);
+        var core=core(c); var expected=List.of(new EssenceStack(EssenceType.IGNIS,500,.6f),new EssenceStack(EssenceType.ORDO,500,.8f));
+        core.pending().addAll(expected); world.breakBlock(pos,true);
+        c.runAtTick(5,()->{
+            var drops=world.getEntitiesByClass(net.minecraft.entity.ItemEntity.class,new net.minecraft.util.math.Box(pos).expand(2),e->e.getStack().isOf(ModBlocks.DISTILLERY_TIER2.asItem()));
+            c.assertTrue(drops.size()==1,"One portable core drops");
+            ItemStack item=savedItem(c,drops.getFirst().getStack());
+            var stored=item.get(net.alkahest.registry.ModDataComponents.DISTILLERY_CONTENTS);
+            c.assertTrue(stored!=null && stored.contents().equals(expected) && stored.total()==1000,"Portable component and inventory NBT preserve a queue above 500");
+            c.assertFalse(ItemEssenceMap.safeToConsume(item),"Portable queued essence is protected from recycling");
+            drops.getFirst().discard(); BlockPos base=c.getAbsolutePos(new BlockPos(5,1,3)); world.setBlockState(base,net.minecraft.block.Blocks.STONE.getDefaultState());
+            var player=c.createMockPlayer(GameMode.SURVIVAL); player.setStackInHand(Hand.MAIN_HAND,item);
+            var hit=new net.minecraft.util.hit.BlockHitResult(net.minecraft.util.math.Vec3d.ofCenter(base),net.minecraft.util.math.Direction.UP,base,false);
+            c.assertTrue(((net.minecraft.item.BlockItem)item.getItem()).place(new net.minecraft.item.ItemPlacementContext(player,Hand.MAIN_HAND,item,hit)).isAccepted(),"Core places again");
+            var placed=(Tier2DistilleryBlockEntity)world.getBlockEntity(base.up());
+            c.assertTrue(placed.pending().equals(expected),"Large portable queue restores exactly");
+            c.setBlockState(5,3,3,ModBlocks.DISTILLERY_BELLOWS);
+            Tier2DistilleryBlockEntity.tick(world,base.up(),placed);
+            c.assertTrue(placed.bellows().getFirst().amount()==64 && placed.pending().stream().mapToInt(EssenceStack::amount).sum()==936,
+                "Large restored queue releases partially and retains the remainder");
+            c.complete();
+        });
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void gelumAndSnowballsKeepTheirPreviousYield(TestContext c) {
+        var world=c.getWorld();
+        var snow=Tier2DistilleryBlockEntity.outputs(new ItemStack(Items.SNOWBALL),world.random,false,world);
+        c.assertTrue(snow.stream().anyMatch(e->e.type()==EssenceType.AQUA && e.amount()==1)
+            && snow.stream().anyMatch(e->e.type()==EssenceType.GELUM && e.amount()==1),"Snowball yield unchanged");
+        var ice=Tier2DistilleryBlockEntity.outputs(new ItemStack(Items.BLUE_ICE),world.random,false,world);
+        c.assertTrue(ice.stream().anyMatch(e->e.type()==EssenceType.GELUM && e.amount()==8),"Existing Gelum limit remains unchanged");
+        c.complete();
+    }
 }

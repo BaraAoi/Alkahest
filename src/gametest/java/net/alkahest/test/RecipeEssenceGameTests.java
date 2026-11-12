@@ -83,8 +83,8 @@ public class RecipeEssenceGameTests implements FabricGameTest {
         cube.setStack(0, new ItemStack(Items.WATER_BUCKET));
         for (int i = 0; i < Tier2DistilleryBlockEntity.DURATION; i++) Tier2DistilleryBlockEntity.tick(world, cubePos, cube);
         c.assertTrue(cube.getStack(0).isEmpty(), "Tier two consumes the entire bucket without returning it");
-        c.assertTrue(cube.bellows().stream().anyMatch(b -> b.storedType() == EssenceType.METALLUM && b.amount() == 8),
-            "Tier two applies its standard cap to the vessel metal");
+        c.assertTrue(cube.bellows().stream().anyMatch(b -> b.storedType() == EssenceType.METALLUM && b.amount() == 18),
+            "Tier two retains all the metal in the consumed vessel");
         c.setBlockState(1, 2, 3, ModBlocks.DISTILLERY);
         var crudePos = c.getAbsolutePos(new BlockPos(1, 2, 3));
         var crude = (DistilleryBlockEntity) world.getBlockEntity(crudePos);

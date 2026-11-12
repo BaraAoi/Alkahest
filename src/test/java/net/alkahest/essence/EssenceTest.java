@@ -40,6 +40,19 @@ class EssenceTest {
         var bad = JsonParser.parseString("{\"contents\":[{\"type\":\"ordo\",\"amount\":501,\"stability\":0.5}]}");
         assertTrue(JarContentsComponent.CODEC.parse(JsonOps.INSTANCE, bad).error().isPresent());
     }
+    @Test void distilleryCodecAcceptsLargeQueuesWithoutChangingJarLimits() {
+        var queue = new JarContentsComponent(List.of(new EssenceStack(EssenceType.IGNIS, 500, .6f),
+            new EssenceStack(EssenceType.ORDO, 500, .8f)));
+        var encoded = JarContentsComponent.DISTILLERY_CODEC.encodeStart(JsonOps.INSTANCE, queue).getOrThrow();
+        assertEquals(queue, JarContentsComponent.DISTILLERY_CODEC.parse(JsonOps.INSTANCE, encoded).getOrThrow());
+        assertTrue(JarContentsComponent.CODEC.parse(JsonOps.INSTANCE, encoded).error().isPresent());
+        var duplicate = new JarContentsComponent(List.of(new EssenceStack(EssenceType.IGNIS, 1, .6f),
+            new EssenceStack(EssenceType.IGNIS, 2, .6f)));
+        assertTrue(JarContentsComponent.DISTILLERY_CODEC.encodeStart(JsonOps.INSTANCE, duplicate).error().isPresent());
+        var legacy = new JarContentsComponent(List.of(new EssenceStack(EssenceType.AQUA, 5, .4f)));
+        var oldData = JarContentsComponent.CODEC.encodeStart(JsonOps.INSTANCE, legacy).getOrThrow();
+        assertEquals(legacy, JarContentsComponent.DISTILLERY_CODEC.parse(JsonOps.INSTANCE, oldData).getOrThrow());
+    }
     @Test void jarVisualLevelAndMixtureColor() {
         var empty = JarContentsComponent.EMPTY;
         assertEquals(0, JarVisuals.level(empty));
