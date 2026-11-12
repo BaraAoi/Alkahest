@@ -198,4 +198,71 @@ public class JarGameTests implements FabricGameTest {
         c.complete();
     }
 
+    private static void clickJar(TestContext c, BlockPos pos, net.minecraft.entity.player.PlayerEntity player, ItemStack stack) {
+        player.setStackInHand(net.minecraft.util.Hand.MAIN_HAND,stack);
+        var hit=new net.minecraft.util.hit.BlockHitResult(net.minecraft.util.math.Vec3d.ofCenter(pos),net.minecraft.util.math.Direction.UP,pos,false);
+        c.getWorld().getBlockState(pos).onUseWithItem(stack,c.getWorld(),player,net.minecraft.util.Hand.MAIN_HAND,hit);
+    }
+
+    @GameTest(templateName=EMPTY_STRUCTURE)
+    public void emptyHeldJarExtractsWithoutBreakingAndRejectsMixtures(TestContext c) {
+        c.setBlockState(3,2,3,ModBlocks.JAR); BlockPos pos=c.getAbsolutePos(new BlockPos(3,2,3));
+        var world=c.getWorld(); var jar=(JarBlockEntity)world.getBlockEntity(pos);
+        var player=c.createMockPlayer(net.minecraft.world.GameMode.SURVIVAL);
+        var expected=of(EssenceType.ORDO,73,.67f); jar.setContents(expected);
+        var held=new ItemStack(ModBlocks.JAR); clickJar(c,pos,player,held);
+        c.assertTrue(JarItem.contents(held).equals(expected) && jar.contents().total()==0,"Empty held jar receives all contents and exact stability");
+        c.assertTrue(world.getBlockState(pos).isOf(ModBlocks.JAR) && world.getBlockState(pos).get(net.alkahest.block.custom.JarBlock.LEVEL)==0,"Placed jar remains intact and visually empty");
+        clickJar(c,pos,player,held);
+        c.assertTrue(jar.contents().equals(expected) && JarItem.contents(held).total()==0,"Filled jar still pours back in as before");
+        var legacy=new JarContentsComponent(List.of(new EssenceStack(EssenceType.ORDO,3,.3f),new EssenceStack(EssenceType.AQUA,4,.4f)));
+        jar.setContents(legacy); clickJar(c,pos,player,held);
+        c.assertTrue(jar.contents().equals(legacy) && JarItem.contents(held).total()==0,"Legacy mixtures stay unchanged; use the separator");
+        c.complete();
+    }
+
+    @GameTest(templateName=EMPTY_STRUCTURE)
+    public void powderTurnsJarEssenceIntoCrystalsWithoutChangingStability(TestContext c) {
+        c.setBlockState(3,2,3,ModBlocks.JAR); BlockPos pos=c.getAbsolutePos(new BlockPos(3,2,3));
+        var jar=(JarBlockEntity)c.getWorld().getBlockEntity(pos); var player=c.createMockPlayer(net.minecraft.world.GameMode.SURVIVAL);
+        jar.setContents(of(EssenceType.HERBA,70,.73f));
+        var powder=new ItemStack(ModItems.CRYSTALLIZATION_POWDER,2); clickJar(c,pos,player,powder);
+        c.assertTrue(jar.contents().total()==0 && powder.getCount()==1,"One powder crystallizes contents and preserves the jar");
+        int total=0;
+        for(int i=0;i<player.getInventory().size();i++) {
+            var stack=player.getInventory().getStack(i);
+            if (stack.isOf(ModItems.CRYSTALS.get(EssenceType.HERBA))) {
+                c.assertTrue(Math.abs(stack.getOrDefault(ModDataComponents.ESSENCE_STABILITY,0f)-.73f)<.0001,"Crystal stability matches the source");
+                total+=stack.getCount();
+            }
+        }
+        c.assertTrue(total==70,"Large amount produces exactly 70 crystals across valid stacks");
+        clickJar(c,pos,player,powder);
+        c.assertTrue(powder.getCount()==1,"Empty jar does not consume powder");
+        var legacy=new JarContentsComponent(List.of(new EssenceStack(EssenceType.ORDO,3,.3f),new EssenceStack(EssenceType.AQUA,4,.4f)));
+        jar.setContents(legacy); clickJar(c,pos,player,powder);
+        c.assertTrue(jar.contents().equals(legacy) && powder.getCount()==1,"Mixed jar is refused without losing powder or essence");
+        c.complete();
+    }
+
+    @GameTest(templateName=EMPTY_STRUCTURE,tickLimit=40)
+    public void crystalsDropSafelyWhenInventoryIsFull(TestContext c) {
+        c.setBlockState(3,2,3,ModBlocks.JAR); BlockPos pos=c.getAbsolutePos(new BlockPos(3,2,3));
+        var jar=(JarBlockEntity)c.getWorld().getBlockEntity(pos); var player=c.createMockPlayer(net.minecraft.world.GameMode.SURVIVAL);
+        player.setPosition(pos.getX()+2.5,pos.getY()+1,pos.getZ()+.5);
+        for(int i=0;i<player.getInventory().size();i++) player.getInventory().setStack(i,new ItemStack(net.minecraft.item.Items.COBBLESTONE,64));
+        jar.setContents(of(EssenceType.AER,100,.4f));
+        var powder=new ItemStack(ModItems.CRYSTALLIZATION_POWDER,2); clickJar(c,pos,player,powder);
+        c.assertTrue(jar.contents().total()==0 && powder.getCount()==1,"Full inventory still consumes only one powder after successful drops");
+        var area=new net.minecraft.util.math.Box(player.getBlockPos()).expand(3);
+        var drops=c.getWorld().getEntitiesByClass(ItemEntity.class,area,e->e.getStack().isOf(ModItems.CRYSTALS.get(EssenceType.AER)));
+        int total=0;
+        for(var drop:drops) {
+            total+=drop.getStack().getCount();
+            c.assertTrue(drop.getCommandTags().contains(net.alkahest.block.entity.CauldronBlockEntity.RETURNED_ITEM_TAG),"Overflow crystal drops are protected from immediate cauldron dissolution");
+            c.assertTrue(Math.abs(drop.getStack().getOrDefault(ModDataComponents.ESSENCE_STABILITY,0f)-.4f)<.0001,"Dropped crystal stability preserved");
+        }
+        c.assertTrue(total==100,"All crystals dropped without loss or duplication");
+        c.complete();
+    }
 }

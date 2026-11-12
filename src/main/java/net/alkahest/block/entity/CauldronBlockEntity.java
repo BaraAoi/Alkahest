@@ -48,7 +48,8 @@ import java.util.Map;
 public class CauldronBlockEntity extends BlockEntity {
     public static final int MAX_PER_TYPE = 256;
     public static final float RESIDUE_STABILITY = 0.05f;
-    private static final String RETURNED_ITEM_TAG = "alkahest_cauldron_returned";
+    /** Prevent freshly produced world drops from immediately dissolving in a nearby cauldron. */
+    public static final String RETURNED_ITEM_TAG = "alkahest_cauldron_returned";
 
     /** Exact dissolved cost of 1x alchemical_moss + 1x ender_pearl + all 6 Prima crystals. */
     public static final Map<EssenceType, Integer> ALKAHEST_BREW_COST = Map.ofEntries(

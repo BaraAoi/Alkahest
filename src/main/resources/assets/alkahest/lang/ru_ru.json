@@ -1,6 +1,6 @@
 {
   "screen.alkahest.practice.jar.title": "Банка для эссенций",
-  "screen.alkahest.practice.jar.recipe": "Банка хранит до 100 единиц одного типа. Добавляй кристаллы ПКМ; Shift + ПКМ добавит стопку до предела. Монокль показывает содержимое. Старые смешанные банки можно разделить.",
+  "screen.alkahest.practice.jar.recipe": "Банка хранит до 100 единиц одного типа. Добавляй кристаллы ПКМ; Shift + ПКМ добавит стопку до предела. ПКМ пустой банкой по установленной заполнит её, не ломая блок. ПКМ кристаллизующей пылью превращает содержимое в кристаллы 1:1, сохраняя стабильность. Старые смеси сначала раздели ручным разделителем.",
   "screen.alkahest.practice.stabilizer_receiver.title": "Приёмник Стабилизатора",
   "screen.alkahest.practice.stabilizer_receiver.recipe": "Четыре медных слитка крестом вокруг блока стекла. Приёмник ставится под ядро; в него можно залить эссенцию банкой или подать её трубами из мехов.",
   "screen.alkahest.practice.stabilizer_crest.title": "Навершие Стабилизатора",
@@ -10,7 +10,7 @@
   "screen.alkahest.practice.separator.title": "Ручной разделитель",
   "screen.alkahest.practice.separator.recipe": "Вставь старую смешанную банку в разделитель. Нажимай пустыми банками, чтобы забирать виды эссенции по отдельности; пустая рука вернёт исходную банку.",
   "screen.alkahest.practice.crystallization.title": "Кристаллизующая пыль",
-  "screen.alkahest.practice.crystallization.recipe": "Брось пыль в нагретый котёл с водой или примени ПКМ, чтобы осадить остатки эссенций в нестабильные кристаллы.",
+  "screen.alkahest.practice.crystallization.recipe": "В нагретом котле с водой пыль осаждает остатки в кристаллы со стабильностью 5%. ПКМ пылью по установленной банке превращает её содержимое в кристаллы 1:1 с сохранением стабильности. Пыль расходуется только при успешном извлечении.",
   "key.categories.alkahest": "Alkahest",
   "key.alkahest.atmosphere": "Показать атмосферу эссенций",
   "screen.alkahest.monocle.cauldron_evaporation": "Испарение: до %s ед./с",
@@ -509,5 +509,9 @@
   "message.alkahest.faucet_off": "Кран закрыт или остановлен редстоуном.",
   "message.alkahest.faucet_no_legacy": "Старого катализатора внутри нет.",
   "screen.alkahest.distillery_tier2.no_bellows": "Установите меха",
-  "tooltip.alkahest.distillery_saved_contents": "Сохранённая эссенция:"
+  "tooltip.alkahest.distillery_saved_contents": "Сохранённая эссенция:",
+  "message.alkahest.jar_extracted": "Извлечено эссенции в пустую банку: %s.",
+  "message.alkahest.jar_crystal_empty": "Банка пуста: кристаллизовать нечего.",
+  "message.alkahest.jar_crystal_no_space": "Не удалось выдать кристаллы; содержимое банки сохранено.",
+  "message.alkahest.jar_crystallized": "Кристаллизовано единиц: %s."
 }

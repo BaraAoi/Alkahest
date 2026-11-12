@@ -23,6 +23,7 @@ import net.minecraft.state.StateManager;
 import net.minecraft.state.property.IntProperty;
 import net.alkahest.registry.ModBlockEntities;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.entity.ItemEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.world.ServerWorld;
@@ -71,11 +72,26 @@ public class JarBlock extends Block implements BlockEntityProvider {
         if (!(world.getBlockEntity(pos) instanceof JarBlockEntity jar)) return ItemActionResult.FAIL;
         var current = jar.contents();
         if (!JarItem.allowed(current)) { player.sendMessage(Text.translatable("message.alkahest.jar_invalid"), true); return ItemActionResult.SUCCESS; }
+        if (stack.isOf(ModItems.CRYSTALLIZATION_POWDER)) {
+            crystallizeJar(world, pos, player, stack, jar, current);
+            return ItemActionResult.SUCCESS;
+        }
         JarContentsComponent addition = null;
         boolean fromJar = stack.getItem() instanceof JarItem;
         if (fromJar) {
             addition = JarItem.contents(stack);
             if (!JarItem.allowed(addition)) { player.sendMessage(Text.translatable("message.alkahest.jar_invalid"), true); return ItemActionResult.SUCCESS; }
+            if (addition.total() == 0 && current.total() > 0) {
+                if (!JarItem.singleType(current)) {
+                    player.sendMessage(Text.translatable("message.alkahest.jar_single_type"), true);
+                } else {
+                    JarItem.set(stack, current);
+                    jar.setContents(JarContentsComponent.EMPTY);
+                    world.playSound(null, pos, SoundEvents.ITEM_BOTTLE_FILL, SoundCategory.BLOCKS, .7f, 1.0f);
+                    player.sendMessage(Text.translatable("message.alkahest.jar_extracted", current.total()), true);
+                }
+                return ItemActionResult.SUCCESS;
+            }
         } else {
             for (var entry : ModItems.CRYSTALS.entrySet()) if (stack.isOf(entry.getValue())) {
                 float stability = stack.getOrDefault(ModDataComponents.ESSENCE_STABILITY, 1.0f);
@@ -101,6 +117,39 @@ public class JarBlock extends Block implements BlockEntityProvider {
         } else describe(player, jar.contents());
         return ItemActionResult.SUCCESS;
     }
+    /** Converts one valid stored type 1:1, preserving its stability and every undelivered unit. */
+    private static void crystallizeJar(World world, BlockPos pos, PlayerEntity player, ItemStack powder,
+                                       JarBlockEntity jar, JarContentsComponent contents) {
+        if (contents.total() == 0) { player.sendMessage(Text.translatable("message.alkahest.jar_crystal_empty"), true); return; }
+        if (!JarItem.singleType(contents)) { player.sendMessage(Text.translatable("message.alkahest.jar_single_type"), true); return; }
+        EssenceStack essence = contents.contents().getFirst();
+        var crystal = ModItems.CRYSTALS.get(essence.type());
+        if (crystal == null) { player.sendMessage(Text.translatable("message.alkahest.jar_invalid"), true); return; }
+        int remaining = essence.amount();
+        while (remaining > 0) {
+            int count = Math.min(remaining, new ItemStack(crystal).getMaxCount());
+            ItemStack output = new ItemStack(crystal, count);
+            output.set(ModDataComponents.ESSENCE_STABILITY, essence.stability());
+            player.getInventory().insertStack(output);
+            int delivered = count - output.getCount();
+            if (!output.isEmpty()) {
+                ItemEntity drop = new ItemEntity(world, player.getX(), player.getY() + .5, player.getZ(), output, 0, .05, 0);
+                drop.addCommandTag(net.alkahest.block.entity.CauldronBlockEntity.RETURNED_ITEM_TAG);
+                drop.setToDefaultPickupDelay();
+                if (world.spawnEntity(drop)) delivered += output.getCount();
+            }
+            remaining -= delivered;
+            if (delivered < count) break; // Any output rejected by the world remains in the jar.
+        }
+        int produced = essence.amount() - remaining;
+        if (produced == 0) { player.sendMessage(Text.translatable("message.alkahest.jar_crystal_no_space"), true); return; }
+        jar.setContents(remaining == 0 ? JarContentsComponent.EMPTY :
+            new JarContentsComponent(List.of(new EssenceStack(essence.type(), remaining, essence.stability()))));
+        powder.decrementUnlessCreative(1, player);
+        world.playSound(null, pos, SoundEvents.BLOCK_AMETHYST_BLOCK_CHIME, SoundCategory.BLOCKS, .8f, 1.2f);
+        player.sendMessage(Text.translatable("message.alkahest.jar_crystallized", produced), true);
+    }
+
     /** Sneak-use crystals in bulk: never consume beyond free capacity or create a mixed jar. */
     public static ActionResult fillCrystalStack(World world, BlockPos pos, PlayerEntity player, Hand hand) {
         ItemStack held = player.getStackInHand(hand);
