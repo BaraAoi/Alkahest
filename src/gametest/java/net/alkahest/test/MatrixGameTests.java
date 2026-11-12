@@ -360,6 +360,14 @@ public class MatrixGameTests implements FabricGameTest {
         c.assertFalse(legacy.started(), "Old saves without identity stop instead of guessing");
         c.assertTrue(legacy.getStack(MatrixCoreBlockEntity.BASE).isOf(Items.GLASS_PANE) && legacy.stored(EssenceType.ORDO) == buffered,
             "Migration retains base and reserved essence");
+        oldSave.putBoolean("Started", true);
+        oldSave.putString("StartedRecipe", "removed-old-bottle-recipe");
+        var removedRecipeSave = new MatrixCoreBlockEntity(pos, core.getCachedState());
+        removedRecipeSave.readComponentlessNbt(oldSave, registry);
+        MatrixCoreBlockEntity.tick(c.getWorld(), pos, removedRecipeSave);
+        c.assertFalse(removedRecipeSave.started(), "An in-flight removed recipe cancels on load");
+        c.assertTrue(removedRecipeSave.getStack(MatrixCoreBlockEntity.BASE).isOf(Items.GLASS_PANE)
+            && removedRecipeSave.stored(EssenceType.ORDO) == buffered, "Removed recipe migration retains inputs and buffer");
         part.takeOne(); run(c.getWorld(), pos, 1);
         c.assertFalse(core.started(), "Changing ingredients cancels synthesis");
         c.assertTrue(core.stored(EssenceType.ORDO) == buffered && core.getStack(MatrixCoreBlockEntity.BASE).isOf(Items.GLASS_PANE),
