@@ -28,10 +28,11 @@ public final class PracticalResearchPlan {
     public static final long SEPARATOR = 1L << 29, CRYSTALLIZATION = 1L << 30;
     public static final long HERBAL_PASTE = 1L << 31, FIRE_DUST = 1L << 32, CAUSTIC_SLIME = 1L << 33;
     public static final long AER_WAND = 1L << 34;
-    public static final long ALL = (1L << 35) - 1;
+    public static final long WATER_FAUCET = 1L << 35;
+    public static final long ALL = (1L << 36) - 1;
     public static final long ASSEMBLIES = STABILIZER | TIER2 | TRANSMUTATOR | MATRIX;
     // Keep obsolete flags for saves, but group the component entries into their machine.
-    public static final long HIDDEN_COMPONENTS = BELLOWS | CHAMBER | CROWN | PEDESTAL | STABILIZER_RECEIVER | STABILIZER_CREST;
+    public static final long HIDDEN_COMPONENTS = BELLOWS | CHAMBER | CROWN | PEDESTAL | STABILIZER_RECEIVER | STABILIZER_CREST | AER_WAND;
 
     /** Legacy completion bits belong to EarlyResearch's saved advancement mapping. */
     public static final List<Step> STEPS = List.of(
@@ -69,10 +70,15 @@ public final class PracticalResearchPlan {
         new Step("herbal_paste", "alkahest:herbal_paste", HERBAL_PASTE, WATER, 0),
         new Step("fire_dust", "alkahest:fire_dust", FIRE_DUST, WATER, 0),
         new Step("caustic_slime", "alkahest:caustic_slime", CAUSTIC_SLIME, WATER, 0),
-        new Step("aer_wand", "alkahest:crystal_wand_aer", AER_WAND, MONOCLE, 0)
+        new Step("aer_wand", "alkahest:crystal_wand_aer", AER_WAND, MONOCLE, 0),
+        new Step("water_faucet", "alkahest:water_faucet", WATER_FAUCET, WATER | DISTILLERY, 0)
     );
 
     public static Step forItem(String itemId) {
+        // One practical entry for all non-Aqua wands. The original Ignis ID/bit stays stable.
+        if (java.util.Set.of("alkahest:crystal_wand_ignis", "alkahest:crystal_wand_terra",
+                "alkahest:crystal_wand_aer", "alkahest:crystal_wand_ordo", "alkahest:crystal_wand_perditio").contains(itemId))
+            return STEPS.get(4);
         for (Step step : STEPS) if (step.itemId().equals(itemId)) return step;
         return null;
     }
@@ -93,6 +99,9 @@ public final class PracticalResearchPlan {
     /** Resolves all currently observed, eligible items, including cascades through both branches. */
     public static long resolve(long completed, long observed, long actions) {
         long result = completed & ALL;
+        // Former Aer research is a completed/observed member of the grouped wand entry.
+        if ((result & AER_WAND) != 0) result |= IGNIS_WAND;
+        if ((observed & AER_WAND) != 0) observed |= IGNIS_WAND;
         boolean changed;
         do {
             changed = false;

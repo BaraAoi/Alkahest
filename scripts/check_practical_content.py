@@ -12,11 +12,11 @@ data = root / 'src/main/resources/data/alkahest'
 java = root / 'src/main/java/net/alkahest'
 plan = (java / 'research/PracticalResearchPlan.java').read_text()
 steps = re.findall(r'new Step\("([a-z0-9_]+)", "alkahest:([a-z0-9_]+)",', plan)
-assert len(steps) == 35 and len(set(steps)) == len(steps), 'all 35 steps must exist and be unique'
+assert len(steps) == 36 and len(set(steps)) == len(steps), 'all 36 steps must exist and be unique'
 # Every visible node must exist exactly once and have its own clickable area.
 journal = (root / 'src/client/java/net/alkahest/client/gui/JournalScreen.java').read_text()
 nodes = [(int(i), int(x), int(y)) for i, x, y in re.findall(r'node\((\d+),\s*(-?\d+),\s*(-?\d+)\)', journal)]
-assert sorted(i for i, _, _ in nodes) == [i for i in range(len(steps)) if i not in {12, 15, 16, 18, 27, 28}], 'one visible node per grouped research'
+assert sorted(i for i, _, _ in nodes) == [i for i in range(len(steps)) if i not in {12, 15, 16, 18, 27, 28, 34}], 'one visible node per grouped research'
 for n, (i, x, y) in enumerate(nodes):
     for j, xx, yy in nodes[n + 1:]:
         assert abs(x - xx) >= 32 or abs(y - yy) >= 32, (i, j, 'overlapping nodes')

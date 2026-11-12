@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "installed=false": {
+      "model": "alkahest:block/water_faucet"
+    },
+    "installed=true": {
+      "model": "alkahest:block/water_faucet_active"
+    }
+  }
+}

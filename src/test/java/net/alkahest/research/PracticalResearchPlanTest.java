@@ -70,12 +70,15 @@ class PracticalResearchPlanTest {
         assertEquals(ACID | NAPALM, resolve(ACID | NAPALM, 0, 0), "Old completions do not relock");
     }
 
-    @Test void aerWandObservationWaitsForMonocleAndPreservesOldSave() {
-        long old = (1L << 34) - 1;
-        assertEquals(old, resolve(old, 0, 0));
+    @Test void groupedWandsAndLegacyAerMigration() {
+        for (String name : new String[]{"ignis", "terra", "aer", "ordo", "perditio"})
+            assertEquals(IGNIS_WAND, forItem("alkahest:crystal_wand_" + name).bit());
+        assertEquals(AQUA_WAND, forItem("alkahest:crystal_wand_aqua").bit());
         assertEquals(0, resolve(0, AER_WAND, 0));
-        assertEquals(MONOCLE | AER_WAND, resolve(MONOCLE, AER_WAND, 0));
-        assertEquals(MONOCLE, forItem("alkahest:crystal_wand_aer").parents());
+        assertEquals(MONOCLE | IGNIS_WAND | AER_WAND, resolve(MONOCLE, AER_WAND, 0));
+        assertEquals(AER_WAND | IGNIS_WAND, resolve(AER_WAND, 0, 0));
+        assertFalse(visible(AER_WAND));
+        assertEquals(WATER | DISTILLERY, forItem("alkahest:water_faucet").parents());
     }
 
     @Test void graphIsAcyclicAndIdsAreUnique() {

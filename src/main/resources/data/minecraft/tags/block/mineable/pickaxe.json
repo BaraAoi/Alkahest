@@ -19,6 +19,7 @@
     "alkahest:matrix_core",
     "alkahest:matrix_pillar",
     "alkahest:alchemical_brick",
-    "alkahest:matrix_pedestal"
+    "alkahest:matrix_pedestal",
+    "alkahest:water_faucet"
   ]
 }

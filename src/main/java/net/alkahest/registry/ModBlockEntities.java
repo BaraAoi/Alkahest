@@ -44,6 +44,8 @@ public final class ModBlockEntities {
         Alkahest.id("transmutator_core"), BlockEntityType.Builder.create(TransmutatorCoreBlockEntity::new, ModBlocks.TRANSMUTATOR_CORE).build(null));
     public static final BlockEntityType<TransmutatorPillarBlockEntity> TRANSMUTATOR_PILLAR = Registry.register(Registries.BLOCK_ENTITY_TYPE,
         Alkahest.id("transmutator_pillar"), BlockEntityType.Builder.create(TransmutatorPillarBlockEntity::new, ModBlocks.TRANSMUTATOR_PILLAR).build(null));
+    public static final BlockEntityType<net.alkahest.block.entity.WaterFaucetBlockEntity> WATER_FAUCET = Registry.register(Registries.BLOCK_ENTITY_TYPE,
+        Alkahest.id("water_faucet"), BlockEntityType.Builder.create(net.alkahest.block.entity.WaterFaucetBlockEntity::new, ModBlocks.WATER_FAUCET).build(null));
     public static final BlockEntityType<CauldronBlockEntity> CAULDRON = Registry.register(Registries.BLOCK_ENTITY_TYPE,
         Alkahest.id("alchemy_cauldron"), BlockEntityType.Builder.create(CauldronBlockEntity::new, ModBlocks.ALCHEMY_CAULDRON).build(null));
     public static final BlockEntityType<DistilleryBlockEntity> DISTILLERY = Registry.register(Registries.BLOCK_ENTITY_TYPE,

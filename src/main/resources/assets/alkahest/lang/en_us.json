@@ -327,8 +327,8 @@
   "screen.alkahest.practice.distillery.recipe": "Right-click to open the distillery and insert material. It distils one item per minute into primal crystals; sometimes it produces ash. Alkahest in the side slot speeds it up.",
   "screen.alkahest.practice.monocle.title": "True Sight",
   "screen.alkahest.practice.monocle.recipe": "Equip the monocle in its Trinkets slot. Look at an item, cauldron, jar or machine to see available essence and working information.",
-  "screen.alkahest.practice.ignis_wand.title": "Wand of Fire",
-  "screen.alkahest.practice.ignis_wand.recipe": "Crystals can be obtained by distillation. A charged wand awakens complete machines and spends charges.",
+  "screen.alkahest.practice.ignis_wand.title": "Elemental Wands",
+  "screen.alkahest.practice.ignis_wand.recipe": "Craft five wands with a stick and the corresponding Ignis, Terra, Aer, Ordo or Perditio crystal. Aqua is studied separately. To preview a machine, hold an Aer wand or amulet and Shift-right-click its core: cyan outlines mark empty spaces and orange marks obstructions. The guide consumes no charge. The Matrix also needs two pedestals.",
   "screen.alkahest.practice.aqua_wand.title": "Wand of Water",
   "screen.alkahest.practice.aqua_wand.recipe": "Right-click an empty or dirty cauldron with the Aqua wand to fill or clean it for one charge. It also awakens complete machines.",
   "screen.alkahest.practice.binding_salt.title": "Binding Salt",
@@ -500,5 +500,12 @@
   "message.alkahest.assembly_part": "Needed: %s × %s",
   "message.alkahest.assembly_colors": "Cyan outlines are empty spaces; orange are occupied. The guide fades after 8 seconds.",
   "message.alkahest.assembly_pedestals": "Matrix research also requires two nearby pedestals; their positions are flexible and are not checked by the guide.",
-  "message.alkahest.assembly_unknown": "Some positions are unloaded or outside world height; the guide may be incomplete."
+  "message.alkahest.assembly_unknown": "Some positions are unloaded or outside world height; the guide may be incomplete.",
+  "block.alkahest.water_faucet": "Water Faucet",
+  "screen.alkahest.practice.water_faucet.title": "Water Faucet",
+  "screen.alkahest.practice.water_faucet.recipe": "Place the faucet directly above an alchemy cauldron. Right-click with an Aqua crystal or water wand to install it; right-click empty-handed to retrieve it. The faucet fills an empty cauldron once per second without consuming the focus or wand charges. Filled cauldrons, dirty water and dissolved essences are untouched. Redstone pauses the flow. Breaking the faucet returns the focus.",
+  "message.alkahest.faucet_occupied": "A focus is already installed. Retrieve it with an empty hand.",
+  "message.alkahest.faucet_needs_aqua": "Requires an Aqua crystal or water wand.",
+  "message.alkahest.faucet_inserted": "Focus installed. Use an empty hand to retrieve it.",
+  "message.alkahest.faucet_removed": "Focus returned."
 }

@@ -78,6 +78,14 @@ public final class PracticalResearchStorage {
     /** Resolve to a fixed point: dependencies may appear after their children in the stable ID list. */
     private static void settle(ServerPlayerEntity player) {
         long observed = observed(player);
+        long existing = completed(player);
+        // One-way, idempotent migration of the former Aer entry into the grouped wand entry.
+        var grouped = PracticalResearchPlan.STEPS.get(4);
+        if ((existing & PracticalResearchPlan.AER_WAND) != 0) grant(player, "completed", grouped);
+        if ((observed & PracticalResearchPlan.AER_WAND) != 0) {
+            grant(player, "observed", grouped);
+            observed = observed(player);
+        }
         long before, after = completed(player);
         do {
             before = after;

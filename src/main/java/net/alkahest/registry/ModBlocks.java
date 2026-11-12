@@ -32,6 +32,8 @@ import net.minecraft.sound.BlockSoundGroup;
 
 public final class ModBlocks {
     public static final Block ALCHEMY_CAULDRON = register("alchemy_cauldron", new AlchemyCauldronBlock(AbstractBlock.Settings.copy(Blocks.CAULDRON)));
+    public static final Block WATER_FAUCET = register("water_faucet", new net.alkahest.block.custom.WaterFaucetBlock(
+        AbstractBlock.Settings.copy(Blocks.COPPER_BLOCK).nonOpaque().noCollision().strength(2.0f)));
     public static final Block JAR = jar();
     public static final Block ALCHEMY_PIPE = register("alchemy_pipe", new AlchemyPipeBlock(AbstractBlock.Settings.copy(Blocks.GLASS).strength(0.8f).nonOpaque()));
     public static final Block ESSENCE_SEPARATOR = register("essence_separator", new EssenceSeparatorBlock(AbstractBlock.Settings.copy(Blocks.COPPER_BLOCK).nonOpaque()));

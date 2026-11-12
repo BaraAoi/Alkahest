@@ -151,6 +151,18 @@ public class CauldronBlockEntity extends BlockEntity {
         message(player, cleaning ? "message.alkahest.cauldron_cleaned" : "message.alkahest.cauldron_filled");
     }
 
+    /** Faucet adds water only to an empty cauldron; never cleans or overwrites a mixture. */
+    public boolean fillFromFaucet() {
+        if (world == null || world.isClient || water) return false;
+        dirtyWater = false;
+        setWater(true);
+        evaporation = 0;
+        essenceIdleTicks = 0;
+        markDirty();
+        world.playSound(null, pos, SoundEvents.ITEM_BUCKET_EMPTY, SoundCategory.BLOCKS, 0.45f, 1.15f);
+        return true;
+    }
+
     public boolean useWand(PlayerEntity player, Hand hand, CrystalWandItem wand) {
         if (wand.essenceType() == EssenceType.AQUA && (!water || dirtyWater)) {
             boolean cleaning = water && dirtyWater;

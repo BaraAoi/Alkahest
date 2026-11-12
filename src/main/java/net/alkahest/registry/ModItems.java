@@ -58,6 +58,7 @@ public final class ModItems {
             .icon(() -> new ItemStack(ALCHEMISTS_MONOCLE))
             .entries((context, entries) -> {
                 entries.add(ModBlocks.ALCHEMY_CAULDRON);
+                entries.add(ModBlocks.WATER_FAUCET);
                 entries.add(ModBlocks.DISTILLERY);
                 entries.add(ModBlocks.DISTILLERY_TIER2);
                 entries.add(ModBlocks.DISTILLERY_BELLOWS);

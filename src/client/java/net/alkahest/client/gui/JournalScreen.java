@@ -42,7 +42,7 @@ public final class JournalScreen extends Screen {
         node(19, 560, -220), node(20, 430, -145), node(21, 430, -80),
         node(22, 290, -15), node(23, 290, -270), node(24, 430, -270), node(25, 430, -220),
         node(26, 300, 280), node(29, 430, 280), node(30, 295, 80),
-        node(31, 290, -210), node(32, 290, -145), node(33, 290, -80), node(34, 425, 125)
+        node(31, 290, -210), node(32, 290, -145), node(33, 290, -80), node(35, 560, 125)
     };
     private final long researchFlags;
     private Node selected;

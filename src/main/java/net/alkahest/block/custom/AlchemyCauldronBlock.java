@@ -114,6 +114,11 @@ public class AlchemyCauldronBlock extends Block implements BlockEntityProvider {
     @Override
     protected ItemActionResult onUseWithItem(ItemStack stack, BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
         discover(world, pos, player);
+        // Allow placing the faucet directly on the rim instead of dissolving its block item.
+        if (stack.isOf(net.alkahest.registry.ModBlocks.WATER_FAUCET.asItem())) {
+            if (!world.isClient) ((BlockItem)stack.getItem()).place(new net.minecraft.item.ItemPlacementContext(player, hand, stack, hit));
+            return ItemActionResult.success(world.isClient);
+        }
         if (stack.isEmpty()) return ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
         if (!world.isClient && world.getBlockEntity(pos) instanceof CauldronBlockEntity cauldron) {
             cauldron.useItem(player, hand);

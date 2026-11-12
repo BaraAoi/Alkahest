@@ -244,18 +244,23 @@ public class PracticalResearchGameTests implements FabricGameTest {
     }
 
     @GameTest(templateName = EMPTY_STRUCTURE)
-    public void aerWandIsRememberedBeforeMonocleAndPersists(TestContext c) {
+    public void groupedWandObservationAndLegacyAerPersist(TestContext c) {
         var player = c.createMockCreativeServerPlayerInWorld(); clearResearch(player);
         grant(player, "matrix");
         var wand = new ItemStack(ModItems.WANDS.get(net.alkahest.essence.EssenceType.AER));
         PracticalResearchStorage.observe(player, wand);
-        c.assertTrue((PracticalResearchStorage.observed(player) & PracticalResearchPlan.AER_WAND) != 0, "Early Aer wand is recorded");
-        c.assertTrue((PracticalResearchStorage.completed(player) & PracticalResearchPlan.AER_WAND) == 0, "Wait for monocle");
+        c.assertTrue((PracticalResearchStorage.observed(player) & PracticalResearchPlan.IGNIS_WAND) != 0, "Aer records grouped entry");
+        c.assertTrue((PracticalResearchStorage.completed(player) & PracticalResearchPlan.IGNIS_WAND) == 0, "Wait for monocle");
         grant(player, "monocle"); PracticalResearchStorage.migrate(player);
-        long expected = PracticalResearchPlan.AER_WAND | PracticalResearchPlan.MATRIX;
-        c.assertTrue((PracticalResearchStorage.completed(player) & expected) == expected, "Parent unlocks wand without relocking old progress");
+        long expected = PracticalResearchPlan.IGNIS_WAND | PracticalResearchPlan.MATRIX;
+        c.assertTrue((PracticalResearchStorage.completed(player) & expected) == expected, "Parent unlocks group without relocking old progress");
+        clearResearch(player);
+        player.getAdvancementTracker().grantCriterion(player.getServer().getAdvancementLoader().get(Alkahest.id("practice/completed_aer_wand")), "done");
+        PracticalResearchStorage.migrate(player);
+        expected = PracticalResearchPlan.AER_WAND | PracticalResearchPlan.IGNIS_WAND;
+        c.assertTrue((PracticalResearchStorage.completed(player) & expected) == expected, "Old Aer completion migrates even without parents");
         player.getAdvancementTracker().save(); player.getAdvancementTracker().reload(c.getWorld().getServer().getAdvancementLoader());
-        c.assertTrue((PracticalResearchStorage.completed(player) & expected) == expected && wand.getCount() == 1, "Wand and completion survive reload");
+        c.assertTrue((PracticalResearchStorage.completed(player) & expected) == expected && wand.getCount() == 1, "Legacy and grouped progress survive reload");
         c.complete();
     }
 
