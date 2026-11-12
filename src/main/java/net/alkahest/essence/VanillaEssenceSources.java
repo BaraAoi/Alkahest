@@ -101,8 +101,7 @@ final class VanillaEssenceSources {
         );
         // Common rare living drops.
         put(values, List.of(new EssenceStack(SPIRITUS, 2, 1f), new EssenceStack(ORDO, 2, 1f)),
-            Items.GOAT_HORN, Items.HEART_OF_THE_SEA, Items.ELYTRA, Items.DRAGON_BREATH,
-            Items.ECHO_SHARD, Items.TOTEM_OF_UNDYING, Items.TRIDENT, Items.SADDLE
+            Items.GOAT_HORN, Items.DRAGON_BREATH, Items.ECHO_SHARD, Items.SADDLE
         );
         // Reviewed hard-to-obtain loot, rather than inventing rarity from item names.
         put(values, List.of(new EssenceStack(SPIRITUS, 10, 1f), new EssenceStack(MOTUS, 8, 1f), new EssenceStack(ORDO, 6, 1f)), Items.ELYTRA);
@@ -129,7 +128,7 @@ final class VanillaEssenceSources {
             Items.CREEPER_HEAD, Items.DRAGON_HEAD, Items.PIGLIN_HEAD, Items.PLAYER_HEAD,
             Items.SKELETON_SKULL, Items.WITHER_SKELETON_SKULL, Items.ZOMBIE_HEAD);
         put(values, List.of(new EssenceStack(SPIRITUS, 3, 1f), new EssenceStack(ORDO, 2, 1f)),
-            Items.DRAGON_EGG, Items.TRIAL_KEY, Items.OMINOUS_TRIAL_KEY, Items.SPAWNER, Items.TRIAL_SPAWNER, Items.VAULT);
+            Items.TRIAL_KEY, Items.OMINOUS_TRIAL_KEY, Items.SPAWNER, Items.TRIAL_SPAWNER, Items.VAULT);
         put(values, List.of(new EssenceStack(SPIRITUS, 20, 1f), new EssenceStack(ORDO, 12, 1f)), Items.DRAGON_EGG);
         // Creative/operator items are known vanilla registry entries, assigned explicitly too.
         put(values, List.of(new EssenceStack(POTENTIA, 3, 1f), new EssenceStack(ORDO, 2, 1f)),
