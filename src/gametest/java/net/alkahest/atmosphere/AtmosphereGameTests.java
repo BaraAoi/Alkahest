@@ -158,6 +158,18 @@ public class AtmosphereGameTests implements FabricGameTest {
     }
 
     @GameTest(templateName = EMPTY_STRUCTURE)
+    public void prefetchDoesNotLoadDistantChunks(TestContext c) {
+        var world = c.getWorld(); BlockPos pos = c.getAbsolutePos(new BlockPos(3, 3, 3));
+        c.assertTrue(AtmosphereEvents.canSample(world, pos), "Current cell is loaded and sampleable");
+        BlockPos far = new BlockPos(29000000, 64, 29000000);
+        c.assertFalse(world.isChunkLoaded(far), "Far chunk starts unloaded");
+        c.assertFalse(AtmosphereEvents.canSample(world, far), "Prefetch skips unloaded chunks");
+        c.assertFalse(world.isChunkLoaded(far), "Prefetch check does not load chunks");
+        c.assertFalse(AtmosphereEvents.canSample(world, new BlockPos(pos.getX(), world.getTopY(), pos.getZ())), "Outside the world is skipped");
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
     public void telemetryUsesTheActualServerCellAndValues(TestContext c) {
         var w = c.getWorld(); BlockPos pos = c.getAbsolutePos(new BlockPos(3, 3, 3));
         var state = AtmosphereState.of(w);

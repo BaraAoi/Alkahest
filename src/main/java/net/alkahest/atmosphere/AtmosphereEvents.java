@@ -47,37 +47,60 @@ public final class AtmosphereEvents {
     public static void emit(World world, BlockPos pos, Map<EssenceType, ? extends Number> amounts, double factor) {
         if (world instanceof ServerWorld server) AtmosphereState.of(server).add(server, pos, amounts, factor);
     }
-    /** Stagger telemetry per player; no client controls what area the server scans. */
+    /** Current cell is refreshed once a second; neighbour prefetch is independently staggered. */
     public static boolean telemetryDue(long time, java.util.UUID playerId, boolean equipped, boolean receiverAvailable) {
-        return equipped && receiverAvailable && Math.floorMod(time + playerId.hashCode(), 40) == 0;
+        return equipped && receiverAvailable && Math.floorMod(time + playerId.hashCode(), 20) == 0;
+    }
+    public static int prefetchIndex(long time, java.util.UUID playerId) {
+        long phase = time + playerId.hashCode();
+        return Math.floorMod(phase, 2) == 0 ? (int) Math.floorMod(Math.floorDiv(phase, 2), 26) : -1;
+    }
+    /** Includes diagonals and vertical neighbours so corners do not cause a gap. */
+    public static BlockPos prefetchPosition(BlockPos position, int index) {
+        if (index < 0 || index >= 26) throw new IllegalArgumentException("Invalid prefetch index");
+        int n = index < 13 ? index : index + 1; // skip the centre of the 3x3x3 cube
+        return AtmosphereState.cellOrigin(position).add((n / 9 - 1) * 16, (n / 3 % 3 - 1) * 16, (n % 3 - 1) * 16);
     }
     public static AtmosphereReading reading(ServerWorld world, BlockPos pos) {
         AtmosphereState state = AtmosphereState.of(world);
         return AtmosphereReading.create(world.getRegistryKey().getValue().toString(), pos,
             state.levels(world, pos), state.baseline(world, pos));
     }
+    static boolean canSample(ServerWorld world, BlockPos pos) {
+        BlockPos origin = AtmosphereState.cellOrigin(pos);
+        return origin.getY() + 15 >= world.getBottomY() && origin.getY() < world.getTopY()
+            && origin.getY() >= -2048 && origin.getY() <= 2047 && world.isChunkLoaded(origin);
+    }
+    private static void sendReading(ServerWorld world, ServerPlayerEntity player, BlockPos pos) {
+        BlockPos origin = AtmosphereState.cellOrigin(pos);
+        if (!canSample(world, origin)) return;
+        try {
+            AtmosphereReading sample = reading(world, origin);
+            // Do not label a temporary neutral fallback as a measured baseline.
+            if (AtmosphereState.of(world).hasBaseline(origin))
+                net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(player,
+                    new net.alkahest.network.AtmospherePayload(sample.encode()));
+        } catch (IllegalArgumentException ignored) {
+            // Nonstandard dimensions/coordinates cannot be represented by this bounded HUD.
+        }
+    }
     private static void tick(ServerWorld world) {
         AtmosphereState.of(world).tick(world);
         for (ServerPlayerEntity player : world.getServer().getPlayerManager().getPlayerList()) {
-            if (player.getServerWorld() != world || Math.floorMod(world.getTime() + player.getUuid().hashCode(), 40) != 0) continue;
+            if (player.getServerWorld() != world) continue;
+            long now = world.getTime();
+            int neighbour = prefetchIndex(now, player.getUuid());
+            boolean currentDue = Math.floorMod(now + player.getUuid().hashCode(), 20) == 0;
+            if (!currentDue && neighbour < 0) continue;
             BlockPos playerPos = player.getBlockPos();
-            BlockPos origin = AtmosphereState.cellOrigin(playerPos);
             if (playerPos.getY() < world.getBottomY() || playerPos.getY() >= world.getTopY()
-                    || origin.getY() < -2048 || origin.getY() > 2047 || !world.isChunkLoaded(playerPos)) continue;
+                    || !world.isChunkLoaded(playerPos)) continue;
             boolean equipped = dev.emi.trinkets.api.TrinketsApi.getTrinketComponent(player)
                 .map(component -> component.isEquipped(net.alkahest.registry.ModItems.ALCHEMISTS_MONOCLE)).orElse(false);
-            if (telemetryDue(world.getTime(), player.getUuid(), equipped,
-                    net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.canSend(player, net.alkahest.network.AtmospherePayload.ID))) {
-                try {
-                    AtmosphereReading sample = reading(world, playerPos);
-                    // Do not label a temporary neutral fallback as a measured baseline.
-                    if (AtmosphereState.of(world).hasBaseline(playerPos))
-                        net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(player,
-                            new net.alkahest.network.AtmospherePayload(sample.encode()));
-                } catch (IllegalArgumentException ignored) {
-                    // Nonstandard dimensions/coordinates cannot be represented by this bounded HUD.
-                }
-            }
+            boolean receiver = net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.canSend(player, net.alkahest.network.AtmospherePayload.ID);
+            if (!equipped || !receiver) continue;
+            if (telemetryDue(now, player.getUuid(), true, true)) sendReading(world, player, playerPos);
+            if (neighbour >= 0) sendReading(world, player, prefetchPosition(playerPos, neighbour));
         }
         if (world.getDifficulty() == Difficulty.PEACEFUL
                 || !world.getGameRules().getBoolean(GameRules.DO_MOB_SPAWNING)) return;

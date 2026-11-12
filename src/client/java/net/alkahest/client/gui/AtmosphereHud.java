@@ -37,7 +37,7 @@ public final class AtmosphereHud {
         if (!enabled || client.player == null || client.world == null || client.options.hudHidden || client.currentScreen != null
             || !TrinketsApi.getTrinketComponent(client.player).map(c -> c.isEquipped(ModItems.ALCHEMISTS_MONOCLE)).orElse(false)) return;
         var reading = VIEW.forPosition(client.world.getRegistryKey().getValue().toString(), client.player.getBlockPos());
-        // Never show an old cell or fabricate values while waiting for a new snapshot.
+        // Use a prefetched cell; the view briefly retains the last value if the new snapshot is late.
         if (reading.isEmpty()) return;
         var snapshot = reading.get();
         if (!snapshot.equals(rendered)) {
