@@ -513,5 +513,7 @@
   "message.alkahest.jar_extracted": "Извлечено эссенции в пустую банку: %s.",
   "message.alkahest.jar_crystal_empty": "Банка пуста: кристаллизовать нечего.",
   "message.alkahest.jar_crystal_no_space": "Не удалось выдать кристаллы; содержимое банки сохранено.",
-  "message.alkahest.jar_crystallized": "Кристаллизовано единиц: %s."
+  "message.alkahest.jar_crystallized": "Кристаллизовано единиц: %s.",
+  "screen.alkahest.distillery_tier2.queue": "Очередь",
+  "screen.alkahest.distillery_tier2.queue_details": "Ожидает выгрузки: %s"
 }

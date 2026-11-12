@@ -261,4 +261,29 @@ public class Tier2DistilleryGameTests implements FabricGameTest {
         c.assertTrue(ice.stream().anyMatch(e->e.type()==EssenceType.GELUM && e.amount()==8),"Existing Gelum limit remains unchanged");
         c.complete();
     }
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void queuedEssencesSyncToOpenScreenAndClearAfterDelivery(TestContext c) {
+        c.setBlockState(3,2,3,ModBlocks.DISTILLERY_TIER2); var machine=core(c); var player=c.createMockPlayer(GameMode.SURVIVAL);
+        machine.pending().addAll(List.of(new EssenceStack(EssenceType.IGNIS,500,.6f),new EssenceStack(EssenceType.AQUA,400,.8f)));
+        var server=(net.alkahest.screen.Tier2DistilleryScreenHandler)machine.createMenu(1,player.getInventory(),player);
+        var client=new net.alkahest.screen.Tier2DistilleryScreenHandler(1,player.getInventory());
+        server.addListener(new net.minecraft.screen.ScreenHandlerListener() {
+            public void onSlotUpdate(net.minecraft.screen.ScreenHandler handler,int slot,ItemStack stack) { }
+            public void onPropertyUpdate(net.minecraft.screen.ScreenHandler handler,int id,int value) { client.setProperty(id,value); }
+        });
+        server.sendContentUpdates();
+        c.assertTrue(client.pendingTotal()==900 && client.pendingAmount(EssenceType.IGNIS)==500
+            && client.pendingAmount(EssenceType.AQUA)==400 && client.status()==Tier2DistilleryBlockEntity.STATUS_NO_BELLOWS,
+            "The client screen sees every queued type, amount, total and absent bellows status");
+        c.setBlockState(3,3,3,ModBlocks.DISTILLERY_BELLOWS);
+        distil(c,1); server.sendContentUpdates();
+        c.assertTrue(client.pendingAmount(EssenceType.IGNIS)==436 && client.pendingAmount(EssenceType.AQUA)==400
+            && client.pendingTotal()==836 && client.status()==Tier2DistilleryBlockEntity.STATUS_BLOCKED,
+            "After partial delivery, changed quantities and blocked status reach the screen");
+        machine.pending().clear(); server.sendContentUpdates();
+        c.assertTrue(client.pendingTotal()==0 && client.pendingAmount(EssenceType.IGNIS)==0 && client.pendingAmount(EssenceType.AQUA)==0,
+            "Removing the queue clears stale client values");
+        c.assertTrue(client.getSlot(0).x==80 && client.getSlot(0).y==30,"Input hitbox remains unchanged");
+        c.complete();
+    }
 }

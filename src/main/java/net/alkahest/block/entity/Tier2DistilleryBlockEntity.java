@@ -55,11 +55,16 @@ public class Tier2DistilleryBlockEntity extends BlockEntity implements Inventory
                 case 0 -> progress;
                 case 1 -> DURATION;
                 case 2 -> status();
-                default -> 0;
+                default -> {
+                    int indexOfType = index - Tier2DistilleryScreenHandler.PENDING_START;
+                    if (indexOfType < 0 || indexOfType >= EssenceType.values().length) yield 0;
+                    EssenceType type = EssenceType.values()[indexOfType];
+                    yield pending.stream().filter(e -> e.type() == type).mapToInt(EssenceStack::amount).sum();
+                }
             };
         }
         @Override public void set(int index, int value) { if (index == 0) progress = value; }
-        @Override public int size() { return 3; }
+        @Override public int size() { return Tier2DistilleryScreenHandler.PROPERTY_COUNT; }
     };
 
     public Tier2DistilleryBlockEntity(BlockPos pos, BlockState state) {

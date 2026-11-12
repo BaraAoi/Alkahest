@@ -1,6 +1,7 @@
 package net.alkahest.client.gui;
 
 import net.alkahest.screen.Tier2DistilleryScreenHandler;
+import net.alkahest.essence.EssenceType;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.entity.player.PlayerInventory;
@@ -10,6 +11,7 @@ import net.minecraft.text.Text;
 public final class Tier2DistilleryScreen extends HandledScreen<Tier2DistilleryScreenHandler> {
     private static final int WIDTH = 176, HEIGHT = 166;
     private static final int TRACK_X = 62, TRACK_Y = 52, TRACK_WIDTH = 52, TRACK_HEIGHT = 6;
+    private static final int QUEUE_X = 107, QUEUE_Y = 23, QUEUE_WIDTH = 63, QUEUE_HEIGHT = 24;
 
     public Tier2DistilleryScreen(Tier2DistilleryScreenHandler handler, PlayerInventory inventory, Text title) {
         super(handler, inventory, title);
@@ -19,6 +21,23 @@ public final class Tier2DistilleryScreen extends HandledScreen<Tier2DistillerySc
         titleY = 6;
         playerInventoryTitleX = 8;
         playerInventoryTitleY = 72;
+    }
+
+    @Override public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+        renderBackground(context, mouseX, mouseY, delta);
+        super.render(context, mouseX, mouseY, delta);
+        drawMouseoverTooltip(context, mouseX, mouseY);
+        if (handler.pendingTotal() > 0 && mouseX >= x + QUEUE_X && mouseX < x + QUEUE_X + QUEUE_WIDTH
+                && mouseY >= y + QUEUE_Y && mouseY < y + QUEUE_Y + QUEUE_HEIGHT) {
+            java.util.List<Text> lines = new java.util.ArrayList<>();
+            lines.add(Text.translatable("screen.alkahest.distillery_tier2.queue_details", handler.pendingTotal()));
+            for (EssenceType type : EssenceType.values()) {
+                int amount = handler.pendingAmount(type);
+                if (amount > 0) lines.add(Text.literal("◆ " + type.displayName() + ": " + amount)
+                    .styled(style -> style.withColor(type.color())));
+            }
+            context.drawTooltip(textRenderer, lines, mouseX, mouseY);
+        }
     }
 
     private int percent() {
@@ -73,6 +92,10 @@ public final class Tier2DistilleryScreen extends HandledScreen<Tier2DistillerySc
         c.drawTextWithShadow(textRenderer, title, titleX, titleY, 0xFFF1D8A3);
         c.drawTextWithShadow(textRenderer, playerInventoryTitle, playerInventoryTitleX, playerInventoryTitleY, 0xFFDFD0AB);
         c.drawTextWithShadow(textRenderer, Text.translatable("screen.alkahest.distillery_tier2.input"), 14, 34, 0xFFE3D1A5);
+        if (handler.pendingTotal() > 0) {
+            c.drawTextWithShadow(textRenderer, Text.translatable("screen.alkahest.distillery_tier2.queue"), 109, 25, 0xFFDFD0AB);
+            c.drawTextWithShadow(textRenderer, "◆ " + handler.pendingTotal(), 109, 36, 0xFFC9A6FF);
+        }
         int color = (handler.status() == 2 || handler.status() == 3) ? 0xFFFFC27D : handler.status() == 1 ? 0xFFC9A6FF : 0xFFD1C6AC;
         c.drawCenteredTextWithShadow(textRenderer, statusText(), 88, 64, color);
         c.drawTextWithShadow(textRenderer, percent() + "%", 118, 52, 0xFFE9D9AE);

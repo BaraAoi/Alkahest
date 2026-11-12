@@ -513,5 +513,7 @@
   "message.alkahest.jar_extracted": "Collected %s essence in the empty jar.",
   "message.alkahest.jar_crystal_empty": "The jar is empty; nothing to crystallize.",
   "message.alkahest.jar_crystal_no_space": "Could not deliver crystals; the jar contents were preserved.",
-  "message.alkahest.jar_crystallized": "Crystallized %s units."
+  "message.alkahest.jar_crystallized": "Crystallized %s units.",
+  "screen.alkahest.distillery_tier2.queue": "Queued",
+  "screen.alkahest.distillery_tier2.queue_details": "Waiting to be delivered: %s"
 }

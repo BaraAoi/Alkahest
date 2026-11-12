@@ -1,6 +1,7 @@
 package net.alkahest.screen;
 
 import net.alkahest.block.entity.Tier2DistilleryBlockEntity;
+import net.alkahest.essence.EssenceType;
 import net.alkahest.registry.ModScreenHandlers;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.PlayerInventory;
@@ -17,18 +18,19 @@ public class Tier2DistilleryScreenHandler extends ScreenHandler {
     public static final int PLAYER_INV_START = 1;
     public static final int PLAYER_INV_END = PLAYER_INV_START + 36;
     public static final int INPUT_X = 80, INPUT_Y = 30;
+    public static final int PENDING_START = 3, PROPERTY_COUNT = PENDING_START + EssenceType.values().length;
 
     private final Inventory inventory;
     private final PropertyDelegate properties;
 
     public Tier2DistilleryScreenHandler(int syncId, PlayerInventory playerInventory) {
-        this(syncId, playerInventory, new SimpleInventory(1), new ArrayPropertyDelegate(3));
+        this(syncId, playerInventory, new SimpleInventory(1), new ArrayPropertyDelegate(PROPERTY_COUNT));
     }
 
     public Tier2DistilleryScreenHandler(int syncId, PlayerInventory playerInventory, Inventory inventory, PropertyDelegate properties) {
         super(ModScreenHandlers.TIER2_DISTILLERY, syncId);
         checkSize(inventory, 1);
-        checkDataCount(properties, 3);
+        checkDataCount(properties, PROPERTY_COUNT);
         this.inventory = inventory;
         this.properties = properties;
         inventory.onOpen(playerInventory.player);
@@ -54,6 +56,12 @@ public class Tier2DistilleryScreenHandler extends ScreenHandler {
     public int progress() { return properties.get(0); }
     public int maxProgress() { return properties.get(1); }
     public int status() { return properties.get(2); }
+    public int pendingAmount(EssenceType type) { return properties.get(PENDING_START + type.ordinal()); }
+    public int pendingTotal() {
+        int total = 0;
+        for (EssenceType type : EssenceType.values()) total += pendingAmount(type);
+        return total;
+    }
 
     @Override public boolean canUse(PlayerEntity player) { return inventory.canPlayerUse(player); }
     @Override public void onClosed(PlayerEntity player) { super.onClosed(player); inventory.onClose(player); }

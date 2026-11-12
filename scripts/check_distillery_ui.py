@@ -31,3 +31,15 @@ for locale in ('ru_ru', 'en_us'):
         assert translations.get(f'screen.alkahest.distillery.{name}'), f'Missing {locale} distillery {name}'
     assert '%s' in translations['screen.alkahest.distillery.progress'], f'Missing progress placeholder: {locale}'
 print('Distillery UI texture and translations validated')
+
+# Tier-II indicator stays outside the input, tracks and inventory; tooltip lists server-provided types.
+tier2 = Path('src/client/java/net/alkahest/client/gui/Tier2DistilleryScreen.java').read_text()
+handler = Path('src/main/java/net/alkahest/screen/Tier2DistilleryScreenHandler.java').read_text()
+assert 'QUEUE_X = 107, QUEUE_Y = 23, QUEUE_WIDTH = 63, QUEUE_HEIGHT = 24' in tier2
+assert 'handler.pendingTotal()' in tier2 and 'handler.pendingAmount(type)' in tier2 and 'context.drawTooltip' in tier2
+assert 'PENDING_START + EssenceType.values().length' in handler and 'addProperties(properties)' in handler
+for locale in ('ru_ru', 'en_us'):
+    translations = json.loads(Path(f'src/main/resources/assets/alkahest/lang/{locale}.json').read_text())
+    assert translations.get('screen.alkahest.distillery_tier2.queue')
+    assert '%s' in translations['screen.alkahest.distillery_tier2.queue_details']
+print('Tier II queued-essence indicator, tooltip and property sync validated')
