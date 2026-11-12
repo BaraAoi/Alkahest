@@ -281,7 +281,7 @@
   "screen.alkahest.practice.pipe.title": "Essence Flow",
   "screen.alkahest.practice.pipe.recipe": "Connect bellows to a jar or receiver. Pipes route automatically. Use a crystal to select its segment filter; use the same crystal again to clear it. Sneak-use a wand or amulet to cycle filters. Neither costs resources. A mined pipe keeps its filter on the item.",
   "screen.alkahest.practice.charger.title": "Essence Charger",
-  "screen.alkahest.practice.charger.recipe": "Place the charger on a jar. While you are nearby it recharges compatible wands and the amulet from the jar.",
+  "screen.alkahest.practice.charger.recipe": "Place the charger on a jar. While you are nearby it recharges compatible wands and the amulet from the jar. An Ordo jar also charges an amulet inside an awakened Transmutator; players are served first.",
   "screen.alkahest.practice.tier2.title": "Tier II Distillery and Bellows",
   "screen.alkahest.practice.tier2.recipe": "Distillery: copper block — copper ingot — copper block / glass — Alkahest vial — glass / copper block — crude distillery — copper block. Bellows (2): glass — copper — glass / copper — iron ingot — copper / glass — copper — glass. Place at least one bellow on top, insert valid material and wait for the machine to start with its screen open. Bellows retain their essence when moved. If output is blocked, the core retains queued essence when moved; input drops separately. Matching bellows fill before empty ones. Large batches are delivered in portions; empty the bellows to continue.",
   "screen.alkahest.practice.bellows.title": "Glass Bellows",

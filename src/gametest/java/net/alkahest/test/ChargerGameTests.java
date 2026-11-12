@@ -158,6 +158,13 @@ public class ChargerGameTests implements FabricGameTest {
         core.wake(); c.getWorld().setBlockState(core.getPos().up(2),net.minecraft.block.Blocks.AIR.getDefaultState());
         c.assertTrue(EssenceChargerBlockEntity.chargeMachineNearby(c.getWorld(),jar,charger)==null && jar.contents().total()==2,
             "An incomplete structure cannot draw charge");
+        for (int dx=-1; dx<=1; dx++) for (int dz=-1; dz<=1; dz++) {
+            if (dx!=0 || dz!=0) c.getWorld().setBlockState(core.getPos().add(dx,0,dz),ModBlocks.TRANSMUTATOR_PILLAR.getDefaultState());
+        }
+        c.assertTrue(EssenceChargerBlockEntity.chargeMachineNearby(c.getWorld(),jar,charger)==core
+            && amulet.get(ModDataComponents.ESSENCE_CHARGE)==10 && jar.contents().total()==1,
+            "A fully assembled legacy platform remains supported");
+        c.getWorld().setBlockState(core.getPos().add(1,0,0),net.minecraft.block.Blocks.AIR.getDefaultState());
         var far=tower(c,2,y+33,3,0,true);
         c.assertTrue(EssenceChargerBlockEntity.chargeMachineNearby(c.getWorld(),jar,charger)==null
             && far.getStack(net.alkahest.block.entity.TransmutatorCoreBlockEntity.AMULET).get(ModDataComponents.ESSENCE_CHARGE)==0,
