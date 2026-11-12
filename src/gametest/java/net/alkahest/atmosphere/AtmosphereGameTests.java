@@ -263,8 +263,8 @@ public class AtmosphereGameTests implements FabricGameTest {
         var air = AtmosphereState.of(w); double before = air.levels(w, p).get(EssenceType.AQUA);
         cube.setStack(0, new ItemStack(Items.WATER_BUCKET));
         for (int i = 0; i < Tier2DistilleryBlockEntity.DURATION; i++) Tier2DistilleryBlockEntity.tick(w, p, cube);
-        c.assertTrue(Math.abs(air.levels(w, p).get(EssenceType.AQUA) - before - .8) < 1e-8,
-            "Tier-two release is ten percent of the capped actual Aqua output");
+        c.assertTrue(Math.abs(air.levels(w, p).get(EssenceType.AQUA) - before - 1.0) < 1e-8,
+            "Tier-two release is ten percent of the full ten-unit Aqua output");
         c.setBlockState(5, 2, 3, ModBlocks.DISTILLERY);
         BlockPos q = c.getAbsolutePos(new BlockPos(5, 2, 3));
         var crude = (DistilleryBlockEntity) w.getBlockEntity(q);
