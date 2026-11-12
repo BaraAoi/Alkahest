@@ -75,7 +75,12 @@ for output, inputs in {
     assert recipe['result'] == {'id': f'alkahest:{output}', 'count': 1}
 subprocess.run(['python3', 'scripts/generate_journal_recipes.py', '--check'], check=True)
 
-# All cauldron recipes must be illustrated in the notes, not a manually maintained subset.
-assert 'CAULDRON_PAGE = 3' in journal and 'renderCauldronIndex(c, x, y, w, h, mouseX, mouseY)' in journal
+# Catalogues and former guide chapters remain accessible from relevant research entries.
+content = (java / 'research/ResearchJournalContent.java').read_text()
+assert 'case "cauldron" -> Catalogue.CAULDRON' in content
+assert 'case "matrix" -> Catalogue.MATRIX' in content and 'case "transmutator" -> Catalogue.TRANSMUTATOR' in content
+assert 'ResearchJournalContent.chapters(node.key())' in journal
 assert 'BookPagination.pages(net.alkahest.recipe.CauldronEssenceRecipes.all().size(), 2)' in journal
 assert 'renderCauldronDiagram(c, brew, 0, 0,' in journal
+assert 'screen.alkahest.journal.notes' not in journal and 'renderGuide(' not in journal
+assert 'layout.detail().contains' in journal and 'camera.zoomAt(' in journal

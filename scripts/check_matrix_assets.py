@@ -171,8 +171,8 @@ for block in ('MatrixPillarBlock', 'AlchemicalBrickBlock', 'MatrixCoreBlock'):
     text = (JAVA / f'block/custom/{block}.java').read_text()
     check('interactNearby' in text, f'{block} must answer to the same click as the core')
 check('MatrixRecipe.all()' in journal, 'the journal must list the matrix syntheses')
-check('BookPagination.pages(MatrixRecipe.all().size(), listRows(21) * 2)' in journal
-      and 'BookPagination.index(guideSubPage, column * rows + row, rows * 2)' in journal,
+check('BookPagination.pages(MatrixRecipe.all().size(), listRows(21, h) * 2)' in journal
+      and 'BookPagination.index(page, column * rows + row, rows * 2)' in journal,
       'the synthesis index must paginate every recipe across both pages')
 for item in ('MIASMA', 'LIGHTNING_IN_A_BOTTLE', 'MIDAS_ELIXIR', 'NAPALM', 'ACID_BOMB', 'FROST_FLASK', 'PURIFYING_FLASK'):
     check(f'new ItemStack(ModItems.{item}' not in recipe_source, f'{item} must not be a Matrix output')
@@ -183,7 +183,7 @@ check('MidasTouchEffect.progressStep' in core and 'before / 10 != self.progress 
       'Midas speed must preserve every essence prefill crossing')
 check((A / 'textures/item/midas_elixir.png').exists() and (A / 'textures/mob_effect/midas_touch.png').exists(),
       'Midas elixir and its effect need icons')
-check('RECIPES_PAGE' in journal, 'the synthesis list needs its own page in the journal')
+check('case MATRIX -> renderRecipes' in journal, 'the Matrix research must contain the synthesis index')
 check('recipe.cost()' in journal, 'the list must show what a synthesis costs in essence')
 check('insertBase' in core and 'takeFromCore' in core, 'the core must accept and hand back items')
 check('launchFlight' in core and 'FLIGHT_TICKS' in core, 'the essence must fly as an animation')
