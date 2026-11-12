@@ -84,3 +84,12 @@ assert 'BookPagination.pages(net.alkahest.recipe.CauldronEssenceRecipes.all().si
 assert 'renderCauldronDiagram(c, brew, 0, 0,' in journal
 assert 'screen.alkahest.journal.notes' not in journal and 'renderGuide(' not in journal
 assert 'layout.detail().contains' in journal and 'camera.zoomAt(' in journal
+
+# The atlas has no book base; modal depth must exceed Minecraft's elevated item layer.
+atlas = (root / 'src/client/resources/assets/alkahest/textures/gui/research_atlas.png').read_bytes()
+assert atlas[:8] == b'\x89PNG\r\n\x1a\n'
+assert struct.unpack('>IIBB', atlas[16:26]) == (1376, 768, 8, 2), 'opaque, high-resolution atlas texture'
+render = journal.split('    @Override public void render(', 1)[1].split('    private void centered(', 1)[0]
+assert 'context.drawTexture(BACKGROUND, 0, 0, width, height' in render
+assert 'context.drawTexture(BOOK, 0, 0, width, height' not in render
+assert render.index('renderMap(') < render.index('context.getMatrices().translate(0, 0, 300)') < render.index('context.drawTexture(BOOK, book.x()') < render.index('renderDetails(') < render.index('context.getMatrices().pop()')

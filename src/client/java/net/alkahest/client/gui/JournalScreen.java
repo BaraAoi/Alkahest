@@ -26,7 +26,7 @@ import java.util.Map;
 
 /** Full-screen research atlas with an independently paginated modal for each entry. */
 public final class JournalScreen extends Screen {
-    private static final Identifier BACKGROUND = Alkahest.id("textures/gui/journal_background.png");
+    private static final Identifier BACKGROUND = Alkahest.id("textures/gui/research_atlas.png");
     private static final Identifier BOOK = Alkahest.id("textures/gui/journal_book.png");
     private record Node(String key, long parents, long completed, int x, int y, ItemStack icon) { }
     private static Node node(int index, int x, int y) {
@@ -74,30 +74,30 @@ public final class JournalScreen extends Screen {
 
     @Override public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         renderBackground(context, mouseX, mouseY, delta);
-        // The atlas fills the screen; the research card is an independent book on top of it.
-        context.drawTexture(BOOK, 0, 0, width, height, 0, 0, 1024, 512, 1024, 512);
-        context.drawText(textRenderer, Text.translatable("screen.alkahest.journal.map"), 21, 14, 0xFF61452E, false);
+        // One quiet, opaque surface for the atlas; only the selected entry uses a book.
+        context.drawTexture(BACKGROUND, 0, 0, width, height, 0, 0, 1376, 768, 1376, 768);
+        context.drawText(textRenderer, Text.translatable("screen.alkahest.journal.map"), 21, 14, 0xFFE2D7B8, false);
+        context.fill(20, 28, width - 20, 29, 0x806E8393);
         renderMap(context, selected == null ? mouseX : -10000, selected == null ? mouseY : -10000);
         if (selected != null) {
+            // drawItem uses an elevated GUI depth; draw the *entire* modal above those items,
+            // not just later in call order, so map icons cannot pierce the book or dimmer.
+            context.getMatrices().push();
+            context.getMatrices().translate(0, 0, 300);
             context.fill(0, 0, width, height, 0xA0000000);
             var book = layout.detail();
             context.fill(book.x() + 4, book.y() + 5, book.x() + book.width() + 5, book.y() + book.height() + 5, 0x66000000);
             context.drawTexture(BOOK, book.x(), book.y(), book.width(), book.height(), 0, 0, 1024, 512, 1024, 512);
             renderDetails(context, selected, mouseX, mouseY);
+            context.getMatrices().pop();
         }
         super.render(context, mouseX, mouseY, delta);
     }
     private void centered(DrawContext c, Text text, int cx, int y, int color) {
         c.drawText(textRenderer, text, cx - textRenderer.getWidth(text) / 2, y, color, false);
     }
-    private void panel(DrawContext c, int x, int y, int w, int h) {
-        c.fill(x, y, x + w, y + h, 0xFF8F7044);
-        c.fill(x + 1, y + 1, x + w - 1, y + h - 1, 0xFF182334);
-    }
     private void renderMap(DrawContext c, int mouseX, int mouseY) {
         int x = mapX(), y = mapY(), w = mapW(), h = mapH();
-        panel(c, x, y, w, h);
-        c.drawTexture(BACKGROUND, x + 1, y + 1, w - 2, h - 2, 0, 0, 512, 256, 512, 256);
         c.enableScissor(x + 2, y + 2, x + w - 2, y + h - 2);
         // Parent bits are the single source of truth for both progression and connections.
         for (Node child : NODES) for (Node parent : NODES)
@@ -105,7 +105,7 @@ public final class JournalScreen extends Screen {
         for (Node node : NODES) if (!state(node).equals("hidden")) drawNode(c, node, mouseX, mouseY);
         c.disableScissor();
         String mapHint = textRenderer.trimToWidth(Text.translatable("screen.alkahest.journal.map_hint").getString(), Math.max(20, width - 40));
-        centered(c, Text.literal(mapHint), width / 2, height - 18, 0xFF665037);
+        centered(c, Text.literal(mapHint), width / 2, height - 18, 0xFFBCCBD0);
         if (within(mouseX, mouseY, x, y, x + w, y + h)) {
             for (Node node : NODES) if (!state(node).equals("hidden") && hitNode(node, mouseX, mouseY)) {
                 Text hint = state(node).equals("locked") ? Text.translatable("screen.alkahest.journal.unknown") : label(node);
