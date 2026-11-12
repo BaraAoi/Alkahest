@@ -114,6 +114,7 @@ public class PracticalResearchGameTests implements FabricGameTest {
         var alkahest = player.getServer().getAdvancementLoader().get(Alkahest.id("practice/completed_alkahest"));
         player.getAdvancementTracker().grantCriterion(stabilizer, "done");
         player.getAdvancementTracker().grantCriterion(alkahest, "done");
+        grant(player, "distillery");
         // Completed machinery actions are remembered even before the paths to them are open.
         PracticalResearchStorage.assembly(player, PracticalResearchPlan.TRANSMUTATOR);
         PracticalResearchStorage.assembly(player, PracticalResearchPlan.MATRIX);
@@ -122,7 +123,7 @@ public class PracticalResearchGameTests implements FabricGameTest {
         c.assertTrue((PracticalResearchStorage.completed(player) & PracticalResearchPlan.FROST) == 0, "It cannot finish before purified water");
         player.getAdvancementTracker().grantCriterion(player.getServer().getAdvancementLoader().get(Alkahest.id("practice/completed_water")), "done");
         for (var item : new net.minecraft.item.ItemConvertible[]{ModBlocks.ALCHEMY_PIPE, ModBlocks.ESSENCE_CHARGER,
-                ModItems.ALKAHEST_AMULET, ModBlocks.TRANSMUTATOR_CORE, ModBlocks.TRANSMUTATOR_CHAMBER,
+                ModItems.ALKAHEST_AMULET, ModBlocks.JAR, ModBlocks.TRANSMUTATOR_CORE, ModBlocks.TRANSMUTATOR_CHAMBER,
                 ModBlocks.TRANSMUTATOR_CROWN, ModBlocks.MATRIX_CORE, ModBlocks.MATRIX_PEDESTAL})
             PracticalResearchStorage.observe(player, new ItemStack(item));
         long expected = PracticalResearchPlan.PIPE | PracticalResearchPlan.CHARGER | PracticalResearchPlan.AMULET
@@ -204,6 +205,24 @@ public class PracticalResearchGameTests implements FabricGameTest {
     }
 
     @GameTest(templateName = EMPTY_STRUCTURE)
+    public void ingredientResearchUnlocksEarlyProductsInSamePass(TestContext c) {
+        var player = c.createMockCreativeServerPlayerInWorld(); clearResearch(player);
+        grant(player, "water");
+        PracticalResearchStorage.observe(player, new ItemStack(ModItems.ACID_BOMB));
+        PracticalResearchStorage.observe(player, new ItemStack(ModItems.NAPALM));
+        long products = PracticalResearchPlan.ACID | PracticalResearchPlan.NAPALM;
+        c.assertTrue((PracticalResearchStorage.completed(player) & products) == 0, "Early products wait for their ingredient studies");
+        PracticalResearchStorage.observe(player, new ItemStack(ModItems.CAUSTIC_SLIME));
+        c.assertTrue((PracticalResearchStorage.completed(player) & PracticalResearchPlan.ACID) != 0, "Slime completes before the already observed acid bomb");
+        c.assertTrue((PracticalResearchStorage.completed(player) & PracticalResearchPlan.NAPALM) == 0, "The fire branch remains independent");
+        PracticalResearchStorage.observe(player, new ItemStack(ModItems.FIRE_DUST));
+        c.assertTrue((PracticalResearchStorage.completed(player) & products) == products, "Dust also resolves the already observed napalm immediately");
+        player.getAdvancementTracker().save(); player.getAdvancementTracker().reload(c.getWorld().getServer().getAdvancementLoader());
+        c.assertTrue((PracticalResearchStorage.completed(player) & products) == products, "The chained progress survives reload");
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
     public void reagentBrewingImmediatelyCreditsTheResearch(TestContext c) {
         var player = c.createMockCreativeServerPlayerInWorld();
         clearResearch(player); grant(player, "water");
@@ -238,7 +257,7 @@ public class PracticalResearchGameTests implements FabricGameTest {
 
     @GameTest(templateName = EMPTY_STRUCTURE)
     public void assembledMatrixRequiresWandAndTwoPedestals(TestContext c) {
-        var player = c.createMockCreativeServerPlayerInWorld(); clearResearch(player); grant(player, "amulet"); grant(player, "transmutator");
+        var player = c.createMockCreativeServerPlayerInWorld(); clearResearch(player); grant(player, "amulet"); grant(player, "alkahest");
         c.setBlockState(3,3,3,ModBlocks.MATRIX_CORE);
         var pos = c.getAbsolutePos(new net.minecraft.util.math.BlockPos(3,3,3));
         PracticalResearchStorage.observe(player, new ItemStack(ModBlocks.MATRIX_CORE));
@@ -260,7 +279,7 @@ public class PracticalResearchGameTests implements FabricGameTest {
     @GameTest(templateName = EMPTY_STRUCTURE)
     public void stabilizerAndTransmutatorRecordRealActivation(TestContext c) {
         var player = c.createMockCreativeServerPlayerInWorld(); clearResearch(player);
-        grant(player,"alkahest"); grant(player,"pipe"); grant(player,"charger");
+        grant(player,"alkahest"); grant(player,"pipe"); grant(player,"jar"); grant(player,"amulet");
         c.setBlockState(2,2,2,ModBlocks.STABILIZER_RECEIVER); c.setBlockState(2,3,2,ModBlocks.STABILIZER_CORE); c.setBlockState(2,4,2,ModBlocks.STABILIZER_CREST);
         var p = c.getAbsolutePos(new net.minecraft.util.math.BlockPos(2,3,2));
         var stabilizer = (net.alkahest.block.entity.StabilizerCoreBlockEntity)c.getWorld().getBlockEntity(p);
@@ -278,7 +297,7 @@ public class PracticalResearchGameTests implements FabricGameTest {
     }
     @GameTest(templateName = EMPTY_STRUCTURE)
     public void tierTwoResearchRequiresActualRunningMachine(TestContext c) {
-        var player = c.createMockCreativeServerPlayerInWorld(); clearResearch(player); grant(player,"stabilizer");
+        var player = c.createMockCreativeServerPlayerInWorld(); clearResearch(player); grant(player,"alkahest"); grant(player,"distillery");
         c.setBlockState(3,2,3,ModBlocks.DISTILLERY_TIER2);
         var pos=c.getAbsolutePos(new net.minecraft.util.math.BlockPos(3,2,3));
         var cube=(net.alkahest.block.entity.Tier2DistilleryBlockEntity)c.getWorld().getBlockEntity(pos);

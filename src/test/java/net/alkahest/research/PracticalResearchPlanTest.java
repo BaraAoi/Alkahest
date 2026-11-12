@@ -30,13 +30,13 @@ class PracticalResearchPlanTest {
     }
 
     @Test void assembledActionsWaitForParentsAndAreSeparateFromItemOwnership() {
-        long parent = PIPE | CHARGER;
+        long parent = PIPE | JAR | AMULET;
         assertEquals(parent, resolve(parent, TRANSMUTATOR, 0));
         assertEquals(0, resolve(0, 0, TRANSMUTATOR));
         assertEquals(parent | TRANSMUTATOR, resolve(parent, 0, TRANSMUTATOR));
-        assertEquals(MATRIX | AMULET | TRANSMUTATOR, resolve(AMULET | TRANSMUTATOR, 0, MATRIX));
-        assertEquals(MATRIX | AMULET | TRANSMUTATOR, resolve(AMULET | TRANSMUTATOR, FROST, MATRIX));
-        assertEquals(WATER | FROST, resolve(WATER, FROST, 0));
+        assertEquals(MATRIX | AMULET | ALKAHEST, resolve(AMULET | ALKAHEST, 0, MATRIX));
+        assertEquals(MATRIX | AMULET | ALKAHEST, resolve(AMULET | ALKAHEST, FROST, MATRIX));
+        assertEquals(WATER | DISTILLERY | FROST, resolve(WATER | DISTILLERY, FROST, 0));
         assertFalse(visible(CHAMBER)); assertFalse(visible(PEDESTAL));
         assertTrue(visible(MATRIX)); assertTrue(visible(SEPARATOR));
     }
@@ -58,20 +58,38 @@ class PracticalResearchPlanTest {
         assertEquals(33, Long.numberOfTrailingZeros(CAUSTIC_SLIME));
     }
 
+    @Test void ingredientsLeadToTheirProductsWithoutRelockingCompletedNodes() {
+        assertEquals(CAUSTIC_SLIME, forItem("alkahest:acid_bomb").parents());
+        assertEquals(FIRE_DUST, forItem("alkahest:napalm").parents());
+        assertEquals(WATER | DISTILLERY, forItem("alkahest:midas_elixir").parents());
+        assertEquals(WATER | DISTILLERY, forItem("alkahest:purifying_flask").parents());
+        assertEquals(ALKAHEST | DISTILLERY, forItem("alkahest:distillery_tier2").parents());
+        long early = ACID | NAPALM | FIRE_DUST | CAUSTIC_SLIME;
+        assertEquals(WATER, resolve(WATER, ACID | NAPALM, 0));
+        assertEquals(WATER | early, resolve(WATER, early, 0), "Later-index parents settle earlier-index children");
+        assertEquals(ACID | NAPALM, resolve(ACID | NAPALM, 0, 0), "Old completions do not relock");
+    }
+
     @Test void graphIsAcyclicAndIdsAreUnique() {
         var ids = new HashSet<String>();
         var items = new HashSet<String>();
-        long preceding = 0;
+        long all = 0;
         for (Step step : STEPS) {
             assertTrue(ids.add(step.id()));
             assertTrue(items.add(step.itemId()));
-            assertEquals(0, step.parents() & ~preceding);
-            assertEquals(0, step.bit() & preceding);
+            assertEquals(0, step.bit() & all);
             assertEquals(1, Long.bitCount(step.bit()));
+            assertEquals(0, step.parents() & ~ALL);
             assertSame(step, forItem(step.itemId()));
-            preceding |= step.bit();
+            all |= step.bit();
         }
-        assertEquals(ALL, preceding);
+        assertEquals(ALL, all);
+        // Stable bit/index order is not topological; prove acyclicity independently of order.
+        long reachable = 0;
+        for (int pass = 0; pass < STEPS.size(); pass++) {
+            for (Step step : STEPS) if ((step.parents() & reachable) == step.parents()) reachable |= step.bit();
+        }
+        assertEquals(ALL, reachable, "Every node must have a path from a root, without cycles");
         assertNull(forItem("minecraft:stone"));
     }
 }

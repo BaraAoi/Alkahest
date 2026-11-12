@@ -37,14 +37,14 @@ public final class JournalScreen extends Screen {
         return new Node(step.id(), step.parents(), step.bit(), x, y, new ItemStack(item));
     }
     private static final Node[] NODES = {
-        node(0, 24, 0), node(1, 100, -40), node(2, 100, 40), node(3, 176, 0),
-        node(4, 252, -40), node(5, 252, 40), node(6, 328, 0), node(7, 404, 0), node(8, 480, 0),
-        node(9, 556, -90), node(10, 556, -30), node(11, 556, 30),
-        node(13, 556, 90), node(14, 632, -60),
-        node(17, 784, 0), node(19, -80, -100), node(20, -20, -150),
-        node(21, 50, -185), node(22, 120, -185), node(23, 190, -165), node(24, -100, -40), node(25, -90, 40),
-        node(26, 176, 80), node(29, 252, 110), node(30, 176, -80),
-        node(31, -175, -180), node(32, -175, -110), node(33, -175, -40)
+        node(0, 30, 0), node(1, 155, -65), node(2, 155, 100), node(3, 295, 20),
+        node(4, 425, -5), node(5, 425, 60), node(6, 555, 25), node(7, 690, 25), node(8, 820, -50),
+        node(9, 300, 160), node(10, 300, 220), node(11, 820, 70), node(13, 820, -130),
+        node(14, 960, 155), node(17, 960, -130),
+        node(19, 560, -220), node(20, 430, -145), node(21, 430, -80),
+        node(22, 290, -15), node(23, 290, -270), node(24, 430, -270), node(25, 430, -220),
+        node(26, 300, 280), node(29, 430, 280), node(30, 295, 80),
+        node(31, 290, -210), node(32, 290, -145), node(33, 290, -80)
     };
     private final long researchFlags;
     private boolean guide;

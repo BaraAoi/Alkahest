@@ -75,16 +75,22 @@ public final class PracticalResearchStorage {
         settle(player);
     }
 
-    /** Grant in parent order and re-read persistent state, so missing data cannot advance children. */
+    /** Resolve to a fixed point: dependencies may appear after their children in the stable ID list. */
     private static void settle(ServerPlayerEntity player) {
         long observed = observed(player);
-        for (var step : PracticalResearchPlan.STEPS) {
-            long completed = completed(player);
-            boolean achieved = PracticalResearchPlan.isAssembly(step.bit()) ? has(player, "action", step)
-                : (observed & step.bit()) != 0;
-            if (achieved && (completed & step.bit()) == 0
-                && PracticalResearchPlan.available(step, completed)) grant(player, "completed", step);
-        }
+        long before, after = completed(player);
+        do {
+            before = after;
+            for (var step : PracticalResearchPlan.STEPS) {
+                boolean achieved = PracticalResearchPlan.isAssembly(step.bit()) ? has(player, "action", step)
+                    : (observed & step.bit()) != 0;
+                if (achieved && (after & step.bit()) == 0 && PracticalResearchPlan.available(step, after)
+                        && grant(player, "completed", step)) {
+                    // Read the server's real advancement state rather than assuming the write succeeded.
+                    after = completed(player);
+                }
+            }
+        } while (after != before);
     }
 
     private PracticalResearchStorage() { }
