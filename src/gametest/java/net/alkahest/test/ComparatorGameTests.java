@@ -29,7 +29,7 @@ public final class ComparatorGameTests implements FabricGameTest {
         c.setBlockState(4,2,z,Blocks.COMPARATOR.getDefaultState().with(ComparatorBlock.FACING,Direction.WEST));
     }
 
-    @GameTest(templateName=EMPTY_STRUCTURE, tickLimit=100)
+    @GameTest(templateName=EMPTY_STRUCTURE, tickLimit=120)
     public void realComparatorsTrackEveryTankEvenBetweenVisualLevels(TestContext c) {
         c.setBlockState(3,2,1,ModBlocks.JAR);
         c.setBlockState(3,2,3,ModBlocks.DISTILLERY_BELLOWS);
@@ -64,6 +64,26 @@ public final class ComparatorGameTests implements FabricGameTest {
         });
         c.runAtTick(55,()->{
             c.assertTrue(output(c,1)==0 && output(c,3)==0 && output(c,5)==0,"Draining returns signal to zero");
+            jar.setContents(one(100));
+        });
+        c.runAtTick(65,()->{
+            c.assertTrue(output(c,1)==15,"Jar refills");
+            world.breakBlock(c.getAbsolutePos(new BlockPos(3,2,1)),true);
+        });
+        c.runAtTick(75,()->{
+            c.assertTrue(output(c,1)==0,"Comparator updates when jar is removed");
+            BlockPos base=c.getAbsolutePos(new BlockPos(3,1,1));
+            world.setBlockState(base,Blocks.STONE.getDefaultState());
+            var item=new net.minecraft.item.ItemStack(ModBlocks.JAR);
+            net.alkahest.item.custom.JarItem.set(item,one(100));
+            var player=c.createMockPlayer(net.minecraft.world.GameMode.SURVIVAL);
+            player.setStackInHand(net.minecraft.util.Hand.MAIN_HAND,item);
+            var hit=new net.minecraft.util.hit.BlockHitResult(net.minecraft.util.math.Vec3d.ofCenter(base),Direction.UP,base,false);
+            var ctx=new net.minecraft.item.ItemPlacementContext(player,net.minecraft.util.Hand.MAIN_HAND,item,hit);
+            c.assertTrue(((net.minecraft.item.BlockItem)item.getItem()).place(ctx).isAccepted(),"Place a filled jar from an item");
+        });
+        c.runAtTick(85,()->{
+            c.assertTrue(output(c,1)==15,"Placing a filled jar restores the comparator output");
             c.complete();
         });
     }
