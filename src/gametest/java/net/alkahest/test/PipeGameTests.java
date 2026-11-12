@@ -428,4 +428,43 @@ public class PipeGameTests implements FabricGameTest {
         c.complete();
     }
 
+    /** Exhaust every filter arrangement of a 3x3 loop against an independent bitset flood fill. */
+    @GameTest(templateName=EMPTY_STRUCTURE, timeoutTicks=200)
+    public void everyThreeByThreeFilterLayoutMatchesConnectivity(TestContext c) {
+        c.setBlockState(1,2,3,ModBlocks.DISTILLERY_BELLOWS);
+        c.setBlockState(5,2,3,ModBlocks.JAR);
+        for (int z=2; z<=4; z++) for (int x=2; x<=4; x++)
+            c.setBlockState(x,2,z,ModBlocks.ALCHEMY_PIPE);
+        BlockPos first=c.getAbsolutePos(new BlockPos(2,2,2));
+        var source=(DistilleryBellowsBlockEntity)c.getWorld().getBlockEntity(c.getAbsolutePos(new BlockPos(1,2,3)));
+        var jar=(JarBlockEntity)c.getWorld().getBlockEntity(c.getAbsolutePos(new BlockPos(5,2,3)));
+        for (int mask=0; mask<(1<<9); mask++) {
+            for (int z=0; z<3; z++) for (int x=0; x<3; x++) {
+                var pipe=(AlchemyPipeBlockEntity)c.getWorld().getBlockEntity(first.add(x,0,z));
+                pipe.setFilter((mask & (1<<(z*3+x)))==0 ? null : EssenceType.AQUA);
+            }
+            int reachable=(mask & (1<<3))==0 ? 1<<3 : 0;
+            int prior;
+            do {
+                prior=reachable;
+                for (int n=0; n<9; n++) {
+                    if ((prior & (1<<n))==0) continue;
+                    int x=n%3, z=n/3;
+                    if (x>0) reachable |= 1<<(n-1);
+                    if (x<2) reachable |= 1<<(n+1);
+                    if (z>0) reachable |= 1<<(n-3);
+                    if (z<2) reachable |= 1<<(n+3);
+                }
+                reachable &= ~mask;
+            } while (reachable!=prior);
+            boolean expected=(reachable & (1<<5))!=0;
+            source.drain(source.amount()); source.accept(EssenceType.IGNIS,1,.5f);
+            jar.setContents(JarContentsComponent.EMPTY);
+            int moved=AlchemyPipeBlockEntity.pulse(c.getWorld(),first);
+            c.assertTrue(moved==(expected ? 1 : 0),"Filter layout " + mask + " has the expected reachability");
+            c.assertTrue(source.amount()+jar.contents().total()==1,"Layout " + mask + " conserves its essence");
+        }
+        c.complete();
+    }
+
 }
