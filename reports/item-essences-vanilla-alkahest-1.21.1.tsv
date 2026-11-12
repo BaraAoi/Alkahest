@@ -1,7 +1,7 @@
 # Alkahest: all registered items for this world; regenerated on startup and successful reload
 # Values are for default item stacks; missing means no reliable source or recipe.
 id	kind	status	essences
-alkahest:acid_bomb	item	recipe	ignis=1,perditio=4,metallum=2,vitium=5
+alkahest:acid_bomb	item	recipe	ignis=4,perditio=5,herba=1,vitium=2
 alkahest:alchemical_brick	block	recipe	terra=2,ordo=1,metallum=2,potentia=1
 alkahest:alchemical_journal	item	recipe	aqua=4,aer=4,ordo=2,herba=14,motus=2
 alkahest:alchemical_moss	block	manual	herba=3,vitium=2,ordo=2
@@ -55,7 +55,7 @@ alkahest:elemental_terra_spawn_egg	item	manual	spiritus=3,terra=2
 alkahest:essence_charger	block	recipe	terra=2,ordo=1,metallum=12,potentia=4
 alkahest:essence_separator	block	recipe	terra=2,ordo=5,metallum=12,potentia=5
 alkahest:fire_dust	item	recipe	ignis=4,perditio=3,potentia=2
-alkahest:frost_flask	item	recipe	aqua=5,terra=1,ordo=1,gelum=7
+alkahest:frost_flask	item	recipe	aqua=1,terra=2,ordo=1,gelum=2
 alkahest:herbal_paste	item	manual	herba=3,aqua=1
 alkahest:jar	block	recipe	terra=5,ordo=3
 alkahest:lightning_in_a_bottle	item	recipe	ignis=4,aer=4,metallum=12,potentia=5
@@ -63,11 +63,11 @@ alkahest:matrix_core	block	recipe	ignis=2,aqua=2,terra=17,aer=2,ordo=73,perditio
 alkahest:matrix_pedestal	block	recipe	ordo=9,metallum=16,potentia=10
 alkahest:matrix_pillar	block	recipe	ordo=7,metallum=8,potentia=6
 alkahest:miasma	item	recipe	aqua=2,mortuus=6,vitium=7
-alkahest:midas_elixir	item	recipe	ignis=2,aqua=1,terra=2,ordo=26,herba=3,metallum=9,lux=12,potentia=2
-alkahest:napalm	item	recipe	ignis=7,aqua=1,perditio=1,potentia=4
+alkahest:midas_elixir	item	recipe	ignis=2,aqua=1,terra=2,ordo=11,herba=3,metallum=4,lux=2,potentia=2
+alkahest:napalm	item	recipe	ignis=4,aqua=2,perditio=3,herba=1,potentia=2
 alkahest:philosophers_stone	item	manual	ordo=10,spiritus=10
 alkahest:purified_water	item	recipe	ignis=2,aqua=1,terra=2,ordo=1
-alkahest:purifying_flask	item	recipe	ignis=1,aqua=6,terra=2,ordo=8,herba=1
+alkahest:purifying_flask	item	recipe	ignis=2,aqua=4,terra=2,ordo=2,herba=2
 alkahest:salt	item	manual	ordo=2,terra=1,aqua=1
 alkahest:salt_ore	block	manual	terra=3,ordo=2,aqua=1
 alkahest:stabilizer_core	block	recipe	ignis=1,aqua=1,terra=16,aer=1,ordo=19,perditio=3,herba=3,metallum=28,lux=10,motus=6,potentia=7,vitium=2,spiritus=6
