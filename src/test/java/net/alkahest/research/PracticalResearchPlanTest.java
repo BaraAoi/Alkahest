@@ -16,6 +16,19 @@ class PracticalResearchPlanTest {
         assertEquals(ALL, resolve(0, ALL));
     }
 
+    @Test void newStorageAndStabilizerBranchesDoNotRelockOldProgress() {
+        long old = (1L << 26) - 1;
+        assertEquals(old, resolve(old, 0));
+        long observed = JAR | STABILIZER_RECEIVER | STABILIZER_CREST;
+        assertEquals(0, resolve(0, observed));
+        assertEquals(DISTILLERY | JAR, resolve(DISTILLERY, observed));
+        long completed = resolve(STABILIZER | DISTILLERY, observed);
+        assertEquals(STABILIZER | DISTILLERY | observed, completed);
+        assertEquals(STABILIZER, STEPS.get(27).parents());
+        assertEquals(STABILIZER, STEPS.get(28).parents());
+        assertNotEquals(STABILIZER_RECEIVER, STEPS.get(28).parents());
+    }
+
     @Test void legacyCompletedOnlyAndHighBits() {
         long old = (1L << 4) | (1L << 16) | (1L << 32) | (1L << 36) | (1L << 33);
         assertEquals(CAULDRON | MONOCLE | ALKAHEST | STABILIZER, migrate(old));

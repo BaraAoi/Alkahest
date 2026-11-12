@@ -1,4 +1,10 @@
 {
+  "screen.alkahest.practice.jar.title": "Essence Jar",
+  "screen.alkahest.practice.jar.recipe": "Craft seven glass panes in a U shape. The jar holds up to 100 units of one type; legacy mixtures can be separated. Obtain a jar to complete this branch.",
+  "screen.alkahest.practice.stabilizer_receiver.title": "Stabilizer Receiver",
+  "screen.alkahest.practice.stabilizer_receiver.recipe": "Craft four copper ingots in a cross around a glass block. Place it below the core; fill it by hand with a jar or pipe essence from bellows.",
+  "screen.alkahest.practice.stabilizer_crest.title": "Stabilizer Crest",
+  "screen.alkahest.practice.stabilizer_crest.recipe": "Craft four Ordo crystals in a cross around a gold ingot. Place the crest above the core; activate the completed tower with an amulet or an Alkahest vial.",
   "key.categories.alkahest": "Alkahest",
   "key.alkahest.atmosphere": "Show essence atmosphere",
   "screen.alkahest.monocle.cauldron_evaporation": "Evaporation in about %s s",

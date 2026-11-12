@@ -40,7 +40,8 @@ public final class JournalScreen extends Screen {
         node(9, 556, -90), node(10, 556, -30), node(11, 556, 30), node(12, 632, 30),
         node(13, 556, 90), node(14, 632, -60), node(15, 708, -90), node(16, 708, -30),
         node(17, 784, 0), node(18, 860, 0), node(19, 936, -108), node(20, 936, -72),
-        node(21, 936, -36), node(22, 936, 0), node(23, 936, 36), node(24, 936, 72), node(25, 936, 108)
+        node(21, 936, -36), node(22, 936, 0), node(23, 936, 36), node(24, 936, 72), node(25, 936, 108),
+        node(26, 176, 80), node(27, 480, -70), node(28, 480, 70)
     };
     private final long researchFlags;
     private boolean guide;

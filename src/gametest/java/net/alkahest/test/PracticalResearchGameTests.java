@@ -123,4 +123,35 @@ public class PracticalResearchGameTests implements FabricGameTest {
         c.assertTrue((PracticalResearchStorage.completed(player) & expected) == expected, "The expanded branch survives reload");
         c.complete();
     }
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void stabilizerAndJarBranchesRememberEarlyItemsWithoutRelocking(TestContext c) {
+        var player = c.createMockCreativeServerPlayerInWorld();
+        for (var step : PracticalResearchPlan.STEPS) for (String kind : new String[]{"observed", "completed"}) {
+            var entry = player.getServer().getAdvancementLoader().get(Alkahest.id("practice/" + kind + "_" + step.id()));
+            player.getAdvancementTracker().revokeCriterion(entry, "done");
+        }
+        var jar = new ItemStack(ModBlocks.JAR);
+        PracticalResearchStorage.observe(player, jar);
+        PracticalResearchStorage.observe(player, new ItemStack(ModBlocks.STABILIZER_RECEIVER));
+        PracticalResearchStorage.observe(player, new ItemStack(ModBlocks.STABILIZER_CREST));
+        long branches = PracticalResearchPlan.JAR | PracticalResearchPlan.STABILIZER_RECEIVER | PracticalResearchPlan.STABILIZER_CREST;
+        c.assertTrue((PracticalResearchStorage.observed(player) & branches) == branches, "All early items are remembered");
+        c.assertTrue((PracticalResearchStorage.completed(player) & branches) == 0 && jar.getCount() == 1, "Items are not consumed and parents are required");
+        var distillery = player.getServer().getAdvancementLoader().get(Alkahest.id("practice/completed_distillery"));
+        var stabilizer = player.getServer().getAdvancementLoader().get(Alkahest.id("practice/completed_stabilizer"));
+        var pipe = player.getServer().getAdvancementLoader().get(Alkahest.id("practice/completed_pipe"));
+        player.getAdvancementTracker().grantCriterion(distillery, "done");
+        player.getAdvancementTracker().grantCriterion(stabilizer, "done");
+        player.getAdvancementTracker().grantCriterion(pipe, "done");
+        PracticalResearchStorage.migrate(player); // resolves previously observed items
+        long actual = PracticalResearchStorage.completed(player);
+        c.assertTrue((actual & branches) == branches, "Independent early branches finish once their parents are completed");
+        c.assertTrue((actual & PracticalResearchPlan.PIPE) != 0, "Existing progress remains intact");
+        player.getAdvancementTracker().save();
+        player.getAdvancementTracker().reload(c.getWorld().getServer().getAdvancementLoader());
+        c.assertTrue((PracticalResearchStorage.completed(player) & (branches | PracticalResearchPlan.PIPE)) == (branches | PracticalResearchPlan.PIPE),
+            "New and existing completions survive reload");
+        c.complete();
+    }
+
 }

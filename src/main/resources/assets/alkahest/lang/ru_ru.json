@@ -1,4 +1,10 @@
 {
+  "screen.alkahest.practice.jar.title": "Банка для эссенций",
+  "screen.alkahest.practice.jar.recipe": "Семь стеклянных панелей буквой U на верстаке. Банка хранит до 100 единиц одного типа; старые смеси можно разделить. Получение банки завершит эту ветвь.",
+  "screen.alkahest.practice.stabilizer_receiver.title": "Приёмник Стабилизатора",
+  "screen.alkahest.practice.stabilizer_receiver.recipe": "Четыре медных слитка крестом вокруг блока стекла. Приёмник ставится под ядро; в него можно залить эссенцию банкой или подать её трубами из мехов.",
+  "screen.alkahest.practice.stabilizer_crest.title": "Навершие Стабилизатора",
+  "screen.alkahest.practice.stabilizer_crest.recipe": "Четыре кристалла Ordo крестом вокруг золотого слитка. Поставьте навершие над ядром; включите собранную башню амулетом или флаконом Алкагеста.",
   "key.categories.alkahest": "Alkahest",
   "key.alkahest.atmosphere": "Показать атмосферу эссенций",
   "screen.alkahest.monocle.cauldron_evaporation": "Испарение примерно через %s с",

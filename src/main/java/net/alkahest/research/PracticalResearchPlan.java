@@ -24,7 +24,8 @@ public final class PracticalResearchPlan {
     public static final long MATRIX = 1L << 17, PEDESTAL = 1L << 18, MIDAS = 1L << 19;
     public static final long NAPALM = 1L << 20, ACID = 1L << 21, MIASMA = 1L << 22, LIGHTNING = 1L << 23;
     public static final long FROST = 1L << 24, PURIFICATION = 1L << 25;
-    public static final long ALL = (1L << 26) - 1;
+    public static final long JAR = 1L << 26, STABILIZER_RECEIVER = 1L << 27, STABILIZER_CREST = 1L << 28;
+    public static final long ALL = (1L << 29) - 1;
 
     /** Legacy completion bits belong to EarlyResearch's saved advancement mapping. */
     public static final List<Step> STEPS = List.of(
@@ -53,7 +54,10 @@ public final class PracticalResearchPlan {
         new Step("miasma", "alkahest:miasma", MIASMA, PEDESTAL, 0),
         new Step("lightning", "alkahest:lightning_in_a_bottle", LIGHTNING, PEDESTAL, 0),
         new Step("frost", "alkahest:frost_flask", FROST, PEDESTAL, 0),
-        new Step("purification", "alkahest:purifying_flask", PURIFICATION, PEDESTAL, 0)
+        new Step("purification", "alkahest:purifying_flask", PURIFICATION, PEDESTAL, 0),
+        new Step("jar", "alkahest:jar", JAR, DISTILLERY, 0),
+        new Step("stabilizer_receiver", "alkahest:stabilizer_receiver", STABILIZER_RECEIVER, STABILIZER, 0),
+        new Step("stabilizer_crest", "alkahest:stabilizer_crest", STABILIZER_CREST, STABILIZER, 0)
     );
 
     public static Step forItem(String itemId) {
