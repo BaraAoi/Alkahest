@@ -98,6 +98,11 @@ public final class RecipeEssenceService {
 
     /** Actual alchemy machines consume both item inputs and the paid essences. */
     private static void addAlchemyRecipes(List<RecipeEssenceCalculator.Recipe> recipes) {
+        // Inventory mixing has no vanilla recipe JSON; account for both consumed inputs.
+        addAlchemyRecipe(recipes, "inventory_mix", 0, net.alkahest.registry.ModItems.NAPALM, 1,
+            List.of(net.alkahest.registry.ModItems.FIRE_DUST, net.minecraft.item.Items.SLIME_BALL), Map.of());
+        addAlchemyRecipe(recipes, "inventory_mix", 1, net.alkahest.registry.ModItems.ACID_BOMB, 1,
+            List.of(net.alkahest.registry.ModItems.CAUSTIC_SLIME, net.minecraft.item.Items.GUNPOWDER), Map.of());
         int index = 0;
         for (var recipe : net.alkahest.recipe.CauldronEssenceRecipes.all()) {
             addAlchemyRecipe(recipes, "cauldron", index++, recipe.result(), recipe.count(),
