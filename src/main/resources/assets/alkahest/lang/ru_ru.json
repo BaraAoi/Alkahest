@@ -520,5 +520,16 @@
   "message.alkahest.pipe_filter_changed": "Фильтр трубы: %s",
   "message.alkahest.pipe_filter_any": "любая эссенция",
   "tooltip.alkahest.pipe_invalid_filter": "Неподдерживаемый фильтр: при установке будет сброшен",
-  "message.alkahest.stabilizer_waiting_output": "Готово: ожидается подходящая банка."
+  "message.alkahest.stabilizer_waiting_output": "Готово: ожидается подходящая банка.",
+  "message.alkahest.pipe_valve.open": "всегда открыт",
+  "message.alkahest.pipe_valve.close_when_powered": "сигнал закрывает",
+  "message.alkahest.pipe_valve.open_when_powered": "сигнал открывает",
+  "message.alkahest.pipe_valve.closed": "всегда закрыт",
+  "message.alkahest.pipe_valve_open": "открыт",
+  "message.alkahest.pipe_valve_closed": "закрыт",
+  "message.alkahest.pipe_valve_changed": "Режим трубы: %s",
+  "message.alkahest.pipe_valve_status": "Клапан: %s · %s",
+  "message.alkahest.pipe_valve_item": "Режим клапана: %s",
+  "message.alkahest.pipe_network_unavailable": "Сеть недоступна: она может превышать предел %s труб или быть выгружена.",
+  "message.alkahest.pipe_ports": "Меха: %s · банки: %s · приёмники: %s · Трансмутаторы: %s"
 }

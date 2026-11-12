@@ -635,4 +635,33 @@ public class TransmutatorGameTests implements FabricGameTest {
         c.complete();
     }
 
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void closedValveBlocksWholePaymentUntilPowered(TestContext c) {
+        int y = CY + 48;
+        BlockPos pos = tower(c, y);
+        var core = (TransmutatorCoreBlockEntity)c.getWorld().getBlockEntity(pos);
+        installInput(c, core); core.wake();
+        c.setBlockState(CX + 1, y, CZ, ModBlocks.ALCHEMY_PIPE);
+        c.setBlockState(CX + 2, y, CZ, ModBlocks.ALCHEMY_PIPE);
+        BlockPos first = c.getAbsolutePos(new BlockPos(CX + 1, y, CZ));
+        var valve = (net.alkahest.block.entity.AlchemyPipeBlockEntity)c.getWorld().getBlockEntity(first.east());
+        valve.setValveMode(net.alkahest.block.entity.PipeValveMode.OPEN_WHEN_POWERED);
+        var metal = jar(c, CX + 1, y, CZ - 1, EssenceType.METALLUM, 10);
+        var ordo = jar(c, CX + 3, y, CZ, EssenceType.ORDO, 10);
+        run(c.getWorld(), pos, 110);
+        for (int i=0; i<100; i++) net.alkahest.block.entity.AlchemyPipeBlockEntity.pulse(c.getWorld(),first);
+        c.assertTrue(metal.contents().total()==10 && ordo.contents().total()==10
+            && core.getStack(TransmutatorCoreBlockEntity.OUTPUT).isEmpty()
+            && core.getStack(TransmutatorCoreBlockEntity.AMULET).get(ModDataComponents.ESSENCE_CHARGE)==4,
+            "Closed valve never consumes a partial price, an item or charge");
+        c.setBlockState(CX + 2, y - 1, CZ, net.minecraft.block.Blocks.REDSTONE_BLOCK);
+        net.alkahest.block.entity.AlchemyPipeBlockEntity.pulse(c.getWorld(),first);
+        c.assertTrue(metal.contents().total()==7 && ordo.contents().total()==8
+            && core.getStack(TransmutatorCoreBlockEntity.OUTPUT).isOf(Items.GOLD_INGOT)
+            && core.getStack(TransmutatorCoreBlockEntity.AMULET).get(ModDataComponents.ESSENCE_CHARGE)==3,
+            "Opening the valve commits the exact complete price once");
+        c.setBlockState(CX + 2, y - 1, CZ, net.minecraft.block.Blocks.AIR);
+        c.complete();
+    }
+
 }

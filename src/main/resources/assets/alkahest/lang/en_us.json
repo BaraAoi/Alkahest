@@ -520,5 +520,16 @@
   "message.alkahest.pipe_filter_changed": "Pipe filter: %s",
   "message.alkahest.pipe_filter_any": "any essence",
   "tooltip.alkahest.pipe_invalid_filter": "Unsupported filter: cleared on placement",
-  "message.alkahest.stabilizer_waiting_output": "Ready: waiting for a suitable jar."
+  "message.alkahest.stabilizer_waiting_output": "Ready: waiting for a suitable jar.",
+  "message.alkahest.pipe_valve.open": "always open",
+  "message.alkahest.pipe_valve.close_when_powered": "signal closes",
+  "message.alkahest.pipe_valve.open_when_powered": "signal opens",
+  "message.alkahest.pipe_valve.closed": "always closed",
+  "message.alkahest.pipe_valve_open": "open",
+  "message.alkahest.pipe_valve_closed": "closed",
+  "message.alkahest.pipe_valve_changed": "Pipe mode: %s",
+  "message.alkahest.pipe_valve_status": "Valve: %s · %s",
+  "message.alkahest.pipe_valve_item": "Valve mode: %s",
+  "message.alkahest.pipe_network_unavailable": "Network unavailable: it may exceed %s pipes or be unloaded.",
+  "message.alkahest.pipe_ports": "Bellows: %s · jars: %s · receivers: %s · Transmutators: %s"
 }

@@ -56,6 +56,7 @@ public class AlchemyPipeBlockEntity extends BlockEntity {
 
     private EssenceType flowing;
     private EssenceType filter;
+    private PipeValveMode valveMode = PipeValveMode.OPEN;
     private int activeTicks;
 
     public AlchemyPipeBlockEntity(BlockPos pos, BlockState state) {
@@ -77,6 +78,38 @@ public class AlchemyPipeBlockEntity extends BlockEntity {
             BlockState state = getCachedState();
             world.updateListeners(pos, state, state, Block.NOTIFY_LISTENERS);
         }
+    }
+
+    public PipeValveMode valveMode() { return valveMode; }
+
+    /** The setting is opt-in: unconfigured and pre-existing pipes ignore redstone. */
+    public boolean valveOpen() {
+        if (valveMode == PipeValveMode.OPEN) return true;
+        if (valveMode == PipeValveMode.CLOSED || world == null) return false;
+        // A solid neighbour can relay strong power from a block two steps away. Do not
+        // inspect an unloaded adjacent chunk merely to sample redstone: fail closed instead.
+        if (!world.isChunkLoaded(pos.add(-2, 0, -2)) || !world.isChunkLoaded(pos.add(-2, 0, 2))
+            || !world.isChunkLoaded(pos.add(2, 0, -2)) || !world.isChunkLoaded(pos.add(2, 0, 2))) return false;
+        return valveMode.allows(world.isReceivingRedstonePower(pos));
+    }
+
+    public void setValveMode(PipeValveMode value) {
+        if (value == null) throw new IllegalArgumentException("null valve mode");
+        if (valveMode == value) return;
+        valveMode = value;
+        markDirty();
+        if (world != null && !world.isClient)
+            world.updateListeners(pos, getCachedState(), getCachedState(), Block.NOTIFY_LISTENERS);
+    }
+
+    public void cycleValve(PlayerEntity player) {
+        setValveMode(valveMode.next());
+        player.sendMessage(Text.translatable("message.alkahest.pipe_valve_changed", valveMode.displayText()), true);
+    }
+
+    public Text valveStatus() {
+        return Text.translatable("message.alkahest.pipe_valve_status", valveMode.displayText(),
+            Text.translatable(valveOpen() ? "message.alkahest.pipe_valve_open" : "message.alkahest.pipe_valve_closed"));
     }
 
     /** Sneak-use a wand to cycle the filter, without spending charges. */
@@ -102,10 +135,18 @@ public class AlchemyPipeBlockEntity extends BlockEntity {
 
     public void describe(PlayerEntity player) {
         Network network = world == null ? null : Network.scan(world, pos);
-        int pipes = network == null ? 1 : network.pipes.size();
-        int containers = network == null ? 0 : network.ports.size();
-        player.sendMessage(Text.translatable("message.alkahest.pipe_status", pipes, containers), false);
+        if (network == null) {
+            player.sendMessage(Text.translatable("message.alkahest.pipe_network_unavailable", MAX_SEGMENTS), false);
+        } else {
+            player.sendMessage(Text.translatable("message.alkahest.pipe_status", network.pipes.size(), network.ports.size()), false);
+            long bellows = network.ports.stream().filter(DistilleryBellowsBlockEntity.class::isInstance).count();
+            long jars = network.ports.stream().filter(JarBlockEntity.class::isInstance).count();
+            long receivers = network.ports.stream().filter(StabilizerReceiverBlockEntity.class::isInstance).count();
+            long cores = network.ports.stream().filter(TransmutatorCoreBlockEntity.class::isInstance).count();
+            player.sendMessage(Text.translatable("message.alkahest.pipe_ports", bellows, jars, receivers, cores), false);
+        }
         player.sendMessage(Text.translatable("message.alkahest.pipe_filter", filterText()), false);
+        player.sendMessage(valveStatus(), false);
         if (active() && flowing != null) {
             player.sendMessage(Text.translatable("message.alkahest.pipe_flowing",
                 Text.literal(flowing.displayName()).styled(style -> style.withColor(flowing.color()))), false);
@@ -116,18 +157,21 @@ public class AlchemyPipeBlockEntity extends BlockEntity {
     @Override protected void addComponents(ComponentMap.Builder builder) {
         super.addComponents(builder);
         if (filter != null) builder.add(ModDataComponents.PIPE_FILTER, filter);
+        if (valveMode != PipeValveMode.OPEN) builder.add(ModDataComponents.PIPE_VALVE, valveMode);
     }
 
     @Override protected void readComponents(ComponentsAccess components) {
         super.readComponents(components);
         EssenceType saved = components.getOrDefault(ModDataComponents.PIPE_FILTER, EssenceType.VACUUM);
         setFilter(saved == EssenceType.VACUUM ? null : saved);
+        setValveMode(components.getOrDefault(ModDataComponents.PIPE_VALVE, PipeValveMode.OPEN));
     }
 
     @Override protected void writeNbt(NbtCompound nbt, RegistryWrapper.WrapperLookup registries) {
         super.writeNbt(nbt, registries);
         if (flowing != null) nbt.putString("Flowing", flowing.asString());
         if (filter != null) nbt.putString("Filter", filter.asString());
+        if (valveMode != PipeValveMode.OPEN) nbt.putString("Valve", valveMode.asString());
         nbt.putInt("ActiveTicks", activeTicks);
     }
 
@@ -135,6 +179,7 @@ public class AlchemyPipeBlockEntity extends BlockEntity {
         super.readNbt(nbt, registries);
         flowing = null;
         filter = null;
+        valveMode = PipeValveMode.fromId(nbt.getString("Valve"));
         for (EssenceType type : EssenceType.values()) {
             if (type != EssenceType.VACUUM && type.asString().equals(nbt.getString("Flowing"))) flowing = type;
             if (type != EssenceType.VACUUM && type.asString().equals(nbt.getString("Filter"))) filter = type;
@@ -362,7 +407,7 @@ public class AlchemyPipeBlockEntity extends BlockEntity {
         private boolean allows(World world, BlockPos pos, EssenceType type) {
             if (!pipeSet.contains(pos) || !world.isChunkLoaded(pos)) return false;
             if (!(world.getBlockEntity(pos) instanceof AlchemyPipeBlockEntity pipe)) return false;
-            return pipe.filter == null || pipe.filter == type;
+            return pipe.valveOpen() && (pipe.filter == null || pipe.filter == type);
         }
 
         /** Receivers win, then jars already holding the type, then empty jars. */

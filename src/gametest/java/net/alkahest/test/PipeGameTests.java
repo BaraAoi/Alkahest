@@ -612,4 +612,131 @@ public class PipeGameTests implements FabricGameTest {
         });
     }
 
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void redstoneModesAreOptInAndNeverLoseEssence(TestContext c) {
+        c.setBlockState(1,2,3,ModBlocks.DISTILLERY_BELLOWS);
+        c.setBlockState(2,2,3,ModBlocks.ALCHEMY_PIPE);
+        c.setBlockState(3,2,3,ModBlocks.JAR);
+        c.setBlockState(2,1,3,net.minecraft.block.Blocks.REDSTONE_BLOCK);
+        BlockPos p=c.getAbsolutePos(new BlockPos(2,2,3));
+        var pipe=(AlchemyPipeBlockEntity)c.getWorld().getBlockEntity(p);
+        var source=(DistilleryBellowsBlockEntity)c.getWorld().getBlockEntity(p.west());
+        var jar=(JarBlockEntity)c.getWorld().getBlockEntity(p.east());
+        source.accept(EssenceType.AQUA,20,.37f);
+        c.assertTrue(pipe.valveMode()==net.alkahest.block.entity.PipeValveMode.OPEN && pipe.valveOpen(), "Old pipes ignore redstone by default");
+        c.assertTrue(AlchemyPipeBlockEntity.pulse(c.getWorld(),p)==4, "Powered normal pipe still works");
+        pipe.setValveMode(net.alkahest.block.entity.PipeValveMode.CLOSE_WHEN_POWERED);
+        c.assertTrue(!pipe.valveOpen() && AlchemyPipeBlockEntity.pulse(c.getWorld(),p)==0
+            && source.amount()==16 && jar.contents().total()==4, "Powered close valve stops without spending essence");
+        c.setBlockState(2,1,3,net.minecraft.block.Blocks.AIR);
+        c.assertTrue(pipe.valveOpen() && AlchemyPipeBlockEntity.pulse(c.getWorld(),p)==4, "Removing power opens this valve");
+        pipe.setValveMode(net.alkahest.block.entity.PipeValveMode.OPEN_WHEN_POWERED);
+        c.assertTrue(!pipe.valveOpen() && AlchemyPipeBlockEntity.pulse(c.getWorld(),p)==0, "Inverse valve is normally closed");
+        c.setBlockState(2,1,3,net.minecraft.block.Blocks.REDSTONE_BLOCK);
+        c.assertTrue(pipe.valveOpen() && AlchemyPipeBlockEntity.pulse(c.getWorld(),p)==4, "Power opens inverse valve");
+        pipe.setValveMode(net.alkahest.block.entity.PipeValveMode.CLOSED);
+        c.assertTrue(!pipe.valveOpen() && AlchemyPipeBlockEntity.pulse(c.getWorld(),p)==0, "Manual shutoff ignores power");
+        c.assertTrue(source.amount()==8 && jar.contents().total()==12
+            && Math.abs(jar.contents().contents().getFirst().stability()-.37f)<.001f, "Every moved unit and its stability are preserved");
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void valvesAndFiltersUseAlternativeRoutes(TestContext c) {
+        c.setBlockState(1,2,3,ModBlocks.DISTILLERY_BELLOWS);
+        for(int x=2;x<=4;x++) { c.setBlockState(x,2,3,ModBlocks.ALCHEMY_PIPE); c.setBlockState(x,2,4,ModBlocks.ALCHEMY_PIPE); }
+        c.setBlockState(5,2,3,ModBlocks.JAR);
+        var world=c.getWorld(); BlockPos start=c.getAbsolutePos(new BlockPos(2,2,3));
+        var source=(DistilleryBellowsBlockEntity)world.getBlockEntity(start.west());
+        var jar=(JarBlockEntity)world.getBlockEntity(start.east(3));
+        var direct=(AlchemyPipeBlockEntity)world.getBlockEntity(start.east());
+        var alternate=(AlchemyPipeBlockEntity)world.getBlockEntity(start.east().south());
+        direct.setValveMode(net.alkahest.block.entity.PipeValveMode.CLOSED);
+        alternate.setFilter(EssenceType.IGNIS);
+        source.accept(EssenceType.AQUA,8,.4f);
+        c.assertTrue(AlchemyPipeBlockEntity.pulse(world,start)==0 && source.amount()==8 && jar.contents().total()==0,
+            "A closed shortcut and an incompatible alternate filter block without loss");
+        alternate.setFilter(EssenceType.AQUA);
+        c.assertTrue(AlchemyPipeBlockEntity.pulse(world,start)==4 && alternate.active() && !direct.active(),
+            "An allowed detour is chosen and only the actual route animates");
+        direct.setValveMode(net.alkahest.block.entity.PipeValveMode.OPEN);
+        alternate.setValveMode(net.alkahest.block.entity.PipeValveMode.CLOSED);
+        c.assertTrue(AlchemyPipeBlockEntity.pulse(world,start)==4 && jar.contents().total()==8 && source.empty(),
+            "Opening the shortcut and closing the detour resumes the remaining transfer");
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE, tickLimit = 80)
+    public void realPipeTickerRespondsToRedstone(TestContext c) {
+        int y=110;
+        c.setBlockState(1,y,3,ModBlocks.DISTILLERY_BELLOWS);
+        c.setBlockState(2,y,3,ModBlocks.ALCHEMY_PIPE);
+        c.setBlockState(3,y,3,ModBlocks.JAR);
+        BlockPos p=c.getAbsolutePos(new BlockPos(2,y,3));
+        var pipe=(AlchemyPipeBlockEntity)c.getWorld().getBlockEntity(p);
+        var source=(DistilleryBellowsBlockEntity)c.getWorld().getBlockEntity(p.west());
+        var jar=(JarBlockEntity)c.getWorld().getBlockEntity(p.east());
+        pipe.setValveMode(net.alkahest.block.entity.PipeValveMode.OPEN_WHEN_POWERED);
+        source.accept(EssenceType.ORDO,12,.5f);
+        c.runAtTick(10,()->{
+            c.assertTrue(source.amount()==12 && jar.contents().total()==0, "Real world ticker respects an unpowered valve");
+            c.setBlockState(2,y-1,3,net.minecraft.block.Blocks.REDSTONE_BLOCK);
+        });
+        c.runAtTick(20,()->{
+            c.assertTrue(source.empty() && jar.contents().total()==12, "Real world ticker resumes after redstone opens it");
+            c.setBlockState(2,y-1,3,net.minecraft.block.Blocks.AIR);
+            source.accept(EssenceType.ORDO,4,.5f);
+        });
+        c.runAtTick(30,()->{
+            c.assertTrue(source.amount()==4 && jar.contents().total()==12, "Removing signal stops later transfers");
+            c.setBlockState(1,y,3,net.minecraft.block.Blocks.AIR);
+            c.setBlockState(2,y,3,net.minecraft.block.Blocks.AIR);
+            c.setBlockState(3,y,3,net.minecraft.block.Blocks.AIR);
+            c.complete();
+        });
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE, tickLimit = 80)
+    public void valveControlsAndConfigurationSurviveMining(TestContext c) {
+        c.setBlockState(2,2,3,ModBlocks.ALCHEMY_PIPE);
+        var world=c.getWorld(); BlockPos p=c.getAbsolutePos(new BlockPos(2,2,3));
+        var pipe=(AlchemyPipeBlockEntity)world.getBlockEntity(p);
+        var player=c.createMockPlayer(GameMode.SURVIVAL);
+        player.setSneaking(true);
+        var hit=new BlockHitResult(Vec3d.ofCenter(p),Direction.UP,p,false);
+        world.getBlockState(p).onUse(world,player,hit);
+        c.assertTrue(pipe.valveMode()==net.alkahest.block.entity.PipeValveMode.CLOSE_WHEN_POWERED, "Sneak empty-hand click selects the first valve mode");
+        world.getBlockState(p).onUse(world,player,hit);
+        c.assertTrue(pipe.valveMode()==net.alkahest.block.entity.PipeValveMode.OPEN_WHEN_POWERED, "Repeated clicks cycle valve modes");
+        pipe.setFilter(EssenceType.ORDO);
+        var replica=new AlchemyPipeBlockEntity(p,pipe.getCachedState());
+        replica.readComponentlessNbt(pipe.toInitialChunkDataNbt(world.getRegistryManager()),world.getRegistryManager());
+        c.assertTrue(replica.valveMode()==pipe.valveMode() && replica.filter()==EssenceType.ORDO && pipe.toUpdatePacket()!=null,
+            "The mode and filter survive NBT and are included in client updates");
+        world.breakBlock(p,true);
+        c.runAtTick(5,()->{
+            var drops=world.getEntitiesByClass(net.minecraft.entity.ItemEntity.class,new net.minecraft.util.math.Box(p).expand(2),
+                e->e.getStack().isOf(ModBlocks.ALCHEMY_PIPE.asItem()));
+            c.assertTrue(drops.size()==1, "Mining returns one configured pipe");
+            var item=drops.getFirst().getStack().copy(); drops.getFirst().discard();
+            c.assertTrue(item.get(net.alkahest.registry.ModDataComponents.PIPE_VALVE)==net.alkahest.block.entity.PipeValveMode.OPEN_WHEN_POWERED
+                && item.get(net.alkahest.registry.ModDataComponents.PIPE_FILTER)==EssenceType.ORDO, "The item retains both settings");
+            c.assertFalse(ItemStack.areItemsAndComponentsEqual(item,new ItemStack(ModBlocks.ALCHEMY_PIPE)), "Differently configured pipes do not stack");
+            var slots=net.minecraft.util.collection.DefaultedList.ofSize(1,ItemStack.EMPTY); slots.set(0,item);
+            var nbt=new net.minecraft.nbt.NbtCompound();
+            net.minecraft.inventory.Inventories.writeNbt(nbt,slots,world.getRegistryManager());
+            var loaded=net.minecraft.util.collection.DefaultedList.ofSize(1,ItemStack.EMPTY);
+            net.minecraft.inventory.Inventories.readNbt(nbt,loaded,world.getRegistryManager());
+            var restoredItem=loaded.get(0);
+            BlockPos base=c.getAbsolutePos(new BlockPos(5,1,3)); world.setBlockState(base,net.minecraft.block.Blocks.STONE.getDefaultState());
+            player.setSneaking(false); player.setStackInHand(Hand.MAIN_HAND,restoredItem);
+            var placement=new BlockHitResult(Vec3d.ofCenter(base),Direction.UP,base,false);
+            c.assertTrue(((net.minecraft.item.BlockItem)restoredItem.getItem()).place(new net.minecraft.item.ItemPlacementContext(player,Hand.MAIN_HAND,restoredItem,placement)).isAccepted(), "Saved configured pipe can be placed");
+            var restored=(AlchemyPipeBlockEntity)world.getBlockEntity(base.up());
+            c.assertTrue(restored.valveMode()==net.alkahest.block.entity.PipeValveMode.OPEN_WHEN_POWERED && restored.filter()==EssenceType.ORDO,
+                "Placement restores both settings after inventory save");
+            c.complete();
+        });
+    }
+
 }

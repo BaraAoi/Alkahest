@@ -1,6 +1,7 @@
 package net.alkahest.item.custom;
 
 import net.alkahest.essence.EssenceType;
+import net.alkahest.block.entity.PipeValveMode;
 import net.alkahest.registry.ModDataComponents;
 import net.minecraft.block.Block;
 import net.minecraft.item.BlockItem;
@@ -17,12 +18,14 @@ public final class AlchemyPipeItem extends BlockItem {
 
     @Override public void appendTooltip(ItemStack stack, TooltipContext context, List<Text> tooltip, TooltipType type) {
         EssenceType filter = stack.get(ModDataComponents.PIPE_FILTER);
-        if (filter == null) return;
         if (filter == EssenceType.VACUUM) {
             tooltip.add(Text.translatable("tooltip.alkahest.pipe_invalid_filter").formatted(Formatting.RED));
-            return;
+        } else if (filter != null) {
+            tooltip.add(Text.translatable("message.alkahest.pipe_filter",
+                Text.literal(filter.displayName()).styled(style -> style.withColor(filter.color()))).formatted(Formatting.GRAY));
         }
-        tooltip.add(Text.translatable("message.alkahest.pipe_filter",
-            Text.literal(filter.displayName()).styled(style -> style.withColor(filter.color()))).formatted(Formatting.GRAY));
+        PipeValveMode mode = stack.getOrDefault(ModDataComponents.PIPE_VALVE, PipeValveMode.OPEN);
+        if (mode != PipeValveMode.OPEN)
+            tooltip.add(Text.translatable("message.alkahest.pipe_valve_item", mode.displayText()).formatted(Formatting.GRAY));
     }
 }

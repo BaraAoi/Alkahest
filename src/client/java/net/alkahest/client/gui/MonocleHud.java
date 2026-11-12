@@ -140,6 +140,7 @@ public final class MonocleHud {
             lines.add(Text.translatable("screen.alkahest.monocle.pipe_auto", pipe.active()
                 ? Text.translatable("screen.alkahest.monocle.working") : Text.translatable("screen.alkahest.monocle.idle")));
             lines.add(Text.translatable("message.alkahest.pipe_filter", pipe.filterText()));
+            lines.add(pipe.valveStatus());
             if (pipe.active() && pipe.flowing() != null) {
                 lines.add(Text.translatable("screen.alkahest.monocle.pipe_flowing",
                     Text.literal(pipe.flowing().displayName()).styled(style -> style.withColor(pipe.flowing().color()))));

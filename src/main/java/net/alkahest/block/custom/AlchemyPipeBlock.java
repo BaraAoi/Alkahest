@@ -92,7 +92,10 @@ public class AlchemyPipeBlock extends Block implements BlockEntityProvider {
         return ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
     }
     @Override protected ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, BlockHitResult hit) {
-        if (!world.isClient && world.getBlockEntity(pos) instanceof AlchemyPipeBlockEntity pipe) pipe.describe(player);
+        if (!world.isClient && world.getBlockEntity(pos) instanceof AlchemyPipeBlockEntity pipe) {
+            if (player.isSneaking() && player.getMainHandStack().isEmpty()) pipe.cycleValve(player);
+            else pipe.describe(player);
+        }
         return ActionResult.success(world.isClient);
     }
 }
