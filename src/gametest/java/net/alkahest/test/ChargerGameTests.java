@@ -115,4 +115,94 @@ public class ChargerGameTests implements FabricGameTest {
         context.complete();
     }
 
+    private static net.alkahest.block.entity.TransmutatorCoreBlockEntity tower(TestContext c, int x, int y, int z, int charge, boolean wake) {
+        c.setBlockState(x,y,z,ModBlocks.TRANSMUTATOR_CORE);
+        c.setBlockState(x,y+1,z,ModBlocks.TRANSMUTATOR_CHAMBER);
+        c.setBlockState(x,y+2,z,ModBlocks.TRANSMUTATOR_CROWN);
+        var core=(net.alkahest.block.entity.TransmutatorCoreBlockEntity)c.getWorld().getBlockEntity(c.getAbsolutePos(new BlockPos(x,y,z)));
+        var amulet=new ItemStack(ModItems.ALKAHEST_AMULET); amulet.set(ModDataComponents.ESSENCE_CHARGE,charge);
+        core.setStack(net.alkahest.block.entity.TransmutatorCoreBlockEntity.AMULET,amulet);
+        if (wake) core.wake();
+        return core;
+    }
+
+    @GameTest(templateName=EMPTY_STRUCTURE)
+    public void rechargesAwakenedMachineWithoutResettingProgress(TestContext c) {
+        int y=200;
+        c.setBlockState(2,y-1,3,ModBlocks.JAR);
+        BlockPos charger=c.getAbsolutePos(new BlockPos(2,y,3));
+        var jar=(JarBlockEntity)c.getWorld().getBlockEntity(charger.down());
+        jar.setContents(new JarContentsComponent(List.of(new EssenceStack(EssenceType.ORDO,4,.55f))));
+        var core=tower(c,5,y,3,35,true);
+        core.setStack(net.alkahest.block.entity.TransmutatorCoreBlockEntity.INPUT,new ItemStack(net.minecraft.item.Items.COPPER_INGOT));
+        for(int n=0;n<12;n++) net.alkahest.block.entity.TransmutatorCoreBlockEntity.tick(c.getWorld(),core.getPos(),core);
+        int before=core.progress();
+        c.assertTrue(before>0,"The machine is processing");
+        c.assertTrue(EssenceChargerBlockEntity.chargeMachineNearby(c.getWorld(),jar,charger)==core,"The awakened machine is selected");
+        var amulet=core.getStack(net.alkahest.block.entity.TransmutatorCoreBlockEntity.AMULET);
+        c.assertTrue(amulet.get(ModDataComponents.ESSENCE_CHARGE)==45 && jar.contents().total()==3,"One Ordo becomes ten charge");
+        c.assertTrue(core.progress()==before,"Charging does not restart processing");
+        var replica=new net.alkahest.block.entity.TransmutatorCoreBlockEntity(core.getPos(),core.getCachedState());
+        replica.readComponentlessNbt(core.toInitialChunkDataNbt(c.getWorld().getRegistryManager()),c.getWorld().getRegistryManager());
+        c.assertTrue(replica.getStack(net.alkahest.block.entity.TransmutatorCoreBlockEntity.AMULET).get(ModDataComponents.ESSENCE_CHARGE)==45
+            && core.toUpdatePacket()!=null,"Saved and client data include the charge");
+        amulet.set(ModDataComponents.ESSENCE_CHARGE,95); amulet.set(ModDataComponents.AMULET_USES_STEP,3);
+        EssenceChargerBlockEntity.chargeMachineNearby(c.getWorld(),jar,charger);
+        c.assertTrue(amulet.get(ModDataComponents.ESSENCE_CHARGE)==100 && amulet.get(ModDataComponents.AMULET_USES_STEP)==0,
+            "The charge is capped and a full amulet clears partial-use debt");
+        c.assertTrue(EssenceChargerBlockEntity.chargeMachineNearby(c.getWorld(),jar,charger)==null && jar.contents().total()==2,
+            "A full amulet cannot waste Ordo");
+        amulet.set(ModDataComponents.ESSENCE_CHARGE,0); core.sleep();
+        c.assertTrue(EssenceChargerBlockEntity.chargeMachineNearby(c.getWorld(),jar,charger)==null && jar.contents().total()==2,
+            "Dormant towers do not draw charge");
+        core.wake(); c.getWorld().setBlockState(core.getPos().up(2),net.minecraft.block.Blocks.AIR.getDefaultState());
+        c.assertTrue(EssenceChargerBlockEntity.chargeMachineNearby(c.getWorld(),jar,charger)==null && jar.contents().total()==2,
+            "An incomplete structure cannot draw charge");
+        var far=tower(c,2,y+33,3,0,true);
+        c.assertTrue(EssenceChargerBlockEntity.chargeMachineNearby(c.getWorld(),jar,charger)==null
+            && far.getStack(net.alkahest.block.entity.TransmutatorCoreBlockEntity.AMULET).get(ModDataComponents.ESSENCE_CHARGE)==0,
+            "A tower outside the cube is not charged");
+        c.complete();
+    }
+
+    @GameTest(templateName=EMPTY_STRUCTURE, tickLimit=100)
+    public void playerPriorityAndActualChargerTick(TestContext c) {
+        int y=280;
+        c.setBlockState(2,y-1,3,ModBlocks.JAR); c.setBlockState(2,y,3,ModBlocks.ESSENCE_CHARGER);
+        BlockPos pos=c.getAbsolutePos(new BlockPos(2,y,3));
+        var jar=(JarBlockEntity)c.getWorld().getBlockEntity(pos.down());
+        jar.setContents(new JarContentsComponent(List.of(new EssenceStack(EssenceType.ORDO,4,.5f))));
+        var core=tower(c,5,y,3,10,true);
+        var player=c.createMockPlayer(GameMode.SURVIVAL); player.setPosition(pos.getX()+1,pos.getY(),pos.getZ());
+        var wand=new ItemStack(ModItems.WANDS.get(EssenceType.ORDO)); wand.set(ModDataComponents.ESSENCE_CHARGE,90);
+        player.getInventory().setStack(0,wand);
+        c.assertTrue(EssenceChargerBlockEntity.chargeCycle(c.getWorld(),jar,pos,List.of(player)),"The cycle finds a target");
+        c.assertTrue(wand.get(ModDataComponents.ESSENCE_CHARGE)==100 && jar.contents().total()==3
+            && core.getStack(net.alkahest.block.entity.TransmutatorCoreBlockEntity.AMULET).get(ModDataComponents.ESSENCE_CHARGE)==10,
+            "A player is charged first and only one unit is spent");
+        c.runAtTick(25,()->{
+            c.assertTrue(core.getStack(net.alkahest.block.entity.TransmutatorCoreBlockEntity.AMULET).get(ModDataComponents.ESSENCE_CHARGE)>=20,
+                "The actual charger tick finds and charges the machine");
+            c.assertTrue(jar.contents().total()<=2,"Actual charging consumes matching Ordo");
+            c.complete();
+        });
+    }
+
+    @GameTest(templateName=EMPTY_STRUCTURE)
+    public void wrongEssenceAndEmptySlotNeverConsumeJar(TestContext c) {
+        int y=350;
+        c.setBlockState(2,y-1,3,ModBlocks.JAR); BlockPos pos=c.getAbsolutePos(new BlockPos(2,y,3));
+        var jar=(JarBlockEntity)c.getWorld().getBlockEntity(pos.down());
+        var original=new JarContentsComponent(List.of(new EssenceStack(EssenceType.AQUA,7,.4f)));
+        jar.setContents(original);
+        var core=tower(c,5,y,3,0,true);
+        c.assertTrue(EssenceChargerBlockEntity.chargeMachineNearby(c.getWorld(),jar,pos)==null && jar.contents().equals(original),
+            "A jar without Ordo is untouched");
+        jar.setContents(new JarContentsComponent(List.of(new EssenceStack(EssenceType.ORDO,2,.4f))));
+        core.removeStack(net.alkahest.block.entity.TransmutatorCoreBlockEntity.AMULET);
+        c.assertTrue(EssenceChargerBlockEntity.chargeMachineNearby(c.getWorld(),jar,pos)==null && jar.contents().total()==2,
+            "An empty machine slot cannot consume Ordo");
+        c.complete();
+    }
+
 }

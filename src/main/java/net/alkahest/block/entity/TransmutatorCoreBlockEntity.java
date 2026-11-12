@@ -155,6 +155,24 @@ public class TransmutatorCoreBlockEntity extends BlockEntity implements Inventor
         return result;
     }
 
+    /** A charger may replenish an installed amulet only in an assembled, active machine.
+     * Check adjacent chunks before inspecting a legacy platform so scanning never loads them.
+     */
+    public boolean acceptsExternalCharge() {
+        if (world == null || world.isClient || isRemoved()) return false;
+        if (verticalFormed()) return awake;
+        for (int dx = -1; dx <= 1; dx++) for (int dz = -1; dz <= 1; dz++) {
+            if (!world.isChunkLoaded(pos.add(dx, 0, dz))) return false;
+        }
+        return legacyFormed();
+    }
+
+    /** Notify inventory screens and the chamber renderer without restarting processing. */
+    public void installedAmuletCharged() {
+        markDirty();
+        syncAmulet();
+    }
+
     private boolean hasAmulet() {
         ItemStack amulet = stacks.get(AMULET);
         if (!(amulet.getItem() instanceof AlkahestAmuletItem)) return false;

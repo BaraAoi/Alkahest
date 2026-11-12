@@ -41,8 +41,21 @@ public class EssenceChargerBlockEntity extends BlockEntity {
         JarBlockEntity jar = findJar(world, pos);
         if (jar == null) return;
         var bounds = Box.of(Vec3d.ofCenter(pos), 64, 64, 64);
-        var result = chargeNearby(jar, pos, world.getEntitiesByClass(PlayerEntity.class, bounds, p -> true));
-        if (result != null) beam(server, pos, result.player(), result.essence());
+        chargeCycle(server, jar, pos, world.getEntitiesByClass(PlayerEntity.class, bounds, p -> true));
+    }
+
+    /** One success per cycle. Existing player behavior has priority over machines. */
+    public static boolean chargeCycle(ServerWorld world, JarBlockEntity jar, BlockPos pos,
+                                      Iterable<? extends PlayerEntity> players) {
+        var result = chargeNearby(jar, pos, players);
+        if (result != null) {
+            beam(world, pos, result.player().getPos().add(0, 1, 0), result.essence());
+            return true;
+        }
+        var machine = chargeMachineNearby(world, jar, pos);
+        if (machine == null) return false;
+        beam(world, pos, Vec3d.ofCenter(machine.getPos()).add(0, 1, 0), EssenceType.ORDO);
+        return true;
     }
 
     /** Prefer the jar below; only fall back to the old arrangement if there is none below. */
@@ -115,10 +128,45 @@ public class EssenceChargerBlockEntity extends BlockEntity {
         return null;
     }
 
-    private static void beam(ServerWorld world, BlockPos pos, PlayerEntity player, EssenceType essence) {
+    /** Locate a loaded, assembled Transmutator within the same 32-block cube as players.
+     * Iterating only existing block entities in already-loaded chunks avoids a 64³ block scan
+     * and never requests chunks merely to search for a charging target.
+     */
+    public static TransmutatorCoreBlockEntity chargeMachineNearby(ServerWorld world, JarBlockEntity jar, BlockPos charger) {
+        JarContentsComponent contents = jar.contents();
+        if (!net.alkahest.item.custom.JarItem.allowed(contents)
+            || contents.contents().stream().noneMatch(e -> e.type() == EssenceType.ORDO)) return null;
+        Box bounds = Box.of(Vec3d.ofCenter(charger), 64, 64, 64);
+        int minX = (charger.getX() - 32) >> 4, maxX = (charger.getX() + 32) >> 4;
+        int minZ = (charger.getZ() - 32) >> 4, maxZ = (charger.getZ() + 32) >> 4;
+        TransmutatorCoreBlockEntity best = null;
+        double bestDistance = Double.POSITIVE_INFINITY;
+        for (int cx = minX; cx <= maxX; cx++) for (int cz = minZ; cz <= maxZ; cz++) {
+            var chunk = world.getChunkManager().getWorldChunk(cx, cz, false);
+            if (chunk == null) continue;
+            for (BlockEntity entity : chunk.getBlockEntities().values()) {
+                if (!(entity instanceof TransmutatorCoreBlockEntity core) || !core.acceptsExternalCharge()) continue;
+                if (!bounds.contains(Vec3d.ofCenter(core.getPos()))) continue;
+                ItemStack stack = core.getStack(TransmutatorCoreBlockEntity.AMULET);
+                if (!(stack.getItem() instanceof AlkahestAmuletItem)
+                    || stack.getOrDefault(ModDataComponents.ESSENCE_CHARGE, 0) >= AlkahestAmuletItem.MAX_CHARGE) continue;
+                double distance = core.getPos().getSquaredDistance(charger);
+                if (best == null || distance < bestDistance
+                    || (distance == bestDistance && core.getPos().compareTo(best.getPos()) < 0)) {
+                    best = core;
+                    bestDistance = distance;
+                }
+            }
+        }
+        if (best == null || applyJarCharge(jar, contents, best.getStack(TransmutatorCoreBlockEntity.AMULET)) == null) return null;
+        best.installedAmuletCharged();
+        return best;
+    }
+
+    private static void beam(ServerWorld world, BlockPos pos, Vec3d end, EssenceType essence) {
         int color = essence.color();
         var dust = new DustParticleEffect(new Vector3f(((color >> 16) & 255) / 255f, ((color >> 8) & 255) / 255f, (color & 255) / 255f), .8f);
-        Vec3d start = Vec3d.ofCenter(pos).add(0, -.18, 0), end = player.getPos().add(0, 1, 0);
+        Vec3d start = Vec3d.ofCenter(pos).add(0, -.18, 0);
         int steps = Math.max(2, Math.min(48, (int)(start.distanceTo(end) * 2)));
         for (int i = 0; i <= steps; i++) {
             Vec3d at = start.lerp(end, (double)i / steps);
