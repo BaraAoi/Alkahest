@@ -219,4 +219,68 @@ public final class MidasStabilizerGameTests implements FabricGameTest {
         c.setBlockState(5,Y,2,Blocks.AIR); c.complete();
     }
 
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void pipeInputAndDisablingWaitingBatch(TestContext c) {
+        build(c);
+        receiver(c).setContents(essence(EssenceType.AQUA, 5, .5f));
+        target(c).setContents(essence(EssenceType.ORDO, 100, .5f));
+        core(c).setActivated(true);
+        for (int t = 1; t <= 200; t++) tick(c, false, t);
+        c.assertTrue(receiver(c).acceptFromPipe(new EssenceStack(EssenceType.AQUA, 3, .5f)) == 3
+            && receiver(c).waitingForOutput(), "Pipe input of the current type keeps its completed cycle");
+        c.assertTrue(receiver(c).acceptFromPipe(new EssenceStack(EssenceType.IGNIS, 2, .5f)) == 2
+            && receiver(c).progress() == 0, "Pipe input changing the first type starts a fresh cycle");
+        for (int t = 201; t <= 400; t++) tick(c, false, t);
+        c.assertTrue(receiver(c).waitingForOutput(), "The replacement type completes independently");
+        core(c).setActivated(false);
+        tick(c, false, 401);
+        c.assertTrue(receiver(c).progress() == 0 && receiver(c).contents().total() == 10,
+            "Switching off while waiting cancels work but preserves the contents");
+        c.setBlockState(5, Y, 2, Blocks.AIR);
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE, tickLimit = 500)
+    public void actualWorldTickerWaitsThenRecovers(TestContext c) {
+        // Use a separate height, so asynchronous tests cannot see other tests' output jars.
+        int y = 110;
+        c.setBlockState(2, y, 2, ModBlocks.STABILIZER_RECEIVER);
+        c.setBlockState(2, y + 1, 2, ModBlocks.STABILIZER_CORE);
+        c.setBlockState(2, y + 2, 2, ModBlocks.STABILIZER_CREST);
+        c.setBlockState(5, y, 2, ModBlocks.JAR);
+        BlockPos pos = c.getAbsolutePos(new BlockPos(2, y, 2));
+        var receiver = (StabilizerReceiverBlockEntity) c.getWorld().getBlockEntity(pos);
+        var core = (StabilizerCoreBlockEntity) c.getWorld().getBlockEntity(pos.up());
+        var target = (JarBlockEntity) c.getWorld().getBlockEntity(c.getAbsolutePos(new BlockPos(5, y, 2)));
+        receiver.setContents(essence(EssenceType.AQUA, 5, .5f));
+        target.setContents(essence(EssenceType.ORDO, 100, .5f));
+        core.setActivated(true);
+        c.runAtTick(220, () -> {
+            c.assertTrue(receiver.waitingForOutput() && receiver.contents().total() == 5,
+                "The registered world ticker reaches and retains readiness without an output jar");
+            receiver.acceptFromPipe(new EssenceStack(EssenceType.AQUA, 3, .5f));
+            c.assertTrue(receiver.waitingForOutput(), "A real running receiver retains completed work on top-up");
+            core.setActivated(false);
+        });
+        c.runAtTick(225, () -> {
+            c.assertTrue(receiver.progress() == 0 && receiver.contents().total() == 8,
+                "The real ticker resets readiness when switched off");
+            core.setActivated(true);
+        });
+        c.runAtTick(435, () -> {
+            c.assertTrue(receiver.waitingForOutput() && receiver.contents().total() == 8,
+                "The reactivated receiver completes a new cycle and waits again");
+            target.setContents(JarContentsComponent.EMPTY);
+        });
+        c.runAtTick(460, () -> {
+            c.assertTrue(target.contents().total() == 8 && receiver.contents().total() == 0 && receiver.progress() == 0,
+                "The real ticker retries and delivers promptly after the jar becomes available");
+            c.setBlockState(5, y, 2, Blocks.AIR);
+            c.setBlockState(2, y + 2, 2, Blocks.AIR);
+            c.setBlockState(2, y + 1, 2, Blocks.AIR);
+            c.setBlockState(2, y, 2, Blocks.AIR);
+            c.complete();
+        });
+    }
+
 }
