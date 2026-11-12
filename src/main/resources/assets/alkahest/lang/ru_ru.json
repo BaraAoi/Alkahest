@@ -192,7 +192,7 @@
   "message.alkahest.cauldron_no_essence_recipe": "Нет подходящего рецепта или не хватает эссенций.",
   "screen.alkahest.monocle.cauldron": "Эссенции в котле",
   "message.alkahest.cauldron_dissolved": "Растворено: %s",
-  "message.alkahest.cauldron_essence_full": "В котле максимум этой эссенции (256).",
+  "message.alkahest.cauldron_essence_full": "Достигнут технический предел хранения; предмет сохранён.",
   "message.alkahest.cauldron_missing_essences": "Не хватает эссенций: %s",
   "message.alkahest.cauldron_cannot_dissolve": "В этом предмете нет растворимых эссенций.",
   "screen.alkahest.monocle.cauldron_dry": "Нет воды",

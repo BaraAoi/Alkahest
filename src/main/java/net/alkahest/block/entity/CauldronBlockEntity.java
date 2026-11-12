@@ -46,7 +46,6 @@ import java.util.List;
 import java.util.Map;
 
 public class CauldronBlockEntity extends BlockEntity {
-    public static final int MAX_PER_TYPE = 256;
     public static final float RESIDUE_STABILITY = 0.05f;
     /** Prevent freshly produced world drops from immediately dissolving in a nearby cauldron. */
     public static final String RETURNED_ITEM_TAG = "alkahest_cauldron_returned";
@@ -90,7 +89,7 @@ public class CauldronBlockEntity extends BlockEntity {
 
     /** Expected loss rate per second, based on the total mixture, capped at 30. */
     public double essenceEvaporationRate() {
-        return Math.min(300, essences.values().stream().mapToInt(Integer::intValue).sum()) / 10.0;
+        return Math.min(300, essences.values().stream().mapToLong(Integer::longValue).sum()) / 10.0;
     }
 
     public CauldronBlockEntity(BlockPos pos, BlockState state) {
@@ -237,7 +236,7 @@ public class CauldronBlockEntity extends BlockEntity {
         if (world == null || world.isClient || !water || !isHeated() || stack.isEmpty()) return false;
         var additions = essencesOf(stack, world);
         if (additions.isEmpty()) return false;
-        if (additions.entrySet().stream().anyMatch(e -> essences.getOrDefault(e.getKey(), 0) + e.getValue() > MAX_PER_TYPE)) {
+        if (additions.entrySet().stream().anyMatch(e -> (long) essences.getOrDefault(e.getKey(), 0) + e.getValue() > Integer.MAX_VALUE)) {
             return false;
         }
         additions.forEach((type, amount) -> essences.merge(type, amount, Integer::sum));
@@ -538,33 +537,18 @@ public class CauldronBlockEntity extends BlockEntity {
         }
     }
 
-    /** Convert all possible residue 1:1 into separately typed 5% crystals; no bank mixtures. */
-    public int crystallize() {
-        if (world == null || world.isClient) return 0;
-        int produced = 0;
-        for (EssenceType type : EssenceType.values()) {
-            int remaining = essences.getOrDefault(type, 0);
-            Item crystal = ModItems.CRYSTALS.get(type);
-            if (crystal == null || remaining <= 0) continue;
-            while (remaining > 0) {
-                int count = Math.min(64, remaining);
-                ItemStack result = new ItemStack(crystal, count);
-                result.set(ModDataComponents.ESSENCE_STABILITY, RESIDUE_STABILITY);
-                ItemEntity output = new ItemEntity(world, pos.getX() + 0.5, pos.getY() + 1.15, pos.getZ() + 0.5, result, 0, 0.18, 0);
-                output.addCommandTag(RETURNED_ITEM_TAG);
-                output.setToDefaultPickupDelay();
-                if (!world.spawnEntity(output)) break;
-                remaining -= count;
-                produced += count;
-                if (remaining == 0) essences.remove(type);
-                else essences.put(type, remaining);
-            }
-        }
+    /** Queue all residue 1:1; large outputs are safely released over time even if the block is broken. */
+    public long crystallize() {
+        if (!(world instanceof ServerWorld server)) return 0;
+        var output = new EnumMap<EssenceType, Integer>(EssenceType.class);
+        essences.forEach((type, amount) -> { if (amount > 0 && ModItems.CRYSTALS.containsKey(type)) output.put(type, amount); });
+        long produced = output.values().stream().mapToLong(Integer::longValue).sum();
+        if (produced == 0) return 0;
+        CauldronResidueState.of(server).enqueue(server, pos, output);
+        output.keySet().forEach(essences::remove);
         mossStabilized = false;
-        if (produced > 0) {
-            syncEssences();
-            world.playSound(null, pos, SoundEvents.BLOCK_AMETHYST_BLOCK_CHIME, SoundCategory.BLOCKS, 0.8f, 1.2f);
-        }
+        syncEssences();
+        world.playSound(null, pos, SoundEvents.BLOCK_AMETHYST_BLOCK_CHIME, SoundCategory.BLOCKS, 0.8f, 1.2f);
         return produced;
     }
 
@@ -577,7 +561,7 @@ public class CauldronBlockEntity extends BlockEntity {
             message(player, "message.alkahest.need_heat");
             return false;
         }
-        int amount = crystallize();
+        long amount = crystallize();
         if (amount == 0) {
             message(player, "message.alkahest.cauldron_no_residue");
             return false;
@@ -662,8 +646,8 @@ public class CauldronBlockEntity extends BlockEntity {
         self.ejectLegacyItems();
         self.collectDroppedIngredients(world, pos);
         if (!self.essences.isEmpty()) {
-            int total = self.essences.values().stream().mapToInt(Integer::intValue).sum();
-            self.essenceEvaporationProgress += Math.min(total, 300);
+            long total = self.essences.values().stream().mapToLong(Integer::longValue).sum();
+            self.essenceEvaporationProgress += (int) Math.min(total, 300);
             boolean changed = false;
             EssenceType[] types = EssenceType.values();
             while (self.essenceEvaporationProgress >= 200 && !self.essences.isEmpty()) {
@@ -740,7 +724,7 @@ public class CauldronBlockEntity extends BlockEntity {
         for (EssenceType type : EssenceType.values()) {
             int amount = stored.getInt(type.asString());
             if (amount > 0 && type != EssenceType.VACUUM) {
-                essences.put(type, Math.min(amount, MAX_PER_TYPE));
+                essences.put(type, amount);
             }
         }
         // Rebuild the client mesh when dissolved essence tint updates without a blockstate change.

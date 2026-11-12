@@ -86,6 +86,7 @@ public final class AtmosphereEvents {
     }
     private static void tick(ServerWorld world) {
         AtmosphereState.of(world).tick(world);
+        net.alkahest.block.entity.CauldronResidueState.of(world).tick(world);
         for (ServerPlayerEntity player : world.getServer().getPlayerManager().getPlayerList()) {
             if (player.getServerWorld() != world) continue;
             long now = world.getTime();
@@ -132,7 +133,7 @@ public final class AtmosphereEvents {
         if (!ElementalEntity.canSpawn(entityType, world, SpawnReason.EVENT, target, world.random)) return false;
         ElementalEntity entity = entityType.spawn(world, target, SpawnReason.EVENT);
         if (entity == null) return false;
-        AtmosphereState.of(world).spend(world, origin, type, 5);
+        AtmosphereState.of(world).spend(world, origin, type, 20);
         return true;
     }
     private static void attempt(ServerWorld world, BlockPos origin) {

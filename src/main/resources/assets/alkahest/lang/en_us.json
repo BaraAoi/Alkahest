@@ -192,7 +192,7 @@
   "message.alkahest.cauldron_no_essence_recipe": "No matching recipe or insufficient essences.",
   "screen.alkahest.monocle.cauldron": "Essences in cauldron",
   "message.alkahest.cauldron_dissolved": "Dissolved: %s",
-  "message.alkahest.cauldron_essence_full": "The cauldron reached the 256 limit for this essence.",
+  "message.alkahest.cauldron_essence_full": "The storage numeric limit was reached; the item was preserved.",
   "message.alkahest.cauldron_missing_essences": "Missing essences: %s",
   "message.alkahest.cauldron_cannot_dissolve": "This item has no soluble essences.",
   "screen.alkahest.monocle.cauldron_dry": "No water",

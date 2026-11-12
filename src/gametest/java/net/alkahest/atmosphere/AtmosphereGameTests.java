@@ -360,8 +360,8 @@ public class AtmosphereGameTests implements FabricGameTest {
         var air = AtmosphereState.of(w); air.add(w, target, EssenceType.IGNIS, 40);
         double before = air.levels(w, target).get(EssenceType.IGNIS);
         c.assertTrue(AtmosphereEvents.spawnAt(w, origin, target, EssenceType.IGNIS, List.of(player)), "Valid player distance and clear loaded space allow manifestation");
-        c.assertTrue(Math.abs(air.levels(w, target).get(EssenceType.IGNIS) - before + 5) < 1e-8,
-            "Successful manifestation spends only 5 excess Ignis");
+        c.assertTrue(Math.abs(air.levels(w, target).get(EssenceType.IGNIS) - before + 20) < 1e-8,
+            "Successful manifestation spends only 20 excess Ignis");
         var mobs = w.getEntitiesByClass(net.alkahest.entity.ElementalEntity.class,
             new net.minecraft.util.math.Box(target).expand(24), e -> e.isAlive());
         c.assertTrue(mobs.size() == 1 && mobs.getFirst().essenceType() == EssenceType.IGNIS, "The selected elemental actually appears");

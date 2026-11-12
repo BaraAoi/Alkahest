@@ -156,7 +156,7 @@ public class CauldronGameTests implements FabricGameTest {
     }
 
     @GameTest(templateName = EMPTY_STRUCTURE, tickLimit = 60)
-    public void essenceCapLegacyMigrationAndSaveWork(TestContext context) {
+    public void unlimitedEssenceLegacyMigrationAndSaveWork(TestContext context) {
         CauldronBlockEntity cauldron = cauldron(context);
         fill(context, cauldron);
         BlockPos pos = context.getAbsolutePos(new BlockPos(3, 2, 3));
@@ -171,9 +171,10 @@ public class CauldronGameTests implements FabricGameTest {
         cauldron.readComponentlessNbt(oldNbt, registry);
 
         ItemStack diamond = new ItemStack(Items.DIAMOND);
-        for (int i = 0; i < 17; i++) context.assertTrue(cauldron.dissolveOne(diamond), "Diamond fits below the per-type cap");
-        context.assertTrue(cauldron.essences().getOrDefault(EssenceType.TERRA, 0) == 255 && !cauldron.dissolveOne(diamond),
-            "18th diamond is rejected atomically at the 256 cap");
+        for (int i = 0; i < 17; i++) context.assertTrue(cauldron.dissolveOne(diamond), "Diamond dissolves");
+        context.assertTrue(cauldron.essences().getOrDefault(EssenceType.TERRA, 0) == 255 && cauldron.dissolveOne(diamond),
+            "18th diamond can dissolve beyond the old 256 cap");
+        context.assertTrue(cauldron.essences().getOrDefault(EssenceType.TERRA, 0) == 270, "All 270 Terra retained");
         ItemEntity outside = item(context, 4.3, 2.5, 3.5, new ItemStack(Items.COAL));
         outside.setNoGravity(true);
 
@@ -184,7 +185,7 @@ public class CauldronGameTests implements FabricGameTest {
             context.assertTrue(ejected.size() == 1 && ejected.getFirst().getStack().getName().getString().equals("Legacy catalyst"),
                 "Items from old <= 0.1.24 cauldron saves must be safely ejected");
             context.assertFalse(cauldron.createNbt(registry).contains("Items"), "Ejected legacy slots must be cleaned from NBT");
-            context.assertTrue(cauldron.essences().getOrDefault(EssenceType.TERRA, 0) < 255, "The large stock evaporates while waiting");
+            context.assertTrue(cauldron.essences().getOrDefault(EssenceType.TERRA, 0) < 270, "The large stock evaporates while waiting");
             context.assertTrue(!outside.isRemoved() && outside.getStack().getCount() == 1, "Outside items are ignored");
             context.complete();
         });
@@ -225,5 +226,63 @@ public class CauldronGameTests implements FabricGameTest {
         context.assertTrue(player.getStackInHand(Hand.MAIN_HAND).getCount() == 1, "1 powder consumed");
         context.assertTrue(cauldron.essences().isEmpty(), "Residue cleared");
         context.complete();
+    }
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void highEssenceSavesEvaporatesAndRejectsOnlyNumericOverflow(TestContext c) {
+        var cauldron = cauldron(c); fill(c, cauldron); var registry = c.getWorld().getRegistryManager();
+        var nbt = cauldron.createNbt(registry); var stored = new NbtCompound();
+        stored.putInt("ignis", 1000000); stored.putInt("aqua", 900000); nbt.put("Essences", stored);
+        cauldron.readComponentlessNbt(nbt, registry);
+        c.assertTrue(cauldron.essences().get(EssenceType.IGNIS) == 1000000, "No 256 clamp on loading");
+        var saved = cauldron.createNbt(registry);
+        cauldron.readComponentlessNbt(saved, registry);
+        c.assertTrue(cauldron.essences().get(EssenceType.AQUA) == 900000, "Large quantities survive save/load");
+        c.assertTrue(cauldron.essenceEvaporationRate() == 30.0, "Evaporation rate remains capped independently of capacity");
+        stored.putInt("ignis", Integer.MAX_VALUE); stored.putInt("aqua", Integer.MAX_VALUE); nbt.put("Essences", stored);
+        cauldron.readComponentlessNbt(nbt, registry);
+        c.assertTrue(cauldron.essenceEvaporationRate() == 30.0, "Large mixed totals do not overflow evaporation arithmetic");
+        var crystal = new ItemStack(ModItems.CRYSTALS.get(EssenceType.IGNIS));
+        c.assertFalse(cauldron.dissolveOne(crystal), "Numeric overflow is refused instead of destroying an item");
+        c.assertTrue(cauldron.essences().get(EssenceType.IGNIS) == Integer.MAX_VALUE && crystal.getCount() == 1, "Overflow leaves contents and item unchanged");
+        CauldronBlockEntity.tick(c.getWorld(), cauldron.getPos(), cauldron);
+        c.assertTrue(cauldron.essences().get(EssenceType.IGNIS) == Integer.MAX_VALUE - 1, "Tick evaporation is correct above integer total range");
+        stored.putInt("ignis", 0); stored.putInt("aqua", 0); nbt.put("Essences",stored);
+        cauldron.readComponentlessNbt(nbt,registry); // do not leave extreme test residue in the world
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void largeResidueQueueIsBoundedAndSurvivesSaveAndBlockRemoval(TestContext c) {
+        var w=c.getWorld(); var cauldron=cauldron(c); fill(c,cauldron); BlockPos pos=cauldron.getPos();
+        var registry=w.getRegistryManager(); var nbt=cauldron.createNbt(registry); var stored=new NbtCompound();
+        stored.putInt("ignis",5000); nbt.put("Essences",stored); cauldron.readComponentlessNbt(nbt,registry);
+        // Destruction uses the same crystallization path as dust; the persistent queue outlives the block.
+        w.setBlockState(pos,Blocks.AIR.getDefaultState());
+        var area=new Box(pos).expand(2);
+        var first=w.getEntitiesByClass(ItemEntity.class,area,e->e.getStack().isOf(ModItems.CRYSTALS.get(EssenceType.IGNIS)));
+        int total=first.stream().mapToInt(e->e.getStack().getCount()).sum();
+        c.assertTrue(first.size()==64 && total==4096, "Large residue emits at most 64 stacks immediately");
+        for(var e:first) {
+            c.assertTrue(e.getCommandTags().contains(CauldronBlockEntity.RETURNED_ITEM_TAG), "Output is protected from re-dissolving");
+            c.assertTrue(Math.abs(e.getStack().getOrDefault(ModDataComponents.ESSENCE_STABILITY,0f)-.05f)<.0001, "Residue stability preserved");
+            e.discard();
+        }
+        var queue=net.alkahest.block.entity.CauldronResidueState.of(w);
+        var saved=queue.writeNbt(new NbtCompound(),registry);
+        var copy=net.alkahest.block.entity.CauldronResidueState.read(saved,registry);
+        copy.tick(w);
+        var second=w.getEntitiesByClass(ItemEntity.class,area,e->e.isAlive() && e.getStack().isOf(ModItems.CRYSTALS.get(EssenceType.IGNIS)));
+        int next=second.stream().mapToInt(e->e.getStack().getCount()).sum();
+        c.assertTrue(next==512 && second.size()==8, "Restored queue releases at most 8 stacks per tick");
+        second.forEach(ItemEntity::discard);
+        copy.tick(w);
+        var last=w.getEntitiesByClass(ItemEntity.class,area,e->e.isAlive() && e.getStack().isOf(ModItems.CRYSTALS.get(EssenceType.IGNIS)));
+        int tail=last.stream().mapToInt(e->e.getStack().getCount()).sum();
+        c.assertTrue(total+next+tail==5000, "All queued residue survives removal and save/load exactly once");
+        last.forEach(ItemEntity::discard);
+        // Drain original queue too, so this isolated test leaves no delayed duplicate outputs.
+        queue.tick(w); queue.tick(w);
+        w.getEntitiesByClass(ItemEntity.class,area,e->e.isAlive() && e.getStack().isOf(ModItems.CRYSTALS.get(EssenceType.IGNIS))).forEach(ItemEntity::discard);
+        c.complete();
     }
 }
