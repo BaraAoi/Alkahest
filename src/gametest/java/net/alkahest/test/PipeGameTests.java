@@ -739,4 +739,31 @@ public class PipeGameTests implements FabricGameTest {
         });
     }
 
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void valveCycleAndOldDataRemainCompatible(TestContext c) {
+        c.setBlockState(2,2,3,ModBlocks.ALCHEMY_PIPE);
+        BlockPos p=c.getAbsolutePos(new BlockPos(2,2,3));
+        var pipe=(AlchemyPipeBlockEntity)c.getWorld().getBlockEntity(p);
+        var player=c.createMockPlayer(GameMode.SURVIVAL); player.setSneaking(true);
+        var hit=new BlockHitResult(Vec3d.ofCenter(p),Direction.UP,p,false);
+        for (var mode : new net.alkahest.block.entity.PipeValveMode[]{
+            net.alkahest.block.entity.PipeValveMode.CLOSE_WHEN_POWERED,
+            net.alkahest.block.entity.PipeValveMode.OPEN_WHEN_POWERED,
+            net.alkahest.block.entity.PipeValveMode.CLOSED,
+            net.alkahest.block.entity.PipeValveMode.OPEN}) {
+            c.getWorld().getBlockState(p).onUse(c.getWorld(),player,hit);
+            c.assertTrue(pipe.valveMode()==mode, "Empty-hand interaction cycles all valve modes in order");
+        }
+        player.setStackInHand(Hand.MAIN_HAND,new ItemStack(net.minecraft.item.Items.STICK));
+        c.getWorld().getBlockState(p).onUse(c.getWorld(),player,hit);
+        c.assertTrue(pipe.valveMode()==net.alkahest.block.entity.PipeValveMode.OPEN, "A held item does not accidentally cycle the valve");
+        var old=pipe.createNbt(c.getWorld().getRegistryManager()); old.remove("Valve");
+        var restored=new AlchemyPipeBlockEntity(p,pipe.getCachedState());
+        restored.readComponentlessNbt(old,c.getWorld().getRegistryManager());
+        c.assertTrue(restored.valveMode()==net.alkahest.block.entity.PipeValveMode.OPEN, "Old saves default to unrestricted mode");
+        old.putString("Valve","unknown"); restored.readComponentlessNbt(old,c.getWorld().getRegistryManager());
+        c.assertTrue(restored.valveMode()==net.alkahest.block.entity.PipeValveMode.OPEN, "Unknown stored modes recover safely");
+        c.complete();
+    }
+
 }
