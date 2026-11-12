@@ -171,8 +171,9 @@ for block in ('MatrixPillarBlock', 'AlchemicalBrickBlock', 'MatrixCoreBlock'):
     text = (JAVA / f'block/custom/{block}.java').read_text()
     check('interactNearby' in text, f'{block} must answer to the same click as the core')
 check('MatrixRecipe.all()' in journal, 'the journal must list the matrix syntheses')
-check('recipes.size() * 17' in journal and 'rowY = top + i * 17 - scroll' in journal,
-      'the synthesis list must scroll instead of silently hiding later recipes')
+check('BookPagination.pages(MatrixRecipe.all().size(), listRows(21) * 2)' in journal
+      and 'BookPagination.index(guideSubPage, column * rows + row, rows * 2)' in journal,
+      'the synthesis index must paginate every recipe across both pages')
 for item in ('MIASMA', 'LIGHTNING_IN_A_BOTTLE', 'MIDAS_ELIXIR', 'NAPALM', 'ACID_BOMB', 'FROST_FLASK', 'PURIFYING_FLASK'):
     check(f'new ItemStack(ModItems.{item}' not in recipe_source, f'{item} must not be a Matrix output')
 check('StartedRecipe' in core and 'startedRecipeKey' in core, 'an active synthesis must retain its recipe identity')

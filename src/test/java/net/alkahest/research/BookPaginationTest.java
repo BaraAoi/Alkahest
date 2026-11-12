@@ -16,6 +16,22 @@ class BookPaginationTest {
             for (boolean line : seen) assertTrue(line);
         }
     }
+    @Test void illustratedAndTextSpreadsNeverLoseOrRepeatLines() {
+        for (int lines = 0; lines < 100; lines++) for (int rows = 1; rows < 12; rows++) for (int diagrams = 0; diagrams < 5; diagrams++) {
+            boolean[] seen = new boolean[lines];
+            int spreads = BookPagination.detailSpreads(lines, rows, diagrams);
+            assertTrue(spreads >= Math.max(1, diagrams));
+            for (int page = 0; page < spreads; page++) for (int column = 0; column < 2; column++) {
+                int start = BookPagination.detailStart(page, column, rows, diagrams);
+                if (page < diagrams && column == 1) { assertEquals(-1, start); continue; }
+                for (int i = 0; i < rows && start + i < lines; i++) {
+                    assertFalse(seen[start + i]); seen[start + i] = true;
+                }
+            }
+            for (boolean found : seen) assertTrue(found);
+        }
+    }
+
     @Test void zeroCapacityAndEmptyEntriesStillHaveAPage() {
         assertEquals(1, BookPagination.pages(0, 0));
         assertEquals(5, BookPagination.pages(5, 0));

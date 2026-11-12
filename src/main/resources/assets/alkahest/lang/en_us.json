@@ -491,5 +491,6 @@
   "screen.alkahest.practice.fire_dust.title": "Fire Dust",
   "screen.alkahest.practice.fire_dust.recipe": "Dissolve the indicated essences in a cauldron, then right-click with gunpowder. Throw the dust to ignite creatures and terrain, or mix it with a slime ball in your inventory for napalm. Beware of fire.",
   "screen.alkahest.practice.caustic_slime.title": "Caustic Slime",
-  "screen.alkahest.practice.caustic_slime.recipe": "Dissolve the indicated essences in a cauldron, then right-click with a slime ball. When thrown, caustic slime creates a slowing area. Mix it with gunpowder in your inventory to make an acid bomb."
+  "screen.alkahest.practice.caustic_slime.recipe": "Dissolve the indicated essences in a cauldron, then right-click with a slime ball. When thrown, caustic slime creates a slowing area. Mix it with gunpowder in your inventory to make an acid bomb.",
+  "screen.alkahest.journal.continued": "Continued"
 }
