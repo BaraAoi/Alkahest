@@ -329,6 +329,21 @@ public class PipeGameTests implements FabricGameTest {
         var replica=new AlchemyPipeBlockEntity(pos,pipe.getCachedState());
         replica.readComponentlessNbt(pipe.toInitialChunkDataNbt(c.getWorld().getRegistryManager()),c.getWorld().getRegistryManager());
         c.assertTrue(replica.filter()==EssenceType.MOTUS && pipe.toUpdatePacket()!=null,"Filter survives NBT and syncs");
+        c.getWorld().getBlockState(pos).onUseWithItem(crystal,c.getWorld(),player,Hand.MAIN_HAND,hit);
+        c.assertTrue(pipe.filter()==null && crystal.getCount()==3,"The same crystal clears the filter");
+        player.setSneaking(true);
+        var wand=new ItemStack(net.alkahest.registry.ModItems.WANDS.get(EssenceType.ORDO));
+        player.setStackInHand(Hand.MAIN_HAND,wand);
+        wand.useOnBlock(new net.minecraft.item.ItemUsageContext(player, Hand.MAIN_HAND, hit));
+        c.assertTrue(pipe.filter()==EssenceType.IGNIS
+            && wand.get(net.alkahest.registry.ModDataComponents.ESSENCE_CHARGE)==100,
+            "Sneak-use wand cycles without spending charge");
+        var amulet=new ItemStack(net.alkahest.registry.ModItems.ALKAHEST_AMULET);
+        player.setStackInHand(Hand.MAIN_HAND,amulet);
+        amulet.useOnBlock(new net.minecraft.item.ItemUsageContext(player, Hand.MAIN_HAND, hit));
+        c.assertTrue(pipe.filter()==EssenceType.AQUA
+            && amulet.get(net.alkahest.registry.ModDataComponents.ESSENCE_CHARGE)==100,
+            "Amulet also cycles without spending charge");
         pipe.setFilter(EssenceType.SPIRITUS); pipe.cycleFilter(player);
         c.assertTrue(pipe.filter()==null,"Cycle wraps to unrestricted without admitting Vacuum");
         pipe.cycleFilter(player);
@@ -336,6 +351,80 @@ public class PipeGameTests implements FabricGameTest {
         var oldNbt=new net.minecraft.nbt.NbtCompound(); oldNbt.putString("Filter","vacuum");
         replica.readComponentlessNbt(oldNbt,c.getWorld().getRegistryManager());
         c.assertTrue(replica.filter()==null,"Invalid old or unsupported filter safely defaults to unrestricted");
+        c.complete();
+    }
+
+    @GameTest(templateName=EMPTY_STRUCTURE)
+    public void unreachablePreferredJarDoesNotStarveAccessibleEmptyJar(TestContext c) {
+        c.setBlockState(1,2,3,ModBlocks.DISTILLERY_BELLOWS);
+        c.setBlockState(2,2,3,ModBlocks.ALCHEMY_PIPE);
+        c.setBlockState(3,2,3,ModBlocks.ALCHEMY_PIPE);
+        c.setBlockState(4,2,3,ModBlocks.JAR);
+        c.setBlockState(2,2,4,ModBlocks.ALCHEMY_PIPE);
+        c.setBlockState(2,2,5,ModBlocks.JAR);
+        BlockPos p=c.getAbsolutePos(new BlockPos(2,2,3));
+        var source=(DistilleryBellowsBlockEntity)c.getWorld().getBlockEntity(p.west());
+        var barred=(AlchemyPipeBlockEntity)c.getWorld().getBlockEntity(p.east());
+        var filled=(JarBlockEntity)c.getWorld().getBlockEntity(p.east(2));
+        var empty=(JarBlockEntity)c.getWorld().getBlockEntity(p.south(2));
+        filled.setContents(of(EssenceType.IGNIS,3,.4f)); barred.setFilter(EssenceType.AQUA);
+        source.accept(EssenceType.IGNIS,5,.6f);
+        c.assertTrue(AlchemyPipeBlockEntity.pulse(c.getWorld(),p)==4,"A reachable empty jar wins over an inaccessible filled jar");
+        c.assertTrue(filled.contents().total()==3 && empty.contents().total()==4 && source.amount()==1,
+            "No essence crosses a blocked segment or disappears");
+        c.complete();
+    }
+
+    @GameTest(templateName=EMPTY_STRUCTURE)
+    public void searchesEveryEntryPointOfAnEndpoint(TestContext c) {
+        c.setBlockState(2,2,3,ModBlocks.DISTILLERY_BELLOWS);
+        c.setBlockState(3,2,3,ModBlocks.ALCHEMY_PIPE);
+        c.setBlockState(2,2,4,ModBlocks.ALCHEMY_PIPE);
+        c.setBlockState(3,2,4,ModBlocks.ALCHEMY_PIPE);
+        c.setBlockState(4,2,4,ModBlocks.JAR);
+        BlockPos p=c.getAbsolutePos(new BlockPos(3,2,3));
+        var source=(DistilleryBellowsBlockEntity)c.getWorld().getBlockEntity(p.west());
+        var barred=(AlchemyPipeBlockEntity)c.getWorld().getBlockEntity(p);
+        var target=(JarBlockEntity)c.getWorld().getBlockEntity(p.south().east());
+        barred.setFilter(EssenceType.AQUA); source.accept(EssenceType.IGNIS,4,.5f);
+        c.assertTrue(AlchemyPipeBlockEntity.pulse(c.getWorld(),p)==4,"Another entry next to the source can reach the jar");
+        c.assertTrue(!barred.active() && target.contents().total()==4,"The disallowed entry stays unused");
+        c.complete();
+    }
+
+    @GameTest(templateName=EMPTY_STRUCTURE)
+    public void networkTicksOnlyOnceEvenIfSegmentsAreVisitedInAnyOrder(TestContext c) {
+        c.setBlockState(1,2,3,ModBlocks.DISTILLERY_BELLOWS);
+        c.setBlockState(2,2,3,ModBlocks.ALCHEMY_PIPE);
+        c.setBlockState(3,2,3,ModBlocks.ALCHEMY_PIPE);
+        c.setBlockState(4,2,3,ModBlocks.JAR);
+        BlockPos first=c.getAbsolutePos(new BlockPos(2,2,3));
+        var source=(DistilleryBellowsBlockEntity)c.getWorld().getBlockEntity(first.west());
+        var jar=(JarBlockEntity)c.getWorld().getBlockEntity(first.east(2));
+        source.accept(EssenceType.IGNIS,12,.5f);
+        c.assertTrue(AlchemyPipeBlockEntity.pulseOncePerTick(c.getWorld(),first.east())==4,
+            "A non-leader segment may scan the network first");
+        c.assertTrue(AlchemyPipeBlockEntity.pulseOncePerTick(c.getWorld(),first)==0,
+            "The leader does not run the same network again that tick");
+        c.assertTrue(source.amount()==8 && jar.contents().total()==4,"Exactly one transfer occurred");
+        c.complete();
+    }
+
+    @GameTest(templateName=EMPTY_STRUCTURE)
+    public void joiningAnAlreadyVisitedNetworkDefersItsNextTransfer(TestContext c) {
+        c.setBlockState(1,2,3,ModBlocks.DISTILLERY_BELLOWS);
+        c.setBlockState(2,2,3,ModBlocks.ALCHEMY_PIPE);
+        c.setBlockState(3,2,4,ModBlocks.ALCHEMY_PIPE);
+        c.setBlockState(4,2,4,ModBlocks.JAR);
+        BlockPos first=c.getAbsolutePos(new BlockPos(2,2,3));
+        var source=(DistilleryBellowsBlockEntity)c.getWorld().getBlockEntity(first.west());
+        var jar=(JarBlockEntity)c.getWorld().getBlockEntity(first.east(2).south());
+        source.accept(EssenceType.IGNIS,8,.5f);
+        c.assertTrue(AlchemyPipeBlockEntity.pulseOncePerTick(c.getWorld(),first)==0,"First isolated section has no target");
+        c.setBlockState(3,2,3,ModBlocks.ALCHEMY_PIPE);
+        c.assertTrue(AlchemyPipeBlockEntity.pulseOncePerTick(c.getWorld(),first.east().south())==0,
+            "Merging cannot cause a second transfer in the same tick");
+        c.assertTrue(source.amount()==8 && jar.contents().total()==0,"Deferred merge retains both contents");
         c.complete();
     }
 

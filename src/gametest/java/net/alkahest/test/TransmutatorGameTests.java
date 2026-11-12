@@ -585,4 +585,27 @@ public class TransmutatorGameTests implements FabricGameTest {
         c.complete();
     }
 
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void towerCombinesSeveralReachableJarsAndPreservesRemainderStability(TestContext c) {
+        int y = CY + 48;
+        BlockPos pos = tower(c, y);
+        var core = (TransmutatorCoreBlockEntity) c.getWorld().getBlockEntity(pos);
+        installInput(c, core); core.wake();
+        c.setBlockState(CX + 1, y, CZ, ModBlocks.ALCHEMY_PIPE);
+        c.setBlockState(CX + 2, y, CZ, ModBlocks.ALCHEMY_PIPE);
+        BlockPos pipe = c.getAbsolutePos(new BlockPos(CX + 1, y, CZ));
+        var first = jar(c, CX + 1, y, CZ - 1, EssenceType.METALLUM, 1);
+        var second = jar(c, CX + 2, y, CZ - 1, EssenceType.METALLUM, 10);
+        second.setContents(new JarContentsComponent(List.of(new EssenceStack(EssenceType.METALLUM,10,.72f))));
+        var ordo = jar(c, CX + 1, y, CZ + 1, EssenceType.ORDO, 10);
+        run(c.getWorld(), pos, 110);
+        net.alkahest.block.entity.AlchemyPipeBlockEntity.pulse(c.getWorld(), pipe);
+        c.assertTrue(first.contents().total()==0 && second.contents().total()==8 && ordo.contents().total()==8,
+            "The exact price is combined from multiple jars");
+        c.assertTrue(Math.abs(second.contents().contents().getFirst().stability()-.72f)<.001f,
+            "The remaining essence retains its stability");
+        c.assertTrue(core.getStack(TransmutatorCoreBlockEntity.OUTPUT).isOf(Items.GOLD_INGOT),"Operation completes");
+        c.complete();
+    }
+
 }

@@ -29,6 +29,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.WeakHashMap;
 
 /**
  * Self-routing essence line. Connected pipes form a network that looks for any container
@@ -43,6 +44,13 @@ public class AlchemyPipeBlockEntity extends BlockEntity {
     public static final int UNITS_PER_PULSE = 4;
     private static final int ACTIVE_TICKS = 6;
     private static final int MAX_SEGMENTS = 64;
+
+    /** Tick-local coordinates only; weak keys avoid retaining stopped/unloaded worlds. */
+    private static final Map<World, TickNetworks> TICK_NETWORKS = new WeakHashMap<>();
+    private static final class TickNetworks {
+        private long tick = Long.MIN_VALUE;
+        private final Set<BlockPos> visited = new HashSet<>();
+    }
 
     private EssenceType flowing;
     private EssenceType filter;
@@ -78,7 +86,7 @@ public class AlchemyPipeBlockEntity extends BlockEntity {
     }
 
     public void selectFilter(EssenceType value, PlayerEntity player) {
-        setFilter(value);
+        setFilter(filter == value ? null : value);
         player.sendMessage(Text.translatable("message.alkahest.pipe_filter_changed", filterText()), true);
     }
 
@@ -127,7 +135,29 @@ public class AlchemyPipeBlockEntity extends BlockEntity {
         if (world.isClient) return;
         if (world.getBlockEntity(pos) instanceof AlchemyPipeBlockEntity pipe) pipe.age(world, state);
         if (world.getTime() % PULSE_TICKS != 0) return;
-        pulse(world, pos);
+        pulseOncePerTick(world, pos);
+    }
+
+    /** Scan a loaded physical network once per world tick, even though every segment ticks.
+     * If two already-ticked networks are joined mid-tick, defer the joined network to the
+     * next pulse instead of allowing either side a second transfer in the same tick.
+     */
+    public static int pulseOncePerTick(World world, BlockPos pos) {
+        if (world.isClient) return 0;
+        TickNetworks tick = TICK_NETWORKS.computeIfAbsent(world, ignored -> new TickNetworks());
+        if (tick.tick != world.getTime()) {
+            tick.tick = world.getTime();
+            tick.visited.clear();
+        }
+        if (tick.visited.contains(pos)) return 0;
+        Network network = Network.scan(world, pos);
+        if (network == null) {
+            tick.visited.add(pos.toImmutable());
+            return 0;
+        }
+        boolean alreadyPulsed = network.pipes.stream().anyMatch(tick.visited::contains);
+        tick.visited.addAll(network.pipes);
+        return alreadyPulsed ? 0 : network.pulse(world);
     }
 
     /** Runs one transfer step for the network this pipe belongs to; only its leader acts. */
@@ -218,20 +248,20 @@ public class AlchemyPipeBlockEntity extends BlockEntity {
     }
 
     private static int portRemove(BlockEntity be, EssenceType type, int count) {
+        if (count <= 0) return 0;
         if (be instanceof DistilleryBellowsBlockEntity bellows) return bellows.drain(count);
         if (!(be instanceof JarBlockEntity jar)) return 0;
-        int removed = 0;
-        while (removed < count) {
-            JarContentsComponent contents = jar.contents();
-            EssenceStack item = contents.contents().stream()
-                .filter(entry -> entry.type() == type).findFirst().orElse(null);
-            if (item == null) break;
-            List<EssenceStack> remainder = new ArrayList<>(contents.contents());
-            remainder.remove(item);
-            if (item.amount() > 1) remainder.add(new EssenceStack(item.type(), item.amount() - 1, item.stability()));
-            jar.setContents(new JarContentsComponent(remainder));
-            removed++;
-        }
+        JarContentsComponent contents = jar.contents();
+        EssenceStack item = contents.contents().stream()
+            .filter(entry -> entry.type() == type).findFirst().orElse(null);
+        if (item == null) return 0;
+        int removed = Math.min(count, item.amount());
+        List<EssenceStack> remainder = new ArrayList<>(contents.contents());
+        remainder.remove(item);
+        if (item.amount() > removed)
+            remainder.add(new EssenceStack(item.type(), item.amount() - removed, item.stability()));
+        // One update per jar, not one dirty/network notification per essence unit.
+        jar.setContents(new JarContentsComponent(remainder));
         return removed;
     }
 
@@ -257,6 +287,11 @@ public class AlchemyPipeBlockEntity extends BlockEntity {
         private final List<BlockPos> pipes;
         private final List<BlockEntity> ports;
         private final Set<BlockPos> pipeSet;
+        // Per-pulse only: no world, topology or filter state is cached across ticks.
+        private final Map<RouteKey, RouteTree> routes = new HashMap<>();
+
+        private record RouteKey(BlockPos source, EssenceType type) { }
+        private record RouteTree(Map<BlockPos, BlockPos> previous, Map<BlockPos, Integer> distance) { }
 
         private Network(List<BlockPos> pipes, List<BlockEntity> ports) {
             this.pipes = pipes;
@@ -305,35 +340,52 @@ public class AlchemyPipeBlockEntity extends BlockEntity {
          */
         private List<BlockPos> route(World world, BlockEntity from, BlockEntity to, EssenceType type) {
             if (type == EssenceType.VACUUM) return List.of();
+            RouteTree tree = routes.computeIfAbsent(new RouteKey(from.getPos(), type), key -> buildRouteTree(world, key));
+            BlockPos end = null;
+            int best = Integer.MAX_VALUE;
+            for (Direction direction : Direction.values()) {
+                BlockPos candidate = to.getPos().offset(direction);
+                Integer distance = tree.distance().get(candidate);
+                if (distance != null && distance < best) {
+                    best = distance;
+                    end = candidate;
+                }
+            }
+            if (end == null) return List.of();
+            List<BlockPos> path = new ArrayList<>();
+            while (true) {
+                path.add(end);
+                BlockPos parent = tree.previous().get(end);
+                if (parent.equals(end)) return path;
+                end = parent;
+            }
+        }
+
+        /** A single breadth-first search serves all targets for this source and type. */
+        private RouteTree buildRouteTree(World world, RouteKey key) {
             Map<BlockPos, BlockPos> previous = new HashMap<>();
+            Map<BlockPos, Integer> distance = new HashMap<>();
             Deque<BlockPos> queue = new ArrayDeque<>();
             for (Direction direction : Direction.values()) {
-                BlockPos start = from.getPos().offset(direction);
-                if (allows(world, start, type) && !previous.containsKey(start)) {
+                BlockPos start = key.source().offset(direction);
+                if (allows(world, start, key.type()) && !previous.containsKey(start)) {
                     previous.put(start, start);
+                    distance.put(start, 0);
                     queue.add(start);
                 }
             }
             while (!queue.isEmpty()) {
                 BlockPos pos = queue.remove();
-                if (pos.getManhattanDistance(to.getPos()) == 1) {
-                    List<BlockPos> path = new ArrayList<>();
-                    while (true) {
-                        path.add(pos);
-                        BlockPos parent = previous.get(pos);
-                        if (parent.equals(pos)) return path;
-                        pos = parent;
-                    }
-                }
                 for (Direction direction : Direction.values()) {
                     BlockPos next = pos.offset(direction);
-                    if (!previous.containsKey(next) && allows(world, next, type)) {
+                    if (!previous.containsKey(next) && allows(world, next, key.type())) {
                         previous.put(next, pos);
+                        distance.put(next, distance.get(pos) + 1);
                         queue.add(next);
                     }
                 }
             }
-            return List.of();
+            return new RouteTree(previous, distance);
         }
 
         private boolean allows(World world, BlockPos pos, EssenceType type) {
