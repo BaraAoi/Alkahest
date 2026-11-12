@@ -923,4 +923,34 @@ public class PipeGameTests implements FabricGameTest {
         });
     }
 
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void directionalBranchUsesValidDetour(TestContext c) {
+        c.setBlockState(1,2,3,ModBlocks.DISTILLERY_BELLOWS);
+        for (int x=2;x<=4;x++) { c.setBlockState(x,2,3,ModBlocks.ALCHEMY_PIPE); c.setBlockState(x,2,4,ModBlocks.ALCHEMY_PIPE); }
+        c.setBlockState(5,2,3,ModBlocks.JAR);
+        var w=c.getWorld(); BlockPos p=c.getAbsolutePos(new BlockPos(2,2,3));
+        var source=(DistilleryBellowsBlockEntity)w.getBlockEntity(p.west());
+        var jar=(JarBlockEntity)w.getBlockEntity(p.east(3));
+        var blocked=(AlchemyPipeBlockEntity)w.getBlockEntity(p.east());
+        var startDetour=(AlchemyPipeBlockEntity)w.getBlockEntity(p.south());
+        var middleDetour=(AlchemyPipeBlockEntity)w.getBlockEntity(p.south().east());
+        var endDetour=(AlchemyPipeBlockEntity)w.getBlockEntity(p.south().east(2));
+        var end=(AlchemyPipeBlockEntity)w.getBlockEntity(p.east(2));
+        blocked.setDirection(net.alkahest.block.entity.PipeDirection.WEST);
+        startDetour.setDirection(net.alkahest.block.entity.PipeDirection.EAST);
+        middleDetour.setDirection(net.alkahest.block.entity.PipeDirection.EAST);
+        endDetour.setDirection(net.alkahest.block.entity.PipeDirection.NORTH);
+        end.setDirection(net.alkahest.block.entity.PipeDirection.EAST);
+        source.accept(EssenceType.ORDO,8,.5f);
+        c.assertTrue(AlchemyPipeBlockEntity.pulse(w,p)==4 && middleDetour.active() && !blocked.active(),
+            "The network follows an allowed directed detour instead of a reversed shortcut");
+        endDetour.setDirection(net.alkahest.block.entity.PipeDirection.EAST);
+        c.assertTrue(AlchemyPipeBlockEntity.pulse(w,p)==0 && source.amount()==4 && jar.contents().total()==4,
+            "Turning the only detour away closes the network without losing the remainder");
+        blocked.setDirection(net.alkahest.block.entity.PipeDirection.EAST);
+        c.assertTrue(AlchemyPipeBlockEntity.pulse(w,p)==4 && source.empty() && jar.contents().total()==8,
+            "Correcting the shortcut opens the path and delivers the remainder");
+        c.complete();
+    }
+
 }
