@@ -21,6 +21,7 @@ import net.minecraft.inventory.Inventory;
 import net.minecraft.inventory.SidedInventory;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtList;
@@ -45,7 +46,7 @@ public class DistilleryBlockEntity extends BlockEntity implements SidedInventory
     public static final int OUTPUT_START = 1, OUTPUT_END = 8, PENDING = 8, CATALYST = 9, SIZE = 10;
     public static final int RAW_DURATION = 1200;
     public static final int ALKAHEST_DURATION = 100;
-    private static final int[] INPUT_SLOTS = {0}, OUTPUT_SLOTS = {1, 2, 3, 4, 5, 6, 7};
+    private static final int[] INPUT_SLOTS = {0}, OUTPUT_AND_CATALYST_SLOTS = {1, 2, 3, 4, 5, 6, 7, CATALYST};
 
     // Slots 0..8 retain their historical NBT indices; slot 9 holds the optional Alkahest solvent vial.
     private final DefaultedList<ItemStack> stacks = DefaultedList.ofSize(SIZE, ItemStack.EMPTY);
@@ -175,9 +176,16 @@ public class DistilleryBlockEntity extends BlockEntity implements SidedInventory
         if (slot == CATALYST) return acceptsCatalyst(stack);
         return false;
     }
-    @Override public int[] getAvailableSlots(Direction side) { return side == Direction.UP ? INPUT_SLOTS : OUTPUT_SLOTS; }
-    @Override public boolean canInsert(int slot, ItemStack stack, Direction side) { return side == Direction.UP && slot == 0 && canProcess(stack); }
-    @Override public boolean canExtract(int slot, ItemStack stack, Direction side) { return slot >= OUTPUT_START && slot < OUTPUT_END; }
+    @Override public int[] getAvailableSlots(Direction side) { return side == Direction.UP ? INPUT_SLOTS : OUTPUT_AND_CATALYST_SLOTS; }
+    @Override public boolean canInsert(int slot, ItemStack stack, Direction side) {
+        if (side == Direction.UP) return slot == 0 && canProcess(stack);
+        // A mode change during a raw cycle would otherwise reuse its accumulated progress.
+        return side != Direction.DOWN && slot == CATALYST && progress == 0 && acceptsCatalyst(stack);
+    }
+    @Override public boolean canExtract(int slot, ItemStack stack, Direction side) {
+        return side != Direction.UP && ((slot >= OUTPUT_START && slot < OUTPUT_END)
+            || (slot == CATALYST && stack.isOf(Items.GLASS_BOTTLE)));
+    }
     @Override public Text getDisplayName() { return Text.translatable("screen.alkahest.distillery.title"); }
     @Override public ScreenHandler createMenu(int syncId, PlayerInventory playerInventory, PlayerEntity player) {
         return new DistilleryScreenHandler(syncId, playerInventory, this, properties);

@@ -72,6 +72,42 @@ public class TransmutatorGameTests implements FabricGameTest {
         for (int i = 0; i < ticks; i++) TransmutatorCoreBlockEntity.tick(world, corePos, core);
     }
 
+    @GameTest(templateName = EMPTY_STRUCTURE, tickLimit = 80)
+    public void actualHoppersFeedInputAndTakeOnlyOutput(TestContext c) {
+        c.setBlockState(CX, CY, CZ, ModBlocks.TRANSMUTATOR_CORE);
+        var world = c.getWorld(); var pos = c.getAbsolutePos(new BlockPos(CX, CY, CZ));
+        var core = (TransmutatorCoreBlockEntity)world.getBlockEntity(pos);
+        var top = pos.up(); var bottom = pos.down();
+        world.setBlockState(top, net.minecraft.block.Blocks.HOPPER.getDefaultState());
+        world.setBlockState(bottom, net.minecraft.block.Blocks.HOPPER.getDefaultState());
+        var feeder = (net.minecraft.block.entity.HopperBlockEntity)world.getBlockEntity(top);
+        var collector = (net.minecraft.block.entity.HopperBlockEntity)world.getBlockEntity(bottom);
+        feeder.setStack(0, new ItemStack(Items.SAND, 3));
+        core.setStack(TransmutatorCoreBlockEntity.AMULET, new ItemStack(ModItems.ALKAHEST_AMULET));
+        core.setStack(TransmutatorCoreBlockEntity.OUTPUT, new ItemStack(Items.GLASS, 2));
+        c.runAtTick(35, () -> {
+            c.assertTrue(core.getStack(TransmutatorCoreBlockEntity.INPUT).getCount() == 3, "Top hopper feeds eligible inputs");
+            c.assertTrue(core.getStack(TransmutatorCoreBlockEntity.AMULET).isOf(ModItems.ALKAHEST_AMULET), "Installed amulet stays in place");
+            c.assertTrue(core.getStack(TransmutatorCoreBlockEntity.OUTPUT).isEmpty() && collector.getStack(0).getCount() == 2
+                && collector.getStack(0).isOf(Items.GLASS), "Bottom hopper extracts only the output");
+            c.assertFalse(core.canInsert(TransmutatorCoreBlockEntity.AMULET, new ItemStack(ModItems.ALKAHEST_AMULET), net.minecraft.util.math.Direction.UP), "Amulet is player-managed");
+            c.assertFalse(core.canExtract(TransmutatorCoreBlockEntity.INPUT, new ItemStack(Items.SAND), net.minecraft.util.math.Direction.DOWN), "Input cannot be extracted");
+            c.complete();
+        });
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void matchingInputTopUpsPreserveTransmutatorProgress(TestContext c) {
+        BlockPos pos = build(c); var core = (TransmutatorCoreBlockEntity)c.getWorld().getBlockEntity(pos);
+        installInput(c, core); run(c.getWorld(), pos, 5); int before = core.progress();
+        c.assertTrue(before > 0, "Machine has started");
+        core.setStack(TransmutatorCoreBlockEntity.INPUT, new ItemStack(Items.COPPER_INGOT, 5));
+        c.assertTrue(core.progress() == before, "Matching input top-up preserves progress");
+        core.setStack(TransmutatorCoreBlockEntity.INPUT, new ItemStack(Items.IRON_INGOT));
+        c.assertTrue(core.progress() == 0, "Changing input resets progress");
+        c.complete();
+    }
+
     @GameTest(templateName = EMPTY_STRUCTURE)
     public void midasSpeedCrossesEveryTransmutatorPrefillBoundary(TestContext c) {
         for (int phase = 0; phase < 5; phase++) {

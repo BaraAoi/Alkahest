@@ -102,13 +102,38 @@ public class DistilleryGameTests implements FabricGameTest {
         c.assertFalse(d.canExtract(8,pending,Direction.DOWN), "Hoppers cannot access pending slot");
         c.complete();
     }
+    @GameTest(templateName=EMPTY_STRUCTURE, tickLimit=80)
+    public void actualHoppersReplaceSpentCatalystAndCollectOutput(TestContext c) {
+        c.setBlockState(3,2,3,ModBlocks.DISTILLERY); var world=c.getWorld();
+        BlockPos pos=c.getAbsolutePos(new BlockPos(3,2,3));
+        var d=(DistilleryBlockEntity)world.getBlockEntity(pos);
+        BlockPos side=pos.west(), bottom=pos.down();
+        world.setBlockState(side,net.minecraft.block.Blocks.HOPPER.getDefaultState().with(net.minecraft.block.HopperBlock.FACING,Direction.EAST));
+        world.setBlockState(bottom,net.minecraft.block.Blocks.HOPPER.getDefaultState());
+        var feeder=(net.minecraft.block.entity.HopperBlockEntity)world.getBlockEntity(side);
+        var collector=(net.minecraft.block.entity.HopperBlockEntity)world.getBlockEntity(bottom);
+        d.setStack(9,new ItemStack(Items.GLASS_BOTTLE));
+        feeder.setStack(0,new ItemStack(ModItems.ALKAHEST_VIAL));
+        d.setStack(1,new ItemStack(ModItems.ASH));
+        c.runAtTick(35,()->{
+            c.assertTrue(d.getStack(9).isOf(ModItems.ALKAHEST_VIAL), "Side hopper installs replacement catalyst once bottle is removed");
+            c.assertTrue(collector.getStack(0).isOf(ModItems.ASH) && collector.getStack(1).isOf(Items.GLASS_BOTTLE), "Bottom hopper collects output and spent bottle");
+            c.assertFalse(d.canExtract(9,d.getStack(9),Direction.DOWN), "Active catalyst cannot be extracted");
+            c.complete();
+        });
+    }
+
     @GameTest(templateName=EMPTY_STRUCTURE)
     public void hopperRulesAndMerge(TestContext c) {
         c.setBlockState(3,2,3,ModBlocks.DISTILLERY); BlockPos pos=c.getAbsolutePos(new BlockPos(3,2,3));
         var d=(DistilleryBlockEntity)c.getWorld().getBlockEntity(pos);
         c.assertTrue(d.canInsert(0,new ItemStack(Items.APPLE),Direction.UP), "Hopper above can insert");
         c.assertFalse(d.canInsert(0,new ItemStack(Items.STONE),Direction.UP), "Hopper rejects stone");
-        c.assertFalse(d.canInsert(0,new ItemStack(Items.APPLE),Direction.NORTH), "Side cannot insert");
+        c.assertFalse(d.canInsert(0,new ItemStack(Items.APPLE),Direction.NORTH), "Side cannot insert input");
+        c.assertTrue(d.canInsert(DistilleryBlockEntity.CATALYST,new ItemStack(ModItems.ALKAHEST_VIAL),Direction.NORTH), "Side accepts charged catalyst while idle");
+        c.assertFalse(d.canInsert(DistilleryBlockEntity.CATALYST,new ItemStack(ModItems.ALKAHEST_VIAL),Direction.DOWN), "Bottom cannot insert catalyst");
+        d.setStack(0,new ItemStack(Items.APPLE)); DistilleryBlockEntity.tick(c.getWorld(),pos,d);
+        c.assertFalse(d.canInsert(DistilleryBlockEntity.CATALYST,new ItemStack(ModItems.ALKAHEST_VIAL),Direction.NORTH), "Catalyst cannot change mode during a raw cycle");
         d.setStack(0,new ItemStack(Items.APPLE,3));
         c.assertTrue(d.canInsert(0,new ItemStack(Items.APPLE),Direction.UP), "Hopper can add to input stack");
         c.assertFalse(d.canExtract(0,new ItemStack(Items.APPLE),Direction.DOWN), "Hopper cannot extract input");

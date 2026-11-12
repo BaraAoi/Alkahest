@@ -20,6 +20,7 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.inventory.Inventories;
 import net.minecraft.inventory.Inventory;
+import net.minecraft.inventory.SidedInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.network.packet.s2c.play.BlockEntityUpdateS2CPacket;
@@ -32,6 +33,7 @@ import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.Text;
 import net.minecraft.util.collection.DefaultedList;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Direction;
 import net.minecraft.world.World;
 import org.joml.Vector3f;
 
@@ -44,9 +46,10 @@ import java.util.Map;
  * that its eight pillars gather out of the surrounding jars — the units fly through the air as
  * coloured sparks instead of travelling through pipes.
  */
-public class TransmutatorCoreBlockEntity extends BlockEntity implements Inventory, NamedScreenHandlerFactory {
+public class TransmutatorCoreBlockEntity extends BlockEntity implements SidedInventory, NamedScreenHandlerFactory {
     public static final int DURATION = 100;
     public static final int INPUT = 0, AMULET = 1, OUTPUT = 2;
+    private static final int[] INPUT_SLOTS = {INPUT}, OUTPUT_SLOTS = {OUTPUT};
 
     public static final int STATUS_IDLE = 0, STATUS_WORKING = 1, STATUS_NO_ESSENCE = 2,
         STATUS_BLOCKED = 3, STATUS_UNFORMED = 4, STATUS_NO_AMULET = 5, STATUS_DORMANT = 6;
@@ -412,8 +415,10 @@ public class TransmutatorCoreBlockEntity extends BlockEntity implements Inventor
         return removed;
     }
     @Override public void setStack(int slot, ItemStack stack) {
+        ItemStack current = stacks.get(slot);
+        if (slot == AMULET || (slot == INPUT && (current.isEmpty() || stack.isEmpty()
+            || !ItemStack.areItemsAndComponentsEqual(current, stack)))) progress = 0;
         stacks.set(slot, stack);
-        if (slot != OUTPUT) progress = 0;
         markDirty();
         if (slot == AMULET) syncAmulet();
     }
@@ -443,6 +448,17 @@ public class TransmutatorCoreBlockEntity extends BlockEntity implements Inventor
             case AMULET -> stack.getItem() instanceof AlkahestAmuletItem;
             default -> false;
         };
+    }
+
+    /** Feed raw input from sides/top and extract only finished output from below.
+     * The amulet remains a player-managed slot and cannot be accidentally pulled out.
+     */
+    @Override public int[] getAvailableSlots(Direction side) { return side == Direction.DOWN ? OUTPUT_SLOTS : INPUT_SLOTS; }
+    @Override public boolean canInsert(int slot, ItemStack stack, Direction side) {
+        return side != Direction.DOWN && slot == INPUT && isValid(INPUT, stack);
+    }
+    @Override public boolean canExtract(int slot, ItemStack stack, Direction side) {
+        return side == Direction.DOWN && slot == OUTPUT;
     }
 
     @Override public Text getDisplayName() { return Text.translatable("screen.alkahest.transmutator.title"); }

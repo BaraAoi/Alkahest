@@ -17,6 +17,7 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.inventory.Inventories;
 import net.minecraft.inventory.Inventory;
+import net.minecraft.inventory.SidedInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.network.packet.s2c.play.BlockEntityUpdateS2CPacket;
@@ -29,6 +30,7 @@ import net.minecraft.screen.ScreenHandler;
 import net.minecraft.text.Text;
 import net.minecraft.util.collection.DefaultedList;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Direction;
 import net.minecraft.world.World;
 
 import java.util.ArrayList;
@@ -40,9 +42,10 @@ import java.util.List;
  * accumulates in those bellows instead of crystal slots. Unlike the crude tier-1 cube it
  * distils every essence type of the item, including composite ones.
  */
-public class Tier2DistilleryBlockEntity extends BlockEntity implements Inventory, NamedScreenHandlerFactory {
+public class Tier2DistilleryBlockEntity extends BlockEntity implements SidedInventory, NamedScreenHandlerFactory {
     public static final int DURATION = 300;
     public static final int MAX_BELLOWS = 8;
+    private static final int[] INPUT_SLOTS = {0};
     public static final int STATUS_IDLE = 0, STATUS_WORKING = 1, STATUS_BLOCKED = 2, STATUS_NO_BELLOWS = 3;
 
     private final DefaultedList<ItemStack> stacks = DefaultedList.ofSize(1, ItemStack.EMPTY);
@@ -226,13 +229,18 @@ public class Tier2DistilleryBlockEntity extends BlockEntity implements Inventory
         return removed;
     }
     @Override public void setStack(int slot, ItemStack stack) {
+        ItemStack current = stacks.get(slot);
+        if (current.isEmpty() || stack.isEmpty() || !ItemStack.areItemsAndComponentsEqual(current, stack)) progress = 0;
         stacks.set(slot, stack);
-        progress = 0;
         markDirty();
     }
     @Override public void clear() { stacks.clear(); pending.clear(); progress = 0; markDirty(); }
     @Override public boolean canPlayerUse(PlayerEntity player) { return Inventory.canPlayerUse(this, player); }
-    @Override public boolean isValid(int slot, ItemStack stack) { return accepts(stack, world); }
+    @Override public boolean isValid(int slot, ItemStack stack) { return slot == 0 && accepts(stack, world); }
+    /** Hopper access is input-only from all sides; liquid output leaves through bellows. */
+    @Override public int[] getAvailableSlots(Direction side) { return INPUT_SLOTS; }
+    @Override public boolean canInsert(int slot, ItemStack stack, Direction side) { return isValid(slot, stack); }
+    @Override public boolean canExtract(int slot, ItemStack stack, Direction side) { return false; }
 
     @Override public Text getDisplayName() { return Text.translatable("screen.alkahest.distillery_tier2.title"); }
     @Override public ScreenHandler createMenu(int syncId, PlayerInventory playerInventory, PlayerEntity player) {

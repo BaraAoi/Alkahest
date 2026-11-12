@@ -45,6 +45,31 @@ public class Tier2DistilleryGameTests implements FabricGameTest {
         for (int i = 0; i < ticks; i++) Tier2DistilleryBlockEntity.tick(c.getWorld(), corePos(c), core(c));
     }
 
+    @GameTest(templateName = EMPTY_STRUCTURE, tickLimit = 80)
+    public void actualHoppersFeedButCannotStealInput(TestContext c) {
+        build(c);
+        var world = c.getWorld(); var machine = core(c);
+        BlockPos feeder = c.getAbsolutePos(new BlockPos(2, 2, 3));
+        BlockPos collector = corePos(c).down();
+        world.setBlockState(feeder, net.minecraft.block.Blocks.HOPPER.getDefaultState().with(net.minecraft.block.HopperBlock.FACING, net.minecraft.util.math.Direction.EAST));
+        world.setBlockState(collector, net.minecraft.block.Blocks.HOPPER.getDefaultState());
+        var in = (net.minecraft.block.entity.HopperBlockEntity)world.getBlockEntity(feeder);
+        var out = (net.minecraft.block.entity.HopperBlockEntity)world.getBlockEntity(collector);
+        machine.setStack(0, new ItemStack(Items.APPLE));
+        distil(c, 10); int before = machine.progress();
+        machine.setStack(0, new ItemStack(Items.APPLE, 2));
+        c.assertTrue(machine.progress() == before, "Adding matching input preserves progress");
+        in.setStack(0, new ItemStack(Items.APPLE, 3));
+        c.runAtTick(35, () -> {
+            c.assertTrue(machine.getStack(0).getCount() == 5, "A real side hopper feeds the core");
+            c.assertTrue(out.isEmpty(), "A real bottom hopper cannot remove raw input");
+            c.assertTrue(machine.progress() > before, "Feeding does not restart the cycle");
+            machine.setStack(0, new ItemStack(Items.CARROT));
+            c.assertTrue(machine.progress() == 0, "Changing input still cancels progress");
+            c.complete();
+        });
+    }
+
     @GameTest(templateName = EMPTY_STRUCTURE)
     public void distilsEveryEssenceTypeIntoBellows(TestContext c) {
         build(c);
