@@ -21,6 +21,15 @@ import java.util.List;
 public class Tier2DistilleryGameTests implements FabricGameTest {
     private BlockPos corePos(TestContext c) { return c.getAbsolutePos(new BlockPos(3, 2, 3)); }
 
+    private ItemStack savedItem(TestContext c, ItemStack item) {
+        var slots=net.minecraft.util.collection.DefaultedList.ofSize(1,ItemStack.EMPTY); slots.set(0,item.copy());
+        var nbt=new net.minecraft.nbt.NbtCompound();
+        net.minecraft.inventory.Inventories.writeNbt(nbt,slots,c.getWorld().getRegistryManager());
+        var loaded=net.minecraft.util.collection.DefaultedList.ofSize(1,ItemStack.EMPTY);
+        net.minecraft.inventory.Inventories.readNbt(nbt,loaded,c.getWorld().getRegistryManager());
+        return loaded.get(0);
+    }
+
     private Tier2DistilleryBlockEntity core(TestContext c) {
         return (Tier2DistilleryBlockEntity) c.getWorld().getBlockEntity(corePos(c));
     }
@@ -141,7 +150,8 @@ public class Tier2DistilleryGameTests implements FabricGameTest {
         c.runAtTick(5,()->{
             var drops=world.getEntitiesByClass(net.minecraft.entity.ItemEntity.class,new net.minecraft.util.math.Box(pos).expand(2),e->e.getStack().isOf(ModBlocks.DISTILLERY_BELLOWS.asItem()));
             c.assertTrue(drops.size()==1 && drops.getFirst().getStack().get(net.alkahest.registry.ModDataComponents.DISTILLERY_CONTENTS).equals(expected),"One dropped bellow retains amount, type and stability");
-            ItemStack item=drops.getFirst().getStack().copy(); drops.getFirst().discard();
+            ItemStack item=savedItem(c,drops.getFirst().getStack()); drops.getFirst().discard();
+            c.assertTrue(expected.equals(item.get(net.alkahest.registry.ModDataComponents.DISTILLERY_CONTENTS)),"Bellows item contents serialize in a saved inventory");
             c.assertTrue(!ItemEssenceMap.safeToConsume(item) && !Tier2DistilleryBlockEntity.accepts(item,world),"Stored essence cannot be destroyed by alchemical recycling");
             BlockPos base=c.getAbsolutePos(new BlockPos(5,1,3)); world.setBlockState(base,net.minecraft.block.Blocks.STONE.getDefaultState());
             var player=c.createMockPlayer(GameMode.SURVIVAL); player.setStackInHand(Hand.MAIN_HAND,item);
@@ -164,7 +174,7 @@ public class Tier2DistilleryGameTests implements FabricGameTest {
         c.runAtTick(5,()->{
             var area=new net.minecraft.util.math.Box(pos).expand(3);
             var drops=world.getEntitiesByClass(net.minecraft.entity.ItemEntity.class,area,e->e.getStack().isOf(ModBlocks.DISTILLERY_TIER2.asItem()));
-            c.assertTrue(drops.size()==1,"Exactly one core drops"); ItemStack item=drops.getFirst().getStack().copy();
+            c.assertTrue(drops.size()==1,"Exactly one core drops"); ItemStack item=savedItem(c,drops.getFirst().getStack());
             var stored=item.get(net.alkahest.registry.ModDataComponents.DISTILLERY_CONTENTS);
             c.assertTrue(stored!=null && stored.contents().equals(queued),"Both queued fractions and their stability survive on core item");
             int apples=world.getEntitiesByClass(net.minecraft.entity.ItemEntity.class,area,e->e.getStack().isOf(Items.APPLE)).stream().mapToInt(e->e.getStack().getCount()).sum();
