@@ -170,7 +170,7 @@ public class CauldronBlockEntity extends BlockEntity {
             dirtyWater = false;
             setWater(true);
             evaporation = 0;
-                wand.consumeUse(player, hand);
+            wand.consumeUse(player, hand);
             if (world != null) {
                 world.playSound(null, pos, SoundEvents.ITEM_BUCKET_EMPTY, SoundCategory.BLOCKS, 0.8f, 1.15f);
             }
@@ -197,7 +197,7 @@ public class CauldronBlockEntity extends BlockEntity {
             dirtyWater = false;
             setWater(true);
             evaporation = 0;
-                amulet.consumeUseStack(player, stack);
+            amulet.consumeUseStack(player, stack);
             if (world != null) {
                 world.playSound(null, pos, SoundEvents.BLOCK_AMETHYST_BLOCK_CHIME, SoundCategory.BLOCKS, 0.8f, 1.2f);
             }

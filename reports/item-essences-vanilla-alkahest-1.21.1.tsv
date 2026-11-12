@@ -77,7 +77,7 @@ alkahest:transmutator_chamber	block	recipe	aqua=1,terra=2,ordo=10,metallum=8,lux
 alkahest:transmutator_core	block	recipe	ordo=13,metallum=16,potentia=12
 alkahest:transmutator_crown	block	recipe	ordo=15,metallum=8,lux=5,potentia=3
 alkahest:transmutator_pillar	block	recipe	ordo=3,metallum=4,potentia=3
-alkahest:water_faucet	block	recipe	terra=5,ordo=1,perditio=1,herba=2,metallum=8,potentia=2
+alkahest:water_faucet	block	recipe	aqua=1,terra=5,ordo=1,perditio=1,herba=2,metallum=4,potentia=1
 minecraft:acacia_boat	item	recipe	terra=10,herba=20
 minecraft:acacia_button	block	recipe	terra=2,herba=4
 minecraft:acacia_chest_boat	item	recipe	terra=26,herba=52
