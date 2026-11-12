@@ -766,4 +766,26 @@ public class PipeGameTests implements FabricGameTest {
         c.complete();
     }
 
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void redstoneSamplingNeverLoadsMissingChunks(TestContext c) {
+        BlockPos far=c.getAbsolutePos(new BlockPos(4096, 70, 4096));
+        var world=c.getWorld();
+        var pipe=new AlchemyPipeBlockEntity(far,ModBlocks.ALCHEMY_PIPE.getDefaultState());
+        pipe.setValveMode(net.alkahest.block.entity.PipeValveMode.CLOSE_WHEN_POWERED);
+        pipe.setWorld(world);
+        boolean[] before=new boolean[4]; int index=0;
+        for (int dx : new int[]{-2,2}) for (int dz : new int[]{-2,2}) {
+            BlockPos corner=far.add(dx,0,dz);
+            before[index++]=world.getChunkManager().isChunkLoaded(corner.getX()>>4,corner.getZ()>>4);
+        }
+        c.assertTrue(!pipe.valveOpen(), "A redstone-controlled valve fails closed when neighbouring chunks are unavailable");
+        index=0;
+        for (int dx : new int[]{-2,2}) for (int dz : new int[]{-2,2}) {
+            BlockPos corner=far.add(dx,0,dz);
+            c.assertTrue(before[index++]==world.getChunkManager().isChunkLoaded(corner.getX()>>4,corner.getZ()>>4),
+                "Sampling redstone does not load adjacent chunks");
+        }
+        c.complete();
+    }
+
 }
