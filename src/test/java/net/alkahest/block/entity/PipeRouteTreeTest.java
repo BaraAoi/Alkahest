@@ -83,9 +83,12 @@ class PipeRouteTreeTest {
         for (int length=1; length<=open.size(); length++) {
             java.util.Set<BlockPos> next = new java.util.HashSet<>();
             for (BlockPos candidate : open) {
-                if (!reached.contains(candidate) && frontier.stream().anyMatch(p -> p.getManhattanDistance(candidate)==1)) {
+                if (reached.contains(candidate)) continue;
+                for (BlockPos p : frontier) {
+                    if (p.getManhattanDistance(candidate)!=1) continue;
                     if (candidate.getManhattanDistance(target)==1) return length;
                     next.add(candidate);
+                    break;
                 }
             }
             if (next.isEmpty()) return -1;
