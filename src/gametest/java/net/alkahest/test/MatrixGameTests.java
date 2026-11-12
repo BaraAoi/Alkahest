@@ -363,6 +363,7 @@ public class MatrixGameTests implements FabricGameTest {
         oldSave.putBoolean("Started", true);
         oldSave.putString("StartedRecipe", "removed-old-bottle-recipe");
         var removedRecipeSave = new MatrixCoreBlockEntity(pos, core.getCachedState());
+        removedRecipeSave.setWorld(c.getWorld());
         removedRecipeSave.readComponentlessNbt(oldSave, registry);
         MatrixCoreBlockEntity.tick(c.getWorld(), pos, removedRecipeSave);
         c.assertFalse(removedRecipeSave.started(), "An in-flight removed recipe cancels on load");
