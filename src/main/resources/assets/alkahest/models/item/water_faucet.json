@@ -1,3 +1,6 @@
 {
-  "parent": "alkahest:block/water_faucet"
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "alkahest:item/water_faucet"
+  }
 }

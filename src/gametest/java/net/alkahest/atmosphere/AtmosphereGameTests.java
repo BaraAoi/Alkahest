@@ -185,49 +185,40 @@ public class AtmosphereGameTests implements FabricGameTest {
     }
 
     @GameTest(templateName = EMPTY_STRUCTURE)
-    public void idleCauldronGraduallyEvaporatesAndPersists(TestContext c) {
-        var w = c.getWorld(); c.setBlockState(3, 1, 3, Blocks.MAGMA_BLOCK);
-        c.setBlockState(3, 2, 3, ModBlocks.ALCHEMY_CAULDRON);
-        BlockPos pos = c.getAbsolutePos(new BlockPos(3, 2, 3));
-        var cauldron = (CauldronBlockEntity) w.getBlockEntity(pos);
-        var player = c.createMockPlayer(GameMode.SURVIVAL);
-        player.setStackInHand(Hand.MAIN_HAND, new ItemStack(Items.WATER_BUCKET)); cauldron.fill(player, Hand.MAIN_HAND);
-        for (int i = 0; i < 3; i++) c.assertTrue(cauldron.dissolveOne(new ItemStack(ModItems.CRYSTALS.get(EssenceType.IGNIS))), "Dissolves crystal");
-        double before = AtmosphereState.of(w).levels(w, pos).get(EssenceType.IGNIS);
-        for (int i = 0; i < 1399; i++) CauldronBlockEntity.tick(w, pos, cauldron);
-        c.assertTrue(cauldron.essences().get(EssenceType.IGNIS) == 3, "No loss during grace or first ten seconds");
-        var nbt = cauldron.createNbt(w.getRegistryManager());
-        var clientCopy = new CauldronBlockEntity(pos, cauldron.getCachedState());
-        clientCopy.readComponentlessNbt(cauldron.toUpdatePacket().getNbt(), w.getRegistryManager());
-        c.assertTrue(clientCopy.essenceEvaporationSeconds() == 1, "Evaporation countdown is synchronized to the monocle");
-        cauldron.readComponentlessNbt(nbt, w.getRegistryManager());
-        CauldronBlockEntity.tick(w, pos, cauldron);
-        c.assertTrue(cauldron.essences().get(EssenceType.IGNIS) == 2, "Exactly one unit evaporates after reload");
-        c.assertTrue(Math.abs(AtmosphereState.of(w).levels(w, pos).get(EssenceType.IGNIS) - before - 1) < 1e-8,
-            "The lost unit increases atmospheric Ignis");
-        nbt = cauldron.createNbt(w.getRegistryManager()); nbt.putBoolean("Water", false);
-        cauldron.readComponentlessNbt(nbt, w.getRegistryManager());
-        for (int i = 0; i < 200; i++) CauldronBlockEntity.tick(w, pos, cauldron);
-        c.assertTrue(cauldron.essences().get(EssenceType.IGNIS) == 1, "Leftover essence also evaporates without water");
+    public void cauldronEvaporationUsesTotalAndPersists(TestContext c) {
+        var w=c.getWorld(); c.setBlockState(3,2,3,ModBlocks.ALCHEMY_CAULDRON);
+        BlockPos pos=c.getAbsolutePos(new BlockPos(3,2,3));
+        var cauldron=(CauldronBlockEntity)w.getBlockEntity(pos);
+        var nbt=cauldron.createNbt(w.getRegistryManager());
+        var contents=new NbtCompound(); contents.putInt("aqua",200); contents.putInt("terra",200); nbt.put("Essences",contents);
+        cauldron.readComponentlessNbt(nbt,w.getRegistryManager());
+        c.assertTrue(cauldron.essenceEvaporationRate()==30.0,"Total mixture reaches 30 per second, not per individual type");
+        double aquaBefore=AtmosphereState.of(w).levels(w,pos).get(EssenceType.AQUA);
+        double terraBefore=AtmosphereState.of(w).levels(w,pos).get(EssenceType.TERRA);
+        for(int i=0;i<20;i++) CauldronBlockEntity.tick(w,pos,cauldron);
+        c.assertTrue(cauldron.essences().get(EssenceType.AQUA)==185 && cauldron.essences().get(EssenceType.TERRA)==185,
+            "Thirty units lost in one second and types share loss");
+        c.assertTrue(Math.abs(AtmosphereState.of(w).levels(w,pos).get(EssenceType.AQUA)-aquaBefore-15)<1e-8 &&
+            Math.abs(AtmosphereState.of(w).levels(w,pos).get(EssenceType.TERRA)-terraBefore-15)<1e-8,"Each lost unit enters atmosphere");
+        nbt=cauldron.createNbt(w.getRegistryManager()); contents=new NbtCompound(); contents.putInt("ignis",1); nbt.put("Essences",contents); nbt.putInt("EssenceEvaporationProgress",0);
+        cauldron.readComponentlessNbt(nbt,w.getRegistryManager());
+        for(int i=0;i<199;i++) CauldronBlockEntity.tick(w,pos,cauldron);
+        c.assertTrue(cauldron.essences().get(EssenceType.IGNIS)==1,"One unit evaporates in ten seconds even without water");
+        nbt=cauldron.createNbt(w.getRegistryManager()); cauldron.readComponentlessNbt(nbt,w.getRegistryManager());
+        CauldronBlockEntity.tick(w,pos,cauldron);
+        c.assertTrue(cauldron.essences().isEmpty(),"Fractional progress survives save/load and cannot underflow");
         c.complete();
     }
 
     @GameTest(templateName = EMPTY_STRUCTURE)
-    public void changingCauldronRestartsItsGracePeriod(TestContext c) {
-        var w = c.getWorld(); c.setBlockState(3, 1, 3, Blocks.MAGMA_BLOCK);
-        c.setBlockState(3, 2, 3, ModBlocks.ALCHEMY_CAULDRON);
-        BlockPos pos = c.getAbsolutePos(new BlockPos(3, 2, 3));
-        var cauldron = (CauldronBlockEntity) w.getBlockEntity(pos);
-        var player = c.createMockPlayer(GameMode.SURVIVAL);
-        player.setStackInHand(Hand.MAIN_HAND, new ItemStack(Items.WATER_BUCKET)); cauldron.fill(player, Hand.MAIN_HAND);
-        var crystal = new ItemStack(ModItems.CRYSTALS.get(EssenceType.AQUA));
-        c.assertTrue(cauldron.dissolveOne(crystal), "Initial essence dissolved");
-        for (int i = 0; i < 1300; i++) CauldronBlockEntity.tick(w, pos, cauldron);
-        c.assertTrue(cauldron.dissolveOne(crystal), "Adding essence counts as work");
-        for (int i = 0; i < 1399; i++) CauldronBlockEntity.tick(w, pos, cauldron);
-        c.assertTrue(cauldron.essences().get(EssenceType.AQUA) == 2, "Work restarts the complete grace and evaporation interval");
-        CauldronBlockEntity.tick(w, pos, cauldron);
-        c.assertTrue(cauldron.essences().get(EssenceType.AQUA) == 1, "Loss resumes only after the fresh interval");
+    public void mixtureRateIsBasedOnOverallAmount(TestContext c) {
+        var w=c.getWorld(); c.setBlockState(3,2,3,ModBlocks.ALCHEMY_CAULDRON);
+        BlockPos pos=c.getAbsolutePos(new BlockPos(3,2,3)); var cauldron=(CauldronBlockEntity)w.getBlockEntity(pos);
+        var nbt=cauldron.createNbt(w.getRegistryManager()); var contents=new NbtCompound();
+        contents.putInt("ignis",100); nbt.put("Essences",contents); cauldron.readComponentlessNbt(nbt,w.getRegistryManager());
+        double single=cauldron.essenceEvaporationRate();
+        contents.putInt("ignis",50); contents.putInt("terra",50); nbt.put("Essences",contents); cauldron.readComponentlessNbt(nbt,w.getRegistryManager());
+        c.assertTrue(single==10.0 && cauldron.essenceEvaporationRate()==single,"Splitting identical total across types does not slow loss");
         c.complete();
     }
 

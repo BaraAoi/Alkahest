@@ -82,12 +82,15 @@ public class CauldronBlockEntity extends BlockEntity {
     private boolean dirtyWater;
     private boolean mossStabilized;
     private int evaporation;
-    // Loaded ticks without a change to the dissolved essences; persisted across chunk unloads.
-    private int essenceIdleTicks;
+    // Fixed-point fractional unit (0..199), so 1 essence contributes 0.1 units/second.
+    private int essenceEvaporationProgress;
     private int evaporationCursor;
+    private boolean evaporationSyncPending;
 
-    /** Approximate seconds before the next lost unit; synced periodically to the monocle. */
-    public int essenceEvaporationSeconds() { return Math.max(0, (1400 - essenceIdleTicks + 19) / 20); }
+    /** Expected loss rate per second, based on the total mixture, capped at 30. */
+    public double essenceEvaporationRate() {
+        return Math.min(300, essences.values().stream().mapToInt(Integer::intValue).sum()) / 10.0;
+    }
 
     public CauldronBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.CAULDRON, pos, state);
@@ -142,7 +145,6 @@ public class CauldronBlockEntity extends BlockEntity {
         dirtyWater = false;
         setWater(true);
         evaporation = 0;
-        essenceIdleTicks = 0;
         if (!player.isCreative()) player.setStackInHand(hand, new ItemStack(Items.BUCKET));
         if (world != null) {
             world.playSound(null, pos, SoundEvents.ITEM_BUCKET_EMPTY, SoundCategory.BLOCKS, 0.8f, 1.0f);
@@ -157,7 +159,6 @@ public class CauldronBlockEntity extends BlockEntity {
         dirtyWater = false;
         setWater(true);
         evaporation = 0;
-        essenceIdleTicks = 0;
         markDirty();
         world.playSound(null, pos, SoundEvents.ITEM_BUCKET_EMPTY, SoundCategory.BLOCKS, 0.45f, 1.15f);
         return true;
@@ -169,8 +170,7 @@ public class CauldronBlockEntity extends BlockEntity {
             dirtyWater = false;
             setWater(true);
             evaporation = 0;
-            essenceIdleTicks = 0;
-            wand.consumeUse(player, hand);
+                wand.consumeUse(player, hand);
             if (world != null) {
                 world.playSound(null, pos, SoundEvents.ITEM_BUCKET_EMPTY, SoundCategory.BLOCKS, 0.8f, 1.15f);
             }
@@ -197,8 +197,7 @@ public class CauldronBlockEntity extends BlockEntity {
             dirtyWater = false;
             setWater(true);
             evaporation = 0;
-            essenceIdleTicks = 0;
-            amulet.consumeUseStack(player, stack);
+                amulet.consumeUseStack(player, stack);
             if (world != null) {
                 world.playSound(null, pos, SoundEvents.BLOCK_AMETHYST_BLOCK_CHIME, SoundCategory.BLOCKS, 0.8f, 1.2f);
             }
@@ -241,7 +240,6 @@ public class CauldronBlockEntity extends BlockEntity {
             return false;
         }
         additions.forEach((type, amount) -> essences.merge(type, amount, Integer::sum));
-        essenceIdleTicks = 0;
         if (stack.isOf(ModBlocks.ALCHEMICAL_MOSS.asItem())) {
             mossStabilized = true;
         }
@@ -264,7 +262,6 @@ public class CauldronBlockEntity extends BlockEntity {
     }
 
     private void deductEssences(Map<EssenceType, Integer> cost) {
-        essenceIdleTicks = 0;
         cost.forEach((type, amount) -> {
             int rest = essences.getOrDefault(type, 0) - amount;
             if (rest <= 0) essences.remove(type);
@@ -543,7 +540,6 @@ public class CauldronBlockEntity extends BlockEntity {
     /** Convert all possible residue 1:1 into separately typed 5% crystals; no bank mixtures. */
     public int crystallize() {
         if (world == null || world.isClient) return 0;
-        essenceIdleTicks = 0;
         int produced = 0;
         for (EssenceType type : EssenceType.values()) {
             int remaining = essences.getOrDefault(type, 0);
@@ -665,9 +661,12 @@ public class CauldronBlockEntity extends BlockEntity {
         self.ejectLegacyItems();
         self.collectDroppedIngredients(world, pos);
         if (!self.essences.isEmpty()) {
-            self.essenceIdleTicks = Math.min(1400, self.essenceIdleTicks + 1);
-            if (self.essenceIdleTicks >= 1400) { // 60 seconds grace, then one unit per 10 seconds
-                EssenceType[] types = EssenceType.values();
+            int total = self.essences.values().stream().mapToInt(Integer::intValue).sum();
+            self.essenceEvaporationProgress += Math.min(total, 300);
+            boolean changed = false;
+            EssenceType[] types = EssenceType.values();
+            while (self.essenceEvaporationProgress >= 200 && !self.essences.isEmpty()) {
+                self.essenceEvaporationProgress -= 200;
                 for (int i = 0; i < types.length; i++) {
                     int index = (self.evaporationCursor + i) % types.length;
                     EssenceType type = types[index]; int amount = self.essences.getOrDefault(type, 0);
@@ -675,15 +674,18 @@ public class CauldronBlockEntity extends BlockEntity {
                     if (amount == 1) self.essences.remove(type); else self.essences.put(type, amount - 1);
                     self.evaporationCursor = (index + 1) % types.length;
                     net.alkahest.atmosphere.AtmosphereEvents.emit(world, pos, type, 1);
-                    self.essenceIdleTicks = 1200;
-                    self.syncEssences();
+                    changed = true;
                     break;
                 }
             }
-            if (self.essenceIdleTicks % 100 == 0) self.syncEssences();
-            else if (self.essenceIdleTicks % 20 == 0) self.markDirty();
-        } else if (self.essenceIdleTicks != 0) {
-            self.essenceIdleTicks = 0; self.markDirty();
+            if (self.essences.isEmpty()) self.essenceEvaporationProgress = 0;
+            self.evaporationSyncPending |= changed;
+            if (self.evaporationSyncPending && (world.getTime() % 20 == 0 || self.essences.isEmpty())) {
+                self.evaporationSyncPending = false;
+                self.syncEssences();
+            } else self.markDirty();
+        } else if (self.essenceEvaporationProgress != 0) {
+            self.essenceEvaporationProgress = 0; self.markDirty();
         }
         if (self.water && self.isHeated() && self.essences.isEmpty()) {
             if (++self.evaporation >= 400) {
@@ -712,7 +714,7 @@ public class CauldronBlockEntity extends BlockEntity {
         nbt.putBoolean("DirtyWater", dirtyWater);
         nbt.putBoolean("MossStabilized", mossStabilized);
         nbt.putInt("Evaporation", evaporation);
-        nbt.putInt("EssenceIdleTicks", essenceIdleTicks);
+        nbt.putInt("EssenceEvaporationProgress", essenceEvaporationProgress);
         nbt.putInt("EssenceEvaporationCursor", evaporationCursor);
         NbtCompound stored = new NbtCompound();
         essences.forEach((type, amount) -> stored.putInt(type.asString(), amount));
@@ -730,7 +732,7 @@ public class CauldronBlockEntity extends BlockEntity {
         dirtyWater = water && nbt.getBoolean("DirtyWater");
         mossStabilized = water && nbt.getBoolean("MossStabilized");
         evaporation = nbt.getInt("Evaporation");
-        essenceIdleTicks = Math.max(0, Math.min(1399, nbt.getInt("EssenceIdleTicks")));
+        essenceEvaporationProgress = Math.max(0, Math.min(199, nbt.getInt("EssenceEvaporationProgress")));
         evaporationCursor = Math.floorMod(nbt.getInt("EssenceEvaporationCursor"), EssenceType.values().length);
         essences.clear();
         NbtCompound stored = nbt.getCompound("Essences");

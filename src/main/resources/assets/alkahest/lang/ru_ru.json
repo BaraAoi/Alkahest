@@ -13,7 +13,7 @@
   "screen.alkahest.practice.crystallization.recipe": "Брось пыль в нагретый котёл с водой или примени ПКМ, чтобы осадить остатки эссенций в нестабильные кристаллы.",
   "key.categories.alkahest": "Alkahest",
   "key.alkahest.atmosphere": "Показать атмосферу эссенций",
-  "screen.alkahest.monocle.cauldron_evaporation": "Испарение примерно через %s с",
+  "screen.alkahest.monocle.cauldron_evaporation": "Испарение: до %s ед./с",
   "message.alkahest.air_header": "Атмосфера области от %s, %s, %s (16×16×16):",
   "message.alkahest.air_value": "%s: %s (естественный фон: %s)",
   "screen.alkahest.monocle.matrix_air_stability": "Устойчивость Матрицы к текущей атмосфере: %s%%.",
@@ -503,9 +503,9 @@
   "message.alkahest.assembly_unknown": "Некоторые позиции не загружены или вне высоты мира; подсказка может быть неполной.",
   "block.alkahest.water_faucet": "Водный кран",
   "screen.alkahest.practice.water_faucet.title": "Водный кран",
-  "screen.alkahest.practice.water_faucet.recipe": "Поставь кран прямо над алхимическим котлом. ПКМ с кристаллом Aqua или водным жезлом устанавливает его в кран; ПКМ пустой рукой возвращает. Кран раз в секунду заполняет пустой котёл, не расходуя катализатор и заряды жезла. Уже наполненный котёл, грязная вода и растворённые эссенции не изменяются. Сигнал редстоуна останавливает подачу. При разрушении кран возвращает предмет.",
-  "message.alkahest.faucet_occupied": "В кране уже установлен катализатор. Забери его пустой рукой.",
-  "message.alkahest.faucet_needs_aqua": "Нужен кристалл Aqua или водный жезл.",
-  "message.alkahest.faucet_inserted": "Катализатор установлен. Пустая рука — забрать.",
-  "message.alkahest.faucet_removed": "Катализатор возвращён."
+  "screen.alkahest.practice.water_faucet.recipe": "Кран создаётся с кристаллом Aqua внутри и работает без дополнительных предметов. Поставь его над алхимическим котлом: он наполняет пустой котёл раз в секунду. ПКМ включает или выключает кран; пустое ведро наполняется водой при включённом кране. Редстоун также останавливает подачу. Грязная вода и растворённые эссенции не меняются. Если в старый кран был вставлен предмет, забери его Shift + ПКМ пустыми руками.",
+  "message.alkahest.faucet_removed": "Старый катализатор возвращён.",
+  "message.alkahest.faucet_on": "Кран открыт.",
+  "message.alkahest.faucet_off": "Кран закрыт или остановлен редстоуном.",
+  "message.alkahest.faucet_no_legacy": "Старого катализатора внутри нет."
 }

@@ -13,7 +13,7 @@
   "screen.alkahest.practice.crystallization.recipe": "Throw the powder into a heated cauldron of water or right-click it to turn leftover essences into unstable crystals.",
   "key.categories.alkahest": "Alkahest",
   "key.alkahest.atmosphere": "Show essence atmosphere",
-  "screen.alkahest.monocle.cauldron_evaporation": "Evaporation in about %s s",
+  "screen.alkahest.monocle.cauldron_evaporation": "Evaporation: up to %s units/s",
   "message.alkahest.air_header": "Atmosphere in cell from %s, %s, %s (16×16×16):",
   "message.alkahest.air_value": "%s: %s (natural baseline: %s)",
   "screen.alkahest.monocle.matrix_air_stability": "Matrix stability in the current atmosphere: %s%%.",
@@ -503,9 +503,9 @@
   "message.alkahest.assembly_unknown": "Some positions are unloaded or outside world height; the guide may be incomplete.",
   "block.alkahest.water_faucet": "Water Faucet",
   "screen.alkahest.practice.water_faucet.title": "Water Faucet",
-  "screen.alkahest.practice.water_faucet.recipe": "Place the faucet directly above an alchemy cauldron. Right-click with an Aqua crystal or water wand to install it; right-click empty-handed to retrieve it. The faucet fills an empty cauldron once per second without consuming the focus or wand charges. Filled cauldrons, dirty water and dissolved essences are untouched. Redstone pauses the flow. Breaking the faucet returns the focus.",
-  "message.alkahest.faucet_occupied": "A focus is already installed. Retrieve it with an empty hand.",
-  "message.alkahest.faucet_needs_aqua": "Requires an Aqua crystal or water wand.",
-  "message.alkahest.faucet_inserted": "Focus installed. Use an empty hand to retrieve it.",
-  "message.alkahest.faucet_removed": "Focus returned."
+  "screen.alkahest.practice.water_faucet.recipe": "The faucet is crafted with an Aqua crystal inside and needs no extra focus. Place it over an alchemy cauldron to fill it once per second when empty. Right-click to turn the faucet on or off; use an empty bucket to fill it when on. Redstone also pauses the flow. Dirty water and dissolved essences are untouched. Retrieve any focus from an older faucet with Shift + right-click and empty hands.",
+  "message.alkahest.faucet_removed": "Old focus returned.",
+  "message.alkahest.faucet_on": "Faucet opened.",
+  "message.alkahest.faucet_off": "Faucet closed or paused by redstone.",
+  "message.alkahest.faucet_no_legacy": "There is no old focus inside."
 }

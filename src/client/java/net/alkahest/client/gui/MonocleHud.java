@@ -83,7 +83,7 @@ public final class MonocleHud {
             }
             if (contents.isEmpty()) lines.add(Text.translatable("screen.alkahest.monocle.empty"));
             else {
-                lines.add(Text.translatable("screen.alkahest.monocle.cauldron_evaporation", cauldron.essenceEvaporationSeconds()));
+                lines.add(Text.translatable("screen.alkahest.monocle.cauldron_evaporation", String.format(java.util.Locale.ROOT, "%.1f", cauldron.essenceEvaporationRate())));
                 int shown = 0;
                 for (EssenceType type : EssenceType.values()) {
                     int amount = contents.getOrDefault(type, 0);

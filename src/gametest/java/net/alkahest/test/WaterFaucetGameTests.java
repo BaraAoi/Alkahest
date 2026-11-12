@@ -16,95 +16,98 @@ import net.minecraft.test.GameTest;
 import net.minecraft.test.TestContext;
 import net.minecraft.text.Text;
 import net.minecraft.util.Hand;
+import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
+import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.GameMode;
 
 public class WaterFaucetGameTests implements FabricGameTest {
-    @GameTest(templateName=EMPTY_STRUCTURE,tickLimit=160)
-    public void fillsRepeatedlyWithoutConsumingFocusAndRespectsRedstone(TestContext c) {
-        c.setBlockState(3,2,3,ModBlocks.ALCHEMY_CAULDRON);
-        c.setBlockState(3,3,3,ModBlocks.WATER_FAUCET);
+    private static BlockHitResult hit(BlockPos p) { return new BlockHitResult(Vec3d.ofCenter(p),Direction.UP,p,false); }
+    private static void empty(CauldronBlockEntity c, TestContext test) {
+        var nbt=c.createNbt(test.getWorld().getRegistryManager()); nbt.putBoolean("Water",false);
+        c.readComponentlessNbt(nbt,test.getWorld().getRegistryManager());
+    }
+    @GameTest(templateName=EMPTY_STRUCTURE,tickLimit=180)
+    public void builtInFocusToggleAndRedstone(TestContext c) {
+        c.setBlockState(3,2,3,ModBlocks.ALCHEMY_CAULDRON); c.setBlockState(3,3,3,ModBlocks.WATER_FAUCET);
         BlockPos pos=c.getAbsolutePos(new BlockPos(3,3,3));
-        var faucet=(WaterFaucetBlockEntity)c.getWorld().getBlockEntity(pos);
-        var cauldron=(CauldronBlockEntity)c.getWorld().getBlockEntity(pos.down());
+        var w=c.getWorld(); var cauldron=(CauldronBlockEntity)w.getBlockEntity(pos.down());
         var player=c.createMockPlayer(GameMode.SURVIVAL);
-        var wrong=new ItemStack(Items.DIAMOND); player.setStackInHand(Hand.MAIN_HAND,wrong);
-        faucet.insert(player,Hand.MAIN_HAND);
-        c.assertTrue(faucet.stacks().get(0).isEmpty() && wrong.getCount()==1,"Rejects unrelated items");
-        var focus=new ItemStack(ModItems.CRYSTALS.get(EssenceType.AQUA),2);
-        player.setStackInHand(Hand.MAIN_HAND,focus); faucet.insert(player,Hand.MAIN_HAND);
-        c.assertTrue(focus.getCount()==1 && faucet.stacks().get(0).getCount()==1 && c.getWorld().getBlockState(pos).get(WaterFaucetBlock.INSTALLED),"Installs exactly one focus");
-        var saved=faucet.createNbt(c.getWorld().getRegistryManager());
-        var restored=new WaterFaucetBlockEntity(pos,faucet.getCachedState());
-        restored.readComponentlessNbt(saved,c.getWorld().getRegistryManager());
-        c.assertTrue(restored.stacks().get(0).isOf(ModItems.CRYSTALS.get(EssenceType.AQUA)),"Focus persists in NBT");
         c.runAtTick(25,()->{
-            c.assertTrue(cauldron.hasWater() && faucet.stacks().get(0).getCount()==1,"Automatic water without consuming the focus");
-            var nbt=cauldron.createNbt(c.getWorld().getRegistryManager()); nbt.putBoolean("Water",false);
-            cauldron.readComponentlessNbt(nbt,c.getWorld().getRegistryManager());
-            c.setBlockState(4,3,3,Blocks.REDSTONE_BLOCK);
+            c.assertTrue(cauldron.hasWater(),"Built-in crystal fills without any inserted focus");
+            empty(cauldron,c); w.getBlockState(pos).onUse(w,player,hit(pos));
+            c.assertTrue(!w.getBlockState(pos).get(WaterFaucetBlock.ENABLED),"Right click closes");
         });
         c.runAtTick(55,()->{
-            c.assertTrue(!cauldron.hasWater(),"Redstone pauses filling");
-            c.setBlockState(4,3,3,Blocks.AIR);
+            c.assertTrue(!cauldron.hasWater(),"Closed faucet does not fill");
+            w.getBlockState(pos).onUse(w,player,hit(pos)); c.setBlockState(4,3,3,Blocks.REDSTONE_BLOCK);
         });
         c.runAtTick(85,()->{
-            c.assertTrue(cauldron.hasWater() && faucet.stacks().get(0).getCount()==1,"Fills again after redstone removed");
-            var nbt=cauldron.createNbt(c.getWorld().getRegistryManager()); nbt.putBoolean("DirtyWater",true);
-            cauldron.readComponentlessNbt(nbt,c.getWorld().getRegistryManager());
+            c.assertTrue(!cauldron.hasWater(),"Redstone pauses an open faucet"); c.setBlockState(4,3,3,Blocks.AIR);
         });
         c.runAtTick(115,()->{
-            c.assertTrue(cauldron.isDirtyWater(),"Does not clean or replace dirty water");
-            faucet.take(player);
-            c.assertTrue(faucet.stacks().get(0).isEmpty() && !c.getWorld().getBlockState(pos).get(WaterFaucetBlock.INSTALLED),"Focus can be removed and appearance resets");
-            c.complete();
+            c.assertTrue(cauldron.hasWater(),"Open faucet refills after redstone removed");
+            var nbt=cauldron.createNbt(w.getRegistryManager()); nbt.putBoolean("DirtyWater",true);
+            cauldron.readComponentlessNbt(nbt,w.getRegistryManager());
         });
+        c.runAtTick(145,()->{ c.assertTrue(cauldron.isDirtyWater(),"Dirty water is not replaced"); c.complete(); });
+    }
+
+    @GameTest(templateName=EMPTY_STRUCTURE)
+    public void bucketsRespectStateAndInventory(TestContext c) {
+        c.setBlockState(3,3,3,ModBlocks.WATER_FAUCET); BlockPos pos=c.getAbsolutePos(new BlockPos(3,3,3));
+        var w=c.getWorld(); var player=c.createMockPlayer(GameMode.SURVIVAL);
+        player.setStackInHand(Hand.MAIN_HAND,new ItemStack(Items.BUCKET,2));
+        var held=player.getMainHandStack(); w.getBlockState(pos).onUseWithItem(held,w,player,Hand.MAIN_HAND,hit(pos));
+        c.assertTrue(player.getMainHandStack().isOf(Items.BUCKET) && player.getMainHandStack().getCount()==1,"Consumes one empty bucket from stack");
+        c.assertTrue(player.getInventory().contains(new ItemStack(Items.WATER_BUCKET)),"Filled bucket delivered to inventory");
+        player.setStackInHand(Hand.MAIN_HAND,ItemStack.EMPTY); w.getBlockState(pos).onUse(w,player,hit(pos));
+        player.setStackInHand(Hand.MAIN_HAND,new ItemStack(Items.BUCKET)); held=player.getMainHandStack();
+        w.getBlockState(pos).onUseWithItem(held,w,player,Hand.MAIN_HAND,hit(pos));
+        c.assertTrue(player.getMainHandStack().isOf(Items.BUCKET),"Closed faucet does not fill a bucket");
+        player.setStackInHand(Hand.MAIN_HAND,ItemStack.EMPTY); w.getBlockState(pos).onUse(w,player,hit(pos));
+        c.setBlockState(4,3,3,Blocks.REDSTONE_BLOCK); player.setStackInHand(Hand.MAIN_HAND,new ItemStack(Items.BUCKET));
+        w.getBlockState(pos).onUseWithItem(player.getMainHandStack(),w,player,Hand.MAIN_HAND,hit(pos));
+        c.assertTrue(player.getMainHandStack().isOf(Items.BUCKET),"Redstone also prevents filling buckets");
+        c.setBlockState(4,3,3,Blocks.AIR);
+        w.getBlockState(pos).onUseWithItem(player.getMainHandStack(),w,player,Hand.MAIN_HAND,hit(pos));
+        c.assertTrue(player.getMainHandStack().isOf(Items.WATER_BUCKET),"Single bucket is exchanged even without a cauldron");
+        c.complete();
     }
 
     @GameTest(templateName=EMPTY_STRUCTURE,tickLimit=80)
     public void placementOnRimAndMixturePreservation(TestContext c) {
-        c.setBlockState(3,1,3,Blocks.MAGMA_BLOCK);
-        c.setBlockState(3,2,3,ModBlocks.ALCHEMY_CAULDRON);
-        BlockPos cauldronPos=c.getAbsolutePos(new BlockPos(3,2,3));
-        var player=c.createMockPlayer(GameMode.SURVIVAL);
-        var blockItem=new ItemStack(ModBlocks.WATER_FAUCET);
-        player.setStackInHand(Hand.MAIN_HAND,blockItem);
-        var hit=new net.minecraft.util.hit.BlockHitResult(net.minecraft.util.math.Vec3d.ofCenter(cauldronPos).add(0,0.5,0),net.minecraft.util.math.Direction.UP,cauldronPos,false);
-        c.getWorld().getBlockState(cauldronPos).onUseWithItem(blockItem,c.getWorld(),player,Hand.MAIN_HAND,hit);
-        c.assertTrue(c.getWorld().getBlockState(cauldronPos.up()).isOf(ModBlocks.WATER_FAUCET),"Faucet places directly on cauldron rim");
-        var faucet=(WaterFaucetBlockEntity)c.getWorld().getBlockEntity(cauldronPos.up());
-        player.setStackInHand(Hand.MAIN_HAND,new ItemStack(ModItems.WANDS.get(EssenceType.AQUA)));
-        faucet.insert(player,Hand.MAIN_HAND);
-        var cauldron=(CauldronBlockEntity)c.getWorld().getBlockEntity(cauldronPos);
-        cauldron.fillFromFaucet();
+        c.setBlockState(3,1,3,Blocks.MAGMA_BLOCK); c.setBlockState(3,2,3,ModBlocks.ALCHEMY_CAULDRON);
+        BlockPos pos=c.getAbsolutePos(new BlockPos(3,2,3)); var player=c.createMockPlayer(GameMode.SURVIVAL);
+        var stack=new ItemStack(ModBlocks.WATER_FAUCET); player.setStackInHand(Hand.MAIN_HAND,stack);
+        var hit=new BlockHitResult(Vec3d.ofCenter(pos).add(0,0.5,0),Direction.UP,pos,false);
+        c.getWorld().getBlockState(pos).onUseWithItem(stack,c.getWorld(),player,Hand.MAIN_HAND,hit);
+        c.assertTrue(c.getWorld().getBlockState(pos.up()).isOf(ModBlocks.WATER_FAUCET),"Places directly on rim");
+        var cauldron=(CauldronBlockEntity)c.getWorld().getBlockEntity(pos); cauldron.fillFromFaucet();
         c.assertTrue(cauldron.dissolveOne(new ItemStack(ModItems.CRYSTALS.get(EssenceType.IGNIS))),"Dissolve test essence");
         var before=cauldron.essences();
-        c.runAtTick(30,()->{
-            c.assertTrue(cauldron.hasWater() && cauldron.essences().equals(before),"Faucet does not replace a filled mixture");
-            c.assertTrue(faucet.stacks().get(0).isOf(ModItems.WANDS.get(EssenceType.AQUA)),"Water wand remains installed");
-            c.complete();
-        });
+        c.runAtTick(30,()->{ c.assertTrue(cauldron.hasWater() && cauldron.essences().equals(before),"Faucet does not replace a mixture"); c.complete(); });
     }
 
     @GameTest(templateName=EMPTY_STRUCTURE,tickLimit=60)
-    public void waterWandIsPreservedWhenBroken(TestContext c) {
-        c.setBlockState(3,2,3,ModBlocks.ALCHEMY_CAULDRON);
-        c.setBlockState(3,3,3,ModBlocks.WATER_FAUCET);
-        BlockPos pos=c.getAbsolutePos(new BlockPos(3,3,3));
+    public void oldWandPersistsAndIsReturned(TestContext c) {
+        c.setBlockState(3,3,3,ModBlocks.WATER_FAUCET); BlockPos pos=c.getAbsolutePos(new BlockPos(3,3,3));
         var faucet=(WaterFaucetBlockEntity)c.getWorld().getBlockEntity(pos);
-        var player=c.createMockPlayer(GameMode.SURVIVAL);
-        var wand=new ItemStack(ModItems.WANDS.get(EssenceType.AQUA));
-        wand.set(DataComponentTypes.CUSTOM_NAME,Text.literal("My water wand"));
-        player.setStackInHand(Hand.MAIN_HAND,wand); faucet.insert(player,Hand.MAIN_HAND);
+        var wand=new ItemStack(ModItems.WANDS.get(EssenceType.AQUA)); wand.set(DataComponentTypes.CUSTOM_NAME,Text.literal("My water wand"));
+        faucet.stacks().set(0,wand);
         var restored=new WaterFaucetBlockEntity(pos,faucet.getCachedState());
         restored.readComponentlessNbt(faucet.createNbt(c.getWorld().getRegistryManager()),c.getWorld().getRegistryManager());
-        c.assertTrue(restored.stacks().get(0).getName().getString().equals("My water wand"),"Wand components persist");
-        c.getWorld().breakBlock(pos,true);
+        c.assertTrue(restored.stacks().get(0).getName().getString().equals("My water wand"),"Old saved focus and components persist");
+        var player=c.createMockPlayer(GameMode.SURVIVAL); player.setSneaking(true);
+        c.getWorld().getBlockState(pos).onUse(c.getWorld(),player,hit(pos));
+        c.assertTrue(faucet.stacks().get(0).isEmpty() && player.getInventory().contains(new ItemStack(ModItems.WANDS.get(EssenceType.AQUA))),"Shift empty hand returns old focus");
+        var replacement=new ItemStack(ModItems.WANDS.get(EssenceType.AQUA)); replacement.set(DataComponentTypes.CUSTOM_NAME,Text.literal("My water wand"));
+        faucet.stacks().set(0,replacement); c.getWorld().breakBlock(pos,true);
         c.runAtTick(5,()->{
             var drops=c.getWorld().getEntitiesByClass(ItemEntity.class,new Box(pos).expand(3),e->e.getStack().isOf(ModItems.WANDS.get(EssenceType.AQUA)));
-            c.assertTrue(drops.size()==1 && drops.getFirst().getStack().getName().getString().equals("My water wand"),"Breaking returns exactly the original wand");
-            c.complete();
+            c.assertTrue(drops.size()==1 && drops.getFirst().getStack().getName().getString().equals("My water wand"),"Breaking returns exactly the old wand"); c.complete();
         });
     }
 }

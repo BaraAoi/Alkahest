@@ -1,9 +1,15 @@
 {
   "variants": {
-    "installed=false": {
+    "enabled=false,installed=false": {
       "model": "alkahest:block/water_faucet"
     },
-    "installed=true": {
+    "enabled=false,installed=true": {
+      "model": "alkahest:block/water_faucet"
+    },
+    "enabled=true,installed=false": {
+      "model": "alkahest:block/water_faucet_active"
+    },
+    "enabled=true,installed=true": {
       "model": "alkahest:block/water_faucet_active"
     }
   }
