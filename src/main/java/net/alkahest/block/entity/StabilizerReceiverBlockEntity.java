@@ -71,6 +71,27 @@ public class StabilizerReceiverBlockEntity extends BlockEntity {
         changed();
     }
 
+    /** Pipe input may mix types in the receiver, but never in an ordinary jar. */
+    public int pipeFree(EssenceType type) {
+        JarContentsComponent current = contents();
+        return type == null || type == EssenceType.VACUUM || !JarItem.allowed(current)
+            ? 0 : Math.max(0, CAPACITY - current.total());
+    }
+
+    /** A continuous feed of the type being sorted must not restart the cycle. */
+    public int acceptFromPipe(EssenceStack incoming) {
+        int accepted = Math.min(incoming.amount(), pipeFree(incoming.type()));
+        if (accepted <= 0) return 0;
+        EssenceType sorting = currentType();
+        JarContentsComponent addition = new JarContentsComponent(List.of(
+            new EssenceStack(incoming.type(), accepted, incoming.stability())));
+        JarItem.set(tank(), contents().merge(addition, CAPACITY));
+        // Merging may reorder types; do not credit work performed on a different type.
+        if (sorting != null && currentType() != sorting) progress = 0;
+        changed();
+        return accepted;
+    }
+
     public boolean structureFormed() {
         return world != null
             && world.getBlockState(pos.up()).isOf(ModBlocks.STABILIZER_CORE)

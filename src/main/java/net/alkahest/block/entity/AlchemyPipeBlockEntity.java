@@ -124,7 +124,7 @@ public class AlchemyPipeBlockEntity extends BlockEntity {
     /** Jars and distillation bellows both act as pipe endpoints, but with fixed roles. */
     private static boolean isPort(BlockEntity be) {
         return be instanceof JarBlockEntity || be instanceof DistilleryBellowsBlockEntity
-            || be instanceof TransmutatorCoreBlockEntity;
+            || be instanceof TransmutatorCoreBlockEntity || be instanceof StabilizerReceiverBlockEntity;
     }
 
     /** Bellows are the source of a line: they give what the cube distilled into them. */
@@ -132,7 +132,7 @@ public class AlchemyPipeBlockEntity extends BlockEntity {
         return be instanceof DistilleryBellowsBlockEntity;
     }
 
-    /** Jars are the sink of a line: they only take essence in and never hand it to each other. */
+    /** Storage jars receive only; a receiver is a one-way destination, never a pipe source. */
     private static boolean canReceive(BlockEntity be) {
         return be instanceof JarBlockEntity;
     }
@@ -154,6 +154,7 @@ public class AlchemyPipeBlockEntity extends BlockEntity {
 
     /** Room left for {@code type}; zero blocks the transfer. */
     private static int portFree(BlockEntity be, EssenceType type) {
+        if (be instanceof StabilizerReceiverBlockEntity receiver) return receiver.pipeFree(type);
         if (be instanceof JarBlockEntity jar) {
             JarContentsComponent contents = jar.contents();
             if (!JarItem.allowed(contents) || !JarItem.singleType(contents)) return 0;
@@ -169,7 +170,9 @@ public class AlchemyPipeBlockEntity extends BlockEntity {
     }
 
     private static void portAdd(BlockEntity be, EssenceStack addition) {
-        if (be instanceof JarBlockEntity jar) {
+        if (be instanceof StabilizerReceiverBlockEntity receiver) {
+            receiver.acceptFromPipe(addition);
+        } else if (be instanceof JarBlockEntity jar) {
             jar.setContents(jar.contents().merge(new JarContentsComponent(List.of(addition)), JarItem.CAPACITY));
         } else if (be instanceof DistilleryBellowsBlockEntity bellows) {
             bellows.accept(addition.type(), addition.amount(), addition.stability());
@@ -257,6 +260,9 @@ public class AlchemyPipeBlockEntity extends BlockEntity {
 
         /** A jar already holding the type wins; otherwise the first empty, unclaimed jar. */
         private BlockEntity pickTarget(EssenceType type, Map<BlockEntity, EssenceType> claimed) {
+            // Explicitly connected receivers win over ordinary storage jars.
+            for (BlockEntity port : ports)
+                if (port instanceof StabilizerReceiverBlockEntity && portFree(port, type) > 0) return port;
             for (BlockEntity port : ports) {
                 if (!canReceive(port) || typeOf(port) != type) continue;
                 if (portFree(port, type) > 0) return port;
@@ -309,8 +315,8 @@ public class AlchemyPipeBlockEntity extends BlockEntity {
         }
 
         /**
-         * Moves up to {@link #UNITS_PER_PULSE} units from every source into jars.
-         * Bellows only give, jars only receive, and each jar takes a single essence type, so
+         * Moves up to {@link #UNITS_PER_PULSE} units from every source into receivers or jars.
+         * Bellows only give, receivers and jars only receive, and each jar takes a single essence type, so
          * several flasks feed several jars with different essences instead of shuffling one
          * unit back and forth.
          */

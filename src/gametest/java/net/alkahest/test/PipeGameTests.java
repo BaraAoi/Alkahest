@@ -4,6 +4,8 @@ import net.alkahest.block.custom.AlchemyPipeBlock;
 import net.alkahest.block.entity.AlchemyPipeBlockEntity;
 import net.alkahest.block.entity.DistilleryBellowsBlockEntity;
 import net.alkahest.block.entity.JarBlockEntity;
+import net.alkahest.block.entity.StabilizerReceiverBlockEntity;
+import net.alkahest.block.entity.StabilizerCoreBlockEntity;
 import net.alkahest.essence.EssenceStack;
 import net.alkahest.essence.EssenceType;
 import net.alkahest.essence.JarContentsComponent;
@@ -156,6 +158,112 @@ public class PipeGameTests implements FabricGameTest {
         replica.readComponentlessNbt(pipe.toInitialChunkDataNbt(c.getWorld().getRegistryManager()),c.getWorld().getRegistryManager());
         c.assertTrue(replica.flowing()==EssenceType.LUX,"Initial chunk data carries the flowing essence");
         c.assertTrue(pipe.toUpdatePacket()!=null,"Changing state produces update data");
+        c.complete();
+    }
+
+    @GameTest(templateName=EMPTY_STRUCTURE)
+    public void pipeFeedsStabilizerBeforeJarsAndPreservesMixtures(TestContext c) {
+        c.setBlockState(2,2,3,ModBlocks.DISTILLERY_BELLOWS);
+        c.setBlockState(3,2,2,ModBlocks.DISTILLERY_BELLOWS);
+        c.setBlockState(3,2,3,ModBlocks.ALCHEMY_PIPE);
+        c.setBlockState(4,2,3,ModBlocks.STABILIZER_RECEIVER);
+        c.setBlockState(3,2,4,ModBlocks.JAR);
+        BlockPos p=c.getAbsolutePos(new BlockPos(3,2,3));
+        var first=(DistilleryBellowsBlockEntity)c.getWorld().getBlockEntity(p.west());
+        var second=(DistilleryBellowsBlockEntity)c.getWorld().getBlockEntity(p.north());
+        var receiver=(StabilizerReceiverBlockEntity)c.getWorld().getBlockEntity(p.east());
+        var jar=(JarBlockEntity)c.getWorld().getBlockEntity(p.south());
+        c.assertTrue(c.getWorld().getBlockState(p).get(AlchemyPipeBlock.EAST), "Pipe visibly connects to receiver");
+        first.accept(EssenceType.IGNIS,8,.4f); second.accept(EssenceType.AQUA,8,.6f);
+        c.assertTrue(AlchemyPipeBlockEntity.pulse(c.getWorld(),p)==8, "Two bellows each send four units");
+        c.assertTrue(receiver.contents().total()==8 && receiver.contents().contents().size()==2, "Receiver accepts both types");
+        c.assertTrue(jar.contents().total()==0, "Receiver takes priority over connected storage jars");
+        c.assertTrue(first.amount()==4 && second.amount()==4, "No essence is lost in transit");
+        var replica=new StabilizerReceiverBlockEntity(p.east(),receiver.getCachedState());
+        replica.readComponentlessNbt(receiver.toInitialChunkDataNbt(c.getWorld().getRegistryManager()),c.getWorld().getRegistryManager());
+        c.assertTrue(replica.contents().equals(receiver.contents()), "Piped mixture survives serialization and client sync");
+        c.complete();
+    }
+
+    @GameTest(templateName=EMPTY_STRUCTURE)
+    public void fullReceiverBackpressuresWithoutLossAndJarsNeverRefillIt(TestContext c) {
+        c.setBlockState(2,2,3,ModBlocks.DISTILLERY_BELLOWS);
+        c.setBlockState(3,2,3,ModBlocks.ALCHEMY_PIPE);
+        c.setBlockState(4,2,3,ModBlocks.STABILIZER_RECEIVER);
+        c.setBlockState(3,2,4,ModBlocks.JAR);
+        BlockPos p=c.getAbsolutePos(new BlockPos(3,2,3));
+        var b=(DistilleryBellowsBlockEntity)c.getWorld().getBlockEntity(p.west());
+        var receiver=(StabilizerReceiverBlockEntity)c.getWorld().getBlockEntity(p.east());
+        var jar=(JarBlockEntity)c.getWorld().getBlockEntity(p.south());
+        receiver.setContents(of(EssenceType.AQUA,98,.6f));
+        jar.setContents(of(EssenceType.ORDO,100,.6f));
+        b.accept(EssenceType.IGNIS,8,.4f);
+        c.assertTrue(AlchemyPipeBlockEntity.pulse(c.getWorld(),p)==2, "Only free receiver capacity is accepted");
+        c.assertTrue(receiver.contents().total()==100 && b.amount()==6 && jar.contents().total()==100, "All quantities retained");
+        c.assertTrue(AlchemyPipeBlockEntity.pulse(c.getWorld(),p)==0, "A full receiver and incompatible full jar block the line");
+        b.drain(6);
+        c.assertTrue(AlchemyPipeBlockEntity.pulse(c.getWorld(),p)==0, "Jars never become sources for the receiver");
+        c.assertTrue(jar.contents().total()==100 && receiver.contents().total()==100, "No jar/receiver feedback loop");
+        c.complete();
+    }
+
+    @GameTest(templateName=EMPTY_STRUCTURE)
+    public void continuousPipeFeedDoesNotRestartSorting(TestContext c) {
+        c.setBlockState(2,2,3,ModBlocks.DISTILLERY_BELLOWS);
+        c.setBlockState(3,2,3,ModBlocks.ALCHEMY_PIPE);
+        c.setBlockState(4,2,3,ModBlocks.STABILIZER_RECEIVER);
+        c.setBlockState(4,3,3,ModBlocks.STABILIZER_CORE);
+        c.setBlockState(4,4,3,ModBlocks.STABILIZER_CREST);
+        c.setBlockState(3,2,4,ModBlocks.JAR);
+        BlockPos p=c.getAbsolutePos(new BlockPos(3,2,3));
+        var b=(DistilleryBellowsBlockEntity)c.getWorld().getBlockEntity(p.west());
+        var receiver=(StabilizerReceiverBlockEntity)c.getWorld().getBlockEntity(p.east());
+        var core=(StabilizerCoreBlockEntity)c.getWorld().getBlockEntity(p.east().up());
+        var jar=(JarBlockEntity)c.getWorld().getBlockEntity(p.south());
+        core.setActivated(true);
+        for (int i=0; i<StabilizerReceiverBlockEntity.TICKS_PER_TYPE; i++) {
+            if (i%5==0) { b.accept(EssenceType.IGNIS,1,.5f); AlchemyPipeBlockEntity.pulse(c.getWorld(),p); }
+            StabilizerReceiverBlockEntity.tick(c.getWorld(),p.east(),receiver);
+        }
+        c.assertTrue(jar.contents().total()==40, "Continual arrivals do not reset the cycle, output is sorted");
+        c.assertTrue(receiver.contents().total()==0 && b.amount()==0, "All forty units were delivered without loss");
+        c.assertTrue(Math.abs(jar.contents().contents().getFirst().stability()-.90f)<.001f, "Output is stabilized normally");
+        c.assertTrue(AlchemyPipeBlockEntity.pulse(c.getWorld(),p)==0 && jar.contents().total()==40,
+            "The output cannot flow back into its receiver");
+        c.complete();
+    }
+
+    @GameTest(templateName=EMPTY_STRUCTURE)
+    public void sortingProgressTracksTheTypeAndKeepsWeightedStability(TestContext c) {
+        c.setBlockState(4,2,3,ModBlocks.STABILIZER_RECEIVER);
+        c.setBlockState(4,3,3,ModBlocks.STABILIZER_CORE);
+        c.setBlockState(4,4,3,ModBlocks.STABILIZER_CREST);
+        BlockPos p=c.getAbsolutePos(new BlockPos(4,2,3));
+        var r=(StabilizerReceiverBlockEntity)c.getWorld().getBlockEntity(p);
+        ((StabilizerCoreBlockEntity)c.getWorld().getBlockEntity(p.up())).setActivated(true);
+        c.assertTrue(r.acceptFromPipe(new EssenceStack(EssenceType.AQUA,4,.4f))==4,"First input accepted");
+        for (int i=0; i<40; i++) StabilizerReceiverBlockEntity.tick(c.getWorld(),p,r);
+        c.assertTrue(r.progress()==40,"Sorting is in progress");
+        c.assertTrue(r.acceptFromPipe(new EssenceStack(EssenceType.AQUA,4,.8f))==4,"More of the current type accepted");
+        c.assertTrue(r.progress()==40,"Same-type input preserves work");
+        c.assertTrue(Math.abs(r.contents().contents().getFirst().stability()-.6f)<.001f,"Stability is weighted by quantity");
+        c.assertTrue(r.acceptFromPipe(new EssenceStack(EssenceType.IGNIS,1,.5f))==1,"A second type can enter the receiver");
+        c.assertTrue(r.progress()==0,"Reordering to a different first type restarts its own sorting cycle");
+        c.assertTrue(r.pipeFree(EssenceType.VACUUM)==0 && r.acceptFromPipe(new EssenceStack(EssenceType.VACUUM,1,.5f))==0,
+            "Vacuum is not accepted");
+        c.complete();
+    }
+
+    @GameTest(templateName=EMPTY_STRUCTURE)
+    public void clickReceiverToPlaceConnectingPipe(TestContext c) {
+        c.setBlockState(2,2,3,ModBlocks.STABILIZER_RECEIVER); BlockPos receiver=c.getAbsolutePos(new BlockPos(2,2,3));
+        var player=c.createMockPlayer(GameMode.SURVIVAL); player.setPosition(receiver.getX()-2,receiver.getY(),receiver.getZ());
+        var pipes=new ItemStack(ModBlocks.ALCHEMY_PIPE,8); player.setStackInHand(Hand.MAIN_HAND,pipes);
+        var hit=new BlockHitResult(Vec3d.ofCenter(receiver).add(.5,0,0),Direction.EAST,receiver,false);
+        c.getWorld().getBlockState(receiver).onUseWithItem(pipes,c.getWorld(),player,Hand.MAIN_HAND,hit);
+        var state=c.getWorld().getBlockState(receiver.east());
+        c.assertTrue(state.isOf(ModBlocks.ALCHEMY_PIPE) && state.get(AlchemyPipeBlock.WEST), "A click places a connected pipe");
+        c.assertTrue(pipes.getCount()==7, "Placement consumes one pipe");
         c.complete();
     }
 

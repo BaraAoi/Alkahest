@@ -2,6 +2,10 @@ package net.alkahest.block.custom;
 
 import net.alkahest.block.entity.StabilizerReceiverBlockEntity;
 import net.alkahest.registry.ModBlockEntities;
+import net.alkahest.registry.ModBlocks;
+import net.minecraft.item.BlockItem;
+import net.minecraft.item.ItemPlacementContext;
+import net.minecraft.text.Text;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockEntityProvider;
 import net.minecraft.block.BlockState;
@@ -43,6 +47,11 @@ public class StabilizerReceiverBlock extends Block implements BlockEntityProvide
     }
 
     @Override protected ItemActionResult onUseWithItem(ItemStack stack, BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
+        if (stack.isOf(ModBlocks.ALCHEMY_PIPE.asItem())) {
+            if (!world.isClient && !((BlockItem) stack.getItem()).place(new ItemPlacementContext(player, hand, stack, hit)).isAccepted())
+                player.sendMessage(Text.translatable("message.alkahest.pipe_no_space"), true);
+            return ItemActionResult.success(world.isClient);
+        }
         // An empty hand must fall through to onUse so the player can read the receiver status.
         if (stack.isEmpty()) return ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
         if (!(stack.getItem() instanceof net.alkahest.item.custom.JarItem)) {
