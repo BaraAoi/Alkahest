@@ -102,7 +102,12 @@ public class WaterFaucetGameTests implements FabricGameTest {
         c.assertTrue(restored.stacks().get(0).getName().getString().equals("My water wand"),"Old saved focus and components persist");
         var player=c.createMockPlayer(GameMode.SURVIVAL); player.setSneaking(true);
         c.getWorld().getBlockState(pos).onUse(c.getWorld(),player,hit(pos));
-        c.assertTrue(faucet.stacks().get(0).isEmpty() && player.getInventory().contains(new ItemStack(ModItems.WANDS.get(EssenceType.AQUA))),"Shift empty hand returns old focus");
+        boolean returned=false;
+        for (int i=0; i<player.getInventory().size(); i++) {
+            var item=player.getInventory().getStack(i);
+            if (item.isOf(ModItems.WANDS.get(EssenceType.AQUA)) && item.getName().getString().equals("My water wand")) returned=true;
+        }
+        c.assertTrue(faucet.stacks().get(0).isEmpty() && returned,"Shift empty hand returns the original named focus");
         var replacement=new ItemStack(ModItems.WANDS.get(EssenceType.AQUA)); replacement.set(DataComponentTypes.CUSTOM_NAME,Text.literal("My water wand"));
         faucet.stacks().set(0,replacement); c.getWorld().breakBlock(pos,true);
         c.runAtTick(5,()->{
