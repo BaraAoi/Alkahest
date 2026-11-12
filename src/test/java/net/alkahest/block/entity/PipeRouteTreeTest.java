@@ -51,4 +51,48 @@ class PipeRouteTreeTest {
         assertEquals(List.of(new BlockPos(2, 1, 0), new BlockPos(1, 1, 0), new BlockPos(0, 1, 0)), path);
         assertTrue(PipeRouteTree.build(source, p -> false).routeTo(target).isEmpty());
     }
+    @Test void seededThreeDimensionalNetworksMatchAnIndependentShortestPathSearch() {
+        var random = new java.util.Random(0xA1CA4E57L);
+        BlockPos source = new BlockPos(0, 0, 0), target = new BlockPos(2, 1, 1);
+        for (int trial = 0; trial < 3000; trial++) {
+            java.util.Set<BlockPos> open = new java.util.HashSet<>();
+            double probability = .15 + random.nextDouble() * .75;
+            for (int x=-2; x<=3; x++) for (int y=-2; y<=2; y++) for (int z=-2; z<=2; z++) {
+                BlockPos p = new BlockPos(x,y,z);
+                if (!p.equals(source) && !p.equals(target) && random.nextDouble() < probability) open.add(p);
+            }
+            List<BlockPos> actual = PipeRouteTree.build(source, open::contains).routeTo(target);
+            int expected = reference3dDistance(open, source, target);
+            assertEquals(expected, actual.isEmpty() ? -1 : actual.size(), "trial=" + trial);
+            if (!actual.isEmpty()) {
+                assertEquals(1, actual.getFirst().getManhattanDistance(target));
+                assertEquals(1, actual.getLast().getManhattanDistance(source));
+                for (int n=0; n<actual.size(); n++) {
+                    assertTrue(open.contains(actual.get(n)));
+                    if (n>0) assertEquals(1, actual.get(n).getManhattanDistance(actual.get(n-1)));
+                }
+            }
+        }
+    }
+
+    /** Independent layer-by-layer flood fill, without using Minecraft Direction or a route tree. */
+    private static int reference3dDistance(java.util.Set<BlockPos> open, BlockPos source, BlockPos target) {
+        java.util.Set<BlockPos> reached = new java.util.HashSet<>();
+        reached.add(source);
+        java.util.Set<BlockPos> frontier = java.util.Set.of(source);
+        for (int length=1; length<=open.size(); length++) {
+            java.util.Set<BlockPos> next = new java.util.HashSet<>();
+            for (BlockPos candidate : open) {
+                if (!reached.contains(candidate) && frontier.stream().anyMatch(p -> p.getManhattanDistance(candidate)==1)) {
+                    if (candidate.getManhattanDistance(target)==1) return length;
+                    next.add(candidate);
+                }
+            }
+            if (next.isEmpty()) return -1;
+            reached.addAll(next);
+            frontier = next;
+        }
+        return -1;
+    }
+
 }
