@@ -67,11 +67,12 @@ public final class Alkahest implements ModInitializer {
             if (!player.isSpectator() && player.isSneaking()
                 && (player.getStackInHand(hand).isOf(ModItems.WANDS.get(net.alkahest.essence.EssenceType.AER))
                     || player.getStackInHand(hand).isOf(ModItems.ALKAHEST_AMULET))
-                && net.alkahest.assembly.AssemblyBlueprint.kind(world, hit.getBlockPos()) != null) {
+                && net.alkahest.assembly.AssemblyBlueprint.targetCore(world, hit.getBlockPos()) != null) {
+                var core = net.alkahest.assembly.AssemblyBlueprint.targetCore(world, hit.getBlockPos());
                 if (player instanceof ServerPlayerEntity serverPlayer
                     && net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.canSend(serverPlayer, net.alkahest.network.AssemblyPreviewPayload.ID))
                     net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(serverPlayer,
-                        new net.alkahest.network.AssemblyPreviewPayload(hit.getBlockPos().asLong()));
+                        new net.alkahest.network.AssemblyPreviewPayload(core.asLong()));
                 return ActionResult.success(world.isClient);
             }
             if (!player.isSpectator() && world.getBlockState(hit.getBlockPos()).isOf(ModBlocks.DISTILLERY)) {

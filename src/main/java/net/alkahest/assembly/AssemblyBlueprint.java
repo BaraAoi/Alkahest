@@ -24,6 +24,23 @@ public final class AssemblyBlueprint {
         if (state.isOf(ModBlocks.MATRIX_CORE)) return Kind.MATRIX;
         return null;
     }
+    /** The Matrix core is physically enclosed. Its adjacent shell is a valid target too. */
+    public static BlockPos targetCore(World world, BlockPos clicked) {
+        if (kind(world, clicked) != null) return clicked.toImmutable();
+        if (!world.isChunkLoaded(clicked)) return null;
+        var block = world.getBlockState(clicked).getBlock();
+        if (!(block instanceof MatrixPillarBlock) && !(block instanceof AlchemicalBrickBlock)) return null;
+        BlockPos found = null;
+        for (int dx = -1; dx <= 1; dx++) for (int dy = -1; dy <= 1; dy++) for (int dz = -1; dz <= 1; dz++) {
+            if (dx == 0 && dy == 0 && dz == 0) continue;
+            BlockPos candidate = clicked.add(dx, dy, dz);
+            if (world.isChunkLoaded(candidate) && world.getBlockState(candidate).isOf(ModBlocks.MATRIX_CORE)) {
+                if (found != null) return null; // Ambiguous neighbouring cores: never guess.
+                found = candidate;
+            }
+        }
+        return found;
+    }
     public static Inspection inspect(World world, BlockPos core) {
         Kind kind = kind(world, core);
         if (kind == null) return null;

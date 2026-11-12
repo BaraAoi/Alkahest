@@ -49,6 +49,7 @@ public class AssemblyBlueprintGameTests implements FabricGameTest {
             c.setBlockState(3 + dx, 3 + dy, 3 + dz, dx != 0 && dy != 0 && dz != 0 ? ModBlocks.MATRIX_PILLAR : ModBlocks.ALCHEMICAL_BRICK);
         }
         c.assertTrue(core.formed() && AssemblyBlueprint.inspect(world, pos).missing().isEmpty(), "Template and actual shell agree");
+        c.assertTrue(pos.equals(AssemblyBlueprint.targetCore(world, pos.add(1, 0, 0))), "A shell click reaches the enclosed core");
         c.setBlockState(4, 4, 4, Blocks.DIRT);
         var part = AssemblyBlueprint.inspect(world, pos).missing().getFirst();
         c.assertTrue(!core.formed() && part.obstructed() && part.expected() == ModBlocks.MATRIX_PILLAR, "Replacing a corner is detected");
