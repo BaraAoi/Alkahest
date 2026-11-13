@@ -203,6 +203,7 @@ public class PracticalResearchGameTests implements FabricGameTest {
         player.getAdvancementTracker().grantCriterion(stabilizer, "done");
         player.getAdvancementTracker().grantCriterion(alkahest, "done");
         grant(player, "distillery");
+        grant(player, "cauldron");
         // Completed machinery actions are remembered even before the paths to them are open.
         PracticalResearchStorage.assembly(player, PracticalResearchPlan.TRANSMUTATOR);
         PracticalResearchStorage.assembly(player, PracticalResearchPlan.MATRIX);
@@ -211,10 +212,10 @@ public class PracticalResearchGameTests implements FabricGameTest {
         c.assertTrue((PracticalResearchStorage.completed(player) & PracticalResearchPlan.FROST) == 0, "It cannot finish before purified water");
         player.getAdvancementTracker().grantCriterion(player.getServer().getAdvancementLoader().get(Alkahest.id("practice/completed_water")), "done");
         for (var item : new net.minecraft.item.ItemConvertible[]{ModBlocks.ALCHEMY_PIPE, ModBlocks.ESSENCE_CHARGER,
-                ModItems.ALKAHEST_AMULET, ModBlocks.JAR, ModBlocks.TRANSMUTATOR_CORE, ModBlocks.TRANSMUTATOR_CHAMBER,
+                ModItems.IRON_CHAIN, ModItems.ALKAHEST_AMULET, ModBlocks.JAR, ModBlocks.TRANSMUTATOR_CORE, ModBlocks.TRANSMUTATOR_CHAMBER,
                 ModBlocks.TRANSMUTATOR_CROWN, ModBlocks.MATRIX_CORE, ModBlocks.MATRIX_PEDESTAL})
             PracticalResearchStorage.observe(player, new ItemStack(item));
-        long expected = PracticalResearchPlan.PIPE | PracticalResearchPlan.CHARGER | PracticalResearchPlan.AMULET
+        long expected = PracticalResearchPlan.PIPE | PracticalResearchPlan.CHARGER | PracticalResearchPlan.NECKLACE_BLANK | PracticalResearchPlan.AMULET
             | PracticalResearchPlan.TRANSMUTATOR | PracticalResearchPlan.CHAMBER | PracticalResearchPlan.CROWN
             | PracticalResearchPlan.MATRIX | PracticalResearchPlan.PEDESTAL | PracticalResearchPlan.FROST;
         c.assertTrue((PracticalResearchStorage.completed(player) & expected) == expected, "Both branches join and the early flask completes");
