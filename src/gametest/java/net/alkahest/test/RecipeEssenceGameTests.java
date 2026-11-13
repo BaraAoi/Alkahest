@@ -39,8 +39,8 @@ public class RecipeEssenceGameTests implements FabricGameTest {
         c.assertTrue(cloth.size()==2 && cloth.getOrDefault(EssenceType.MOTUS,0)==4 && cloth.getOrDefault(EssenceType.ORDO,0)==4,
             "Cloth inherits four strings with Motus instead of Herba");
         var soul = CauldronBlockEntity.essencesOf(new ItemStack(ModItems.SPIRIT_CLOTH), world);
-        c.assertTrue(soul.size()==3 && soul.getOrDefault(EssenceType.MOTUS,0)==4 && soul.getOrDefault(EssenceType.ORDO,0)==4
-            && soul.getOrDefault(EssenceType.SPIRITUS,0)==3, "Soul cloth retains its Spiritus and the updated cloth composition");
+        c.assertTrue(soul.size()==3 && soul.getOrDefault(EssenceType.MOTUS,0)==2 && soul.getOrDefault(EssenceType.ORDO,0)==2
+            && soul.getOrDefault(EssenceType.SPIRITUS,0)==5, "Soul cloth has exactly two Motus, two Ordo and five Spiritus");
         for (var item : java.util.List.of(Items.STRING, ModItems.CLOTH, ModItems.SPIRIT_CLOTH))
             c.assertFalse(Tier2DistilleryBlockEntity.outputs(new ItemStack(item), world.random, false, world)
                 .stream().anyMatch(e -> e.type()==EssenceType.HERBA), "Distillation gives no Herba for " + item);

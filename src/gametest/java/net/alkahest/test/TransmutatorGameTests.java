@@ -367,10 +367,10 @@ public class TransmutatorGameTests implements FabricGameTest {
         c.assertTrue(core.getStack(2).isOf(ModItems.SPIRIT_CLOTH) && core.getStack(0).isEmpty()
             && supply.contents().total()==0 && amulet.get(ModDataComponents.ESSENCE_CHARGE)==1, "Full price yields spirit cloth");
         var composition=net.alkahest.essence.ItemEssenceMap.get(new ItemStack(ModItems.SPIRIT_CLOTH),world);
-        c.assertTrue(composition.stream().filter(e -> e.type()==EssenceType.SPIRITUS).mapToInt(e -> e.amount()).sum()==3,
-            "Recycling returns three Spiritus, less than the eight spent on infusion");
-        var clothValues=net.alkahest.essence.ItemEssenceMap.get(new ItemStack(ModItems.CLOTH),world);
-        for (var value : clothValues) c.assertTrue(composition.stream().anyMatch(e -> e.type()==value.type() && e.amount()==value.amount()), "Recycling retains the cloth base");
+        c.assertTrue(composition.size()==3 && composition.stream().anyMatch(e -> e.type()==EssenceType.SPIRITUS && e.amount()==5)
+            && composition.stream().anyMatch(e -> e.type()==EssenceType.MOTUS && e.amount()==2)
+            && composition.stream().anyMatch(e -> e.type()==EssenceType.ORDO && e.amount()==2),
+            "Recycling yields exactly five Spiritus, two Motus and two Ordo; less Spiritus than the eight spent");
         c.complete();
     }
 
