@@ -61,7 +61,7 @@ public final class AlkahestClient implements ClientModInitializer {
         ClientPlayNetworking.registerGlobalReceiver(net.alkahest.network.ShieldPayload.ID, (payload, context) ->
             context.client().execute(() -> net.alkahest.client.gui.ShieldHud.receive(payload.points(), payload.max(), payload.charge())));
         ClientPlayNetworking.registerGlobalReceiver(net.alkahest.network.ShieldVisualPayload.ID, (payload, context) ->
-            context.client().execute(() -> net.alkahest.client.render.ShieldVisuals.receive(payload.entityId(),payload.points(),payload.max())));
+            context.client().execute(() -> net.alkahest.client.render.ShieldVisuals.receive(payload.entityId(),payload.impact())));
         ClientPlayNetworking.registerGlobalReceiver(OpenJournalPayload.ID, (payload, context) ->
             context.client().execute(() -> context.client().setScreen(new JournalScreen(payload.flags()))));
         ClientPlayNetworking.registerGlobalReceiver(net.alkahest.network.EssenceMapPayload.ID, (payload, context) ->

@@ -195,9 +195,13 @@ public class ShieldRingGameTests implements FabricGameTest {
     public void shieldVisualPayloadPreservesTrackingIdentity(TestContext c) {
         var buf=new net.minecraft.network.RegistryByteBuf(io.netty.buffer.Unpooled.buffer(),c.getWorld().getRegistryManager());
         try {
-            net.alkahest.network.ShieldVisualPayload.CODEC.encode(buf,new net.alkahest.network.ShieldVisualPayload(981,2.5f,4));
+            net.alkahest.network.ShieldVisualPayload.CODEC.encode(buf,new net.alkahest.network.ShieldVisualPayload(981,true));
             var p=net.alkahest.network.ShieldVisualPayload.CODEC.decode(buf);
-            c.assertTrue(p.entityId()==981 && p.points()==2.5f && p.max()==4,"Visual updates retain entity and shield strength");
+            c.assertTrue(p.entityId()==981 && p.impact(),"Impact events retain the target player");
+            buf.clear();
+            net.alkahest.network.ShieldVisualPayload.CODEC.encode(buf,new net.alkahest.network.ShieldVisualPayload(981,false));
+            var cancel=net.alkahest.network.ShieldVisualPayload.CODEC.decode(buf);
+            c.assertTrue(cancel.entityId()==981 && !cancel.impact(),"Unequip cancels the right player's impact");
         } finally { buf.release(); }
         c.complete();
     }

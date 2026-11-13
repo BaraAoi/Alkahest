@@ -41,7 +41,10 @@ public final class ShieldRingItem extends TrinketItem {
         if (!entity.getWorld().isClient) send(entity, points(stack), (int)maxShield(), stack.getOrDefault(ModDataComponents.ESSENCE_CHARGE, 0));
     }
     @Override public void onUnequip(ItemStack stack, SlotReference slot, LivingEntity entity) {
-        if (!entity.getWorld().isClient) send(entity, -1, 0, 0);
+        if (!entity.getWorld().isClient) {
+            send(entity, -1, 0, 0);
+            sendVisual(entity, false);
+        }
     }
     @Override public void tick(ItemStack stack, SlotReference slot, LivingEntity entity) {
         if (entity.getWorld().isClient || !(entity instanceof PlayerEntity player) || !player.isAlive() || player.isSpectator()) return;
@@ -86,15 +89,20 @@ public final class ShieldRingItem extends TrinketItem {
         float absorbed = mayAbsorb ? Math.min(amount, points(stack)) : 0;
         stack.set(ModDataComponents.SHIELD_POINTS, points(stack) - absorbed);
         send(player, points(stack), (int)((ShieldRingItem)stack.getItem()).maxShield(), stack.getOrDefault(ModDataComponents.ESSENCE_CHARGE, 0));
+        // Only a hit actually absorbed by the barrier creates the short impact effect,
+        // including the hit that depletes its last point. Falls never create an effect.
+        if (net.alkahest.shield.ShieldImpactEffect.shouldTrigger(absorbed)) sendVisual(player, true);
         return amount - absorbed;
     }
     private static void send(LivingEntity entity, float points, int max, int charge) {
         if (!(entity instanceof ServerPlayerEntity player)) return;
         if (ServerPlayNetworking.canSend(player, ShieldPayload.ID))
             ServerPlayNetworking.send(player, new ShieldPayload(points, max, charge));
-        // The barrier is visible to observers as well as its wearer. Tracking clients receive
-        // only the visual state, not the item's charge; periodic updates handle late tracking.
-        var visual = new ShieldVisualPayload(player.getId(), points, max);
+    }
+    private static void sendVisual(LivingEntity entity, boolean impact) {
+        if (!(entity instanceof ServerPlayerEntity player)) return;
+        // Events go to the wearer and observers, independently of periodic HUD updates.
+        var visual = new ShieldVisualPayload(player.getId(), impact);
         for (ServerPlayerEntity viewer : PlayerLookup.tracking(player))
             if (ServerPlayNetworking.canSend(viewer, ShieldVisualPayload.ID)) ServerPlayNetworking.send(viewer, visual);
         if (ServerPlayNetworking.canSend(player, ShieldVisualPayload.ID)) ServerPlayNetworking.send(player, visual);

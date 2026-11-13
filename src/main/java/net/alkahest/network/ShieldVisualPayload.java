@@ -6,11 +6,11 @@ import net.minecraft.network.codec.PacketCodec;
 import net.minecraft.network.codec.PacketCodecs;
 import net.minecraft.network.packet.CustomPayload;
 
-/** Non-private shield state for the player and clients tracking that player. */
-public record ShieldVisualPayload(int entityId, float points, int max) implements CustomPayload {
+/** A transient impact or cancellation, visible to the wearer and tracking players. */
+public record ShieldVisualPayload(int entityId, boolean impact) implements CustomPayload {
     public static final Id<ShieldVisualPayload> ID = new Id<>(Alkahest.id("shield_visual"));
     public static final PacketCodec<RegistryByteBuf, ShieldVisualPayload> CODEC = PacketCodec.tuple(
-        PacketCodecs.VAR_INT, ShieldVisualPayload::entityId, PacketCodecs.FLOAT, ShieldVisualPayload::points,
-        PacketCodecs.VAR_INT, ShieldVisualPayload::max, ShieldVisualPayload::new);
+        PacketCodecs.VAR_INT, ShieldVisualPayload::entityId,
+        PacketCodecs.BOOL, ShieldVisualPayload::impact, ShieldVisualPayload::new);
     @Override public Id<? extends CustomPayload> getId() { return ID; }
 }

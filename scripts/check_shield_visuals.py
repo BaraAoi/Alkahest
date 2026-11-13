@@ -24,6 +24,8 @@ hud=Path('src/client/java/net/alkahest/client/gui/ShieldHud.java').read_text()
 server=Path('src/main/java/net/alkahest/item/custom/ShieldRingItem.java').read_text()
 assert 'WorldRenderEvents.AFTER_ENTITIES.register' in client and 'ShieldVisualPayload.ID' in client
 assert 'PlayerLookup.tracking(player)' in server and 'ServerPlayNetworking.canSend' in server
-assert 'LATITUDES=12, LONGITUDES=24' in visual and 'state.points<=0' in visual
+assert 'LATITUDES=12, LONGITUDES=24' in visual and 'ShieldImpactEffect.opacity' in visual
+assert 'ShieldImpactEffect.shouldTrigger(absorbed)' in server and 'sendVisual(player, true)' in server
+assert 'sendVisual(entity, false)' in server and 'IMPACTS.remove(id)' in visual
 assert 'ShieldBarLayout.calculate' in hud and 'drawTextWithShadow' not in hud
 print('Shield shell, tracking, renderer and HUD checks passed')
