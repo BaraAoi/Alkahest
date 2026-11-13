@@ -57,7 +57,8 @@ public class TransmutatorCoreBlockEntity extends BlockEntity implements SidedInv
     private final DefaultedList<ItemStack> stacks = DefaultedList.ofSize(3, ItemStack.EMPTY);
     private int progress;
     private boolean awake;
-    private boolean ironDiamond;
+    // A stable recipe ID per input item, not an index that can change when recipes are added.
+    private final Map<String, String> selectedRecipes = new java.util.HashMap<>();
     // Client-only visual interpolation timestamp. It is not saved and never changes real progress.
     private long clientProgressSyncTick = Long.MIN_VALUE;
 
@@ -67,7 +68,7 @@ public class TransmutatorCoreBlockEntity extends BlockEntity implements SidedInv
                 case 0 -> progress;
                 case 1 -> duration();
                 case 2 -> status();
-                case 3 -> ironDiamond ? 1 : 0;
+                case 3 -> selectedRecipeIndex();
                 default -> 0;
             };
         }
@@ -85,14 +86,25 @@ public class TransmutatorCoreBlockEntity extends BlockEntity implements SidedInv
             ? 0 : Math.max(0, world.getTime() - clientProgressSyncTick + tickDelta);
         return TransmutatorAnimation.estimateProgress(progress, elapsed, working, duration());
     }
-    public TransmutationRecipe recipe() { return TransmutationRecipe.find(stacks.get(INPUT), ironDiamond); }
+    private static String inputId(ItemStack stack) {
+        return stack.isEmpty() ? "" : net.minecraft.registry.Registries.ITEM.getId(stack.getItem()).toString();
+    }
+    public int selectedRecipeIndex() {
+        var input = stacks.get(INPUT);
+        return TransmutationRecipe.selectedIndex(TransmutationRecipe.choices(input), selectedRecipes.get(inputId(input)));
+    }
+    public TransmutationRecipe recipe() { return TransmutationRecipe.find(stacks.get(INPUT), selectedRecipeIndex()); }
     public int duration() { TransmutationRecipe recipe = recipe(); return recipe == null ? DURATION : recipe.duration(); }
-    public boolean ironDiamond() { return ironDiamond; }
 
-    /** Switches only for iron, without paying or clearing stored output and pillar buffers. */
-    public boolean toggleIronRecipe() {
-        if (world == null || world.isClient || !stacks.get(INPUT).isOf(net.minecraft.item.Items.IRON_INGOT)) return false;
-        ironDiamond = !ironDiamond;
+    /** Cycle all recipes for the current input, without consuming or clearing any resources. */
+    public boolean cycleRecipe() {
+        if (world == null || world.isClient) return false;
+        ItemStack input = stacks.get(INPUT);
+        var choices = TransmutationRecipe.choices(input);
+        var next = TransmutationRecipe.next(choices, selectedRecipes.get(inputId(input)));
+        if (next == null) return false;
+        if (next == choices.getFirst()) selectedRecipes.remove(inputId(input));
+        else selectedRecipes.put(inputId(input), next.id());
         progress = 0;
         markDirty();
         syncAnimationProgress();
@@ -420,12 +432,12 @@ public class TransmutatorCoreBlockEntity extends BlockEntity implements SidedInv
     @Override public ItemStack getStack(int slot) { return stacks.get(slot); }
     @Override public ItemStack removeStack(int slot, int amount) {
         ItemStack removed = Inventories.splitStack(stacks, slot, amount);
-        if (!removed.isEmpty()) { if (slot != OUTPUT) progress = 0; markDirty(); if (slot == AMULET) syncAmulet(); }
+        if (!removed.isEmpty()) { if (slot != OUTPUT) progress = 0; markDirty(); if (slot == AMULET) syncAmulet(); else if (slot == INPUT) syncAnimationProgress(); }
         return removed;
     }
     @Override public ItemStack removeStack(int slot) {
         ItemStack removed = Inventories.removeStack(stacks, slot);
-        if (!removed.isEmpty()) { if (slot != OUTPUT) progress = 0; markDirty(); if (slot == AMULET) syncAmulet(); }
+        if (!removed.isEmpty()) { if (slot != OUTPUT) progress = 0; markDirty(); if (slot == AMULET) syncAmulet(); else if (slot == INPUT) syncAnimationProgress(); }
         return removed;
     }
     @Override public void setStack(int slot, ItemStack stack) {
@@ -486,7 +498,15 @@ public class TransmutatorCoreBlockEntity extends BlockEntity implements SidedInv
         Inventories.writeNbt(nbt, stacks, registries);
         nbt.putInt("Progress", progress);
         nbt.putBoolean("VerticalAwake", awake);
-        if (ironDiamond) nbt.putBoolean("IronDiamond", true);
+        nbt.remove("RecipeChoices");
+        nbt.remove("IronDiamond");
+        if (!selectedRecipes.isEmpty()) {
+            NbtCompound choices = new NbtCompound();
+            selectedRecipes.forEach(choices::putString);
+            nbt.put("RecipeChoices", choices);
+        }
+        // Retain the old flag as well for worlds later opened in an older mod version.
+        if ("iron_ingot_to_diamond".equals(selectedRecipes.get("minecraft:iron_ingot"))) nbt.putBoolean("IronDiamond", true);
     }
 
     @Override protected void readNbt(NbtCompound nbt, RegistryWrapper.WrapperLookup registries) {
@@ -495,7 +515,13 @@ public class TransmutatorCoreBlockEntity extends BlockEntity implements SidedInv
         Inventories.readNbt(nbt, stacks, registries);
         progress = nbt.getInt("Progress");
         awake = nbt.getBoolean("VerticalAwake");
-        ironDiamond = nbt.getBoolean("IronDiamond");
+        selectedRecipes.clear();
+        if (nbt.contains("RecipeChoices", net.minecraft.nbt.NbtElement.COMPOUND_TYPE)) {
+            NbtCompound choices = nbt.getCompound("RecipeChoices");
+            for (String input : choices.getKeys()) selectedRecipes.put(input, choices.getString(input));
+        }
+        if (nbt.getBoolean("IronDiamond") && !selectedRecipes.containsKey("minecraft:iron_ingot"))
+            selectedRecipes.put("minecraft:iron_ingot", "iron_ingot_to_diamond");
         // Older iron-to-diamond operations could have up to 2400 ticks of progress. Preserve
         // completed work as ready under the shorter duration, but never leave an invalid counter.
         progress = Math.max(0, Math.min(progress, duration()));
@@ -515,9 +541,9 @@ public class TransmutatorCoreBlockEntity extends BlockEntity implements SidedInv
     }
 
     /** Only used by the screen to show what the current input needs. */
-    public static List<EssenceStack> requirements(ItemStack input) { return requirements(input, false); }
-    public static List<EssenceStack> requirements(ItemStack input, boolean ironDiamond) {
-        TransmutationRecipe recipe = TransmutationRecipe.find(input, ironDiamond);
+    public static List<EssenceStack> requirements(ItemStack input) { return requirements(input, 0); }
+    public static List<EssenceStack> requirements(ItemStack input, int recipeIndex) {
+        TransmutationRecipe recipe = TransmutationRecipe.find(input, recipeIndex);
         if (recipe == null) return List.of();
         List<EssenceStack> list = new ArrayList<>();
         for (Map.Entry<EssenceType, Integer> entry : recipe.cost().entrySet()) {

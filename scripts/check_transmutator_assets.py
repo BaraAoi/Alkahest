@@ -127,7 +127,7 @@ known = set(re.findall(r'^\s+(?:[A-Z_]+\()?([A-Z_]{3,})\(0x', essence_source, re
 known |= set(re.findall(r'\b([A-Z_]{3,})\(0x[0-9A-Fa-f]+, Tier\.', essence_source))
 used = set(re.findall(r'EssenceType\.([A-Z_]+)', recipe_source))
 check(used <= known, f'unknown essence types in the recipes: {sorted(used - known)}')
-check(len(re.findall(r'recipe\(Items\.', recipe_source)) >= 8, 'the transmutator needs a decent recipe table')
+check(len(re.findall(r'recipe\("[a-z0-9_]+", Items\.', recipe_source)) >= 8, 'the transmutator needs a decent recipe table')
 
 block_source = (JAVA / 'block/custom/TransmutatorCoreBlock.java').read_text()
 check('WORKING' in block_source and 'getTicker' in block_source, 'the core block must tick and switch state')

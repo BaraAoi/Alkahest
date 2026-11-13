@@ -89,8 +89,8 @@ public class TransmutatorGameTests implements FabricGameTest {
         spectator.setPosition(pos.getX()+.5,pos.getY()+.5,pos.getZ()+.5);
         c.assertFalse(h.onButtonClick(spectator,0),"Spectators cannot change the recipe");
         c.assertTrue(h.onButtonClick(player,0) && core.progress()==0,"Changing the recipe resets progress");
-        c.assertTrue(core.ironDiamond() && core.recipe().output().isOf(Items.DIAMOND) && core.duration()==100,"Alternate recipe is selected");
-        c.assertTrue(h.maxProgress()==100 && h.ironDiamond() && h.selectedOutput().isOf(Items.DIAMOND)
+        c.assertTrue(core.selectedRecipeIndex()==1 && core.recipe().output().isOf(Items.DIAMOND) && core.duration()==100,"Alternate recipe is selected");
+        c.assertTrue(h.maxProgress()==100 && h.selectedRecipeIndex()==1 && h.selectedOutput().isOf(Items.DIAMOND)
             && h.requirements().size()==4,"GUI properties and cost match the selected recipe");
         var clientInventory=new net.minecraft.inventory.SimpleInventory(3);
         clientInventory.setStack(0,new ItemStack(Items.IRON_INGOT));
@@ -101,10 +101,10 @@ public class TransmutatorGameTests implements FabricGameTest {
             && clientScreen.maxProgress()==100,"Client mirror displays the selected result, price and duration");
         var rendered=new TransmutatorCoreBlockEntity(pos,core.getCachedState());
         rendered.readComponentlessNbt(core.toUpdatePacket().getNbt(),world.getRegistryManager());
-        c.assertTrue(rendered.ironDiamond() && rendered.duration()==100,"Block update sync carries recipe to the renderer");
+        c.assertTrue(rendered.selectedRecipeIndex()==1 && rendered.duration()==100,"Block update sync carries recipe to the renderer");
         var restored=new TransmutatorCoreBlockEntity(pos,core.getCachedState());
         restored.readComponentlessNbt(core.createNbt(world.getRegistryManager()),world.getRegistryManager());
-        c.assertTrue(restored.ironDiamond() && restored.recipe().output().isOf(Items.DIAMOND),"Choice and input survive save/load");
+        c.assertTrue(restored.selectedRecipeIndex()==1 && restored.recipe().output().isOf(Items.DIAMOND),"Choice and input survive save/load");
         core.setStack(2,new ItemStack(Items.GOLD_INGOT));
         c.assertTrue(core.status()==TransmutatorCoreBlockEntity.STATUS_BLOCKED,"Existing gold blocks diamond output without loss");
         c.assertTrue(h.onButtonClick(player,0) && core.getStack(2).isOf(Items.GOLD_INGOT),"Switching back preserves the output");
@@ -115,12 +115,90 @@ public class TransmutatorGameTests implements FabricGameTest {
     }
 
     @GameTest(templateName = EMPTY_STRUCTURE)
+    public void genericRecipeSelectionSupportsThreeAndReordering(TestContext c) {
+        var sand = new ItemStack(Items.SAND);
+        var a = new net.alkahest.transmutation.TransmutationRecipe("sand_first", sand.copy(), new ItemStack(Items.GLASS), java.util.Map.of(EssenceType.IGNIS, 1), 100);
+        var b = new net.alkahest.transmutation.TransmutationRecipe("sand_second", sand.copy(), new ItemStack(Items.CLAY_BALL), java.util.Map.of(EssenceType.AQUA, 2), 120);
+        var d = new net.alkahest.transmutation.TransmutationRecipe("sand_third", sand.copy(), new ItemStack(Items.GRAVEL), java.util.Map.of(EssenceType.TERRA, 3), 140);
+        var other = new net.alkahest.transmutation.TransmutationRecipe("coal_only", new ItemStack(Items.COAL), new ItemStack(Items.DIAMOND), java.util.Map.of(EssenceType.LUX, 1), 100);
+        var all = List.of(a, other, b, d);
+        var options = net.alkahest.transmutation.TransmutationRecipe.choices(all, sand);
+        c.assertTrue(options.equals(List.of(a,b,d)), "All and only matching inputs appear in registry order");
+        c.assertTrue(net.alkahest.transmutation.TransmutationRecipe.next(options, null) == b
+            && net.alkahest.transmutation.TransmutationRecipe.next(options, b.id()) == d
+            && net.alkahest.transmutation.TransmutationRecipe.next(options, d.id()) == a, "Cycles through three options and wraps");
+        var reordered = List.of(d,a,b);
+        int index = net.alkahest.transmutation.TransmutationRecipe.selectedIndex(reordered, b.id());
+        c.assertTrue(net.alkahest.transmutation.TransmutationRecipe.selected(reordered,index) == b, "Stable ID survives registry reorder");
+        c.assertTrue(net.alkahest.transmutation.TransmutationRecipe.selectedIndex(reordered, "removed_recipe") == 0
+            && net.alkahest.transmutation.TransmutationRecipe.selected(reordered, 999) == d, "Missing ID or invalid network index falls back safely");
+        c.assertTrue(net.alkahest.transmutation.TransmutationRecipe.next(List.of(other), null) == null
+            && net.alkahest.transmutation.TransmutationRecipe.choices(all, ItemStack.EMPTY).isEmpty(), "No selector for zero or one recipe");
+        var ids = new java.util.HashSet<String>();
+        for (var recipe : net.alkahest.transmutation.TransmutationRecipe.all())
+            c.assertTrue(ids.add(recipe.id()) && !recipe.id().isBlank(), "Built-in recipe IDs must be unique and stable");
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void legacyIronChoiceMigratesEvenWithDifferentInputAndKeepsProgress(TestContext c) {
+        BlockPos pos=tower(c,CY+32); var world=c.getWorld();
+        var core=(TransmutatorCoreBlockEntity)world.getBlockEntity(pos); core.wake();
+        core.setStack(0,new ItemStack(Items.IRON_INGOT));
+        core.setStack(1,new ItemStack(ModItems.ALKAHEST_AMULET));
+        var old=core.createNbt(world.getRegistryManager());
+        old.remove("RecipeChoices"); old.putBoolean("IronDiamond",true); old.putInt("Progress",40);
+        core.readComponentlessNbt(old,world.getRegistryManager());
+        c.assertTrue(core.selectedRecipeIndex()==1 && core.recipe().output().isOf(Items.DIAMOND) && core.progress()==40, "Old iron flag migrates without resetting valid progress");
+        core.setStack(0,new ItemStack(Items.COPPER_INGOT));
+        c.assertTrue(core.selectedRecipeIndex()==0 && !core.cycleRecipe(), "Another input with one recipe cannot change the selection");
+        var saved=core.createNbt(world.getRegistryManager());
+        var restored=new TransmutatorCoreBlockEntity(pos,core.getCachedState());
+        restored.readComponentlessNbt(saved,world.getRegistryManager());
+        restored.setStack(0,new ItemStack(Items.IRON_INGOT));
+        c.assertTrue(restored.selectedRecipeIndex()==1 && restored.recipe().output().isOf(Items.DIAMOND), "Iron choice is remembered across another input and save/reload");
+        var oldNoInput=core.createNbt(world.getRegistryManager());
+        oldNoInput.remove("RecipeChoices"); oldNoInput.putBoolean("IronDiamond",true);
+        core.readComponentlessNbt(oldNoInput,world.getRegistryManager());
+        core.setStack(0,new ItemStack(Items.IRON_INGOT));
+        c.assertTrue(core.selectedRecipeIndex()==1, "Legacy selection migrates even when iron is not currently loaded");
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void recipeSelectionSynchronizesThroughScreenProperties(TestContext c) {
+        BlockPos pos=tower(c,CY+32); var world=c.getWorld();
+        var core=(TransmutatorCoreBlockEntity)world.getBlockEntity(pos); core.wake();
+        var player=c.createMockPlayer(net.minecraft.world.GameMode.SURVIVAL);
+        player.setPosition(pos.getX()+.5,pos.getY()+.5,pos.getZ()+.5);
+        core.setStack(0,new ItemStack(Items.IRON_INGOT));
+        var server=(net.alkahest.screen.TransmutatorScreenHandler)core.createMenu(1,player.getInventory(),player);
+        var client=new net.alkahest.screen.TransmutatorScreenHandler(1,player.getInventory());
+        client.getSlot(0).setStack(new ItemStack(Items.IRON_INGOT));
+        server.addListener(new net.minecraft.screen.ScreenHandlerListener() {
+            public void onSlotUpdate(net.minecraft.screen.ScreenHandler handler,int slot,ItemStack stack) { }
+            public void onPropertyUpdate(net.minecraft.screen.ScreenHandler handler,int id,int value) { client.setProperty(id,value); }
+        });
+        server.sendContentUpdates();
+        c.assertTrue(client.recipeCount()==2 && client.canSelectRecipe() && client.selectedOutput().isOf(Items.GOLD_INGOT), "Default is shown on the client");
+        c.assertTrue(server.onButtonClick(player,0), "Player selects the next option"); server.sendContentUpdates();
+        c.assertTrue(client.selectedRecipeIndex()==1 && client.selectedOutput().isOf(Items.DIAMOND) && client.requirements().size()==4, "Choice and price sync to open screen");
+        c.assertTrue(server.onButtonClick(player,0), "Player cycles back"); server.sendContentUpdates();
+        c.assertTrue(client.selectedRecipeIndex()==0 && client.selectedOutput().isOf(Items.GOLD_INGOT), "Wrapping syncs to the open screen");
+        client.getSlot(0).setStack(new ItemStack(Items.SAND));
+        c.assertFalse(client.canSelectRecipe(), "Single-recipe input hides the control");
+        client.setProperty(3,999);
+        c.assertTrue(client.selectedOutput().isOf(Items.GLASS), "Stale invalid property never picks an unrelated recipe");
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
     public void diamondTowerWaitsForFullPriceThenPaysExactlyOnce(TestContext c) {
         int y=CY+80; BlockPos pos=tower(c,y); var world=c.getWorld();
         var core=(TransmutatorCoreBlockEntity)world.getBlockEntity(pos); core.wake();
         core.setStack(0,new ItemStack(Items.IRON_INGOT,2));
         ItemStack amulet=new ItemStack(ModItems.ALKAHEST_AMULET); amulet.set(ModDataComponents.ESSENCE_CHARGE,4);
-        core.setStack(1,amulet); c.assertTrue(core.toggleIronRecipe(),"Select diamond");
+        core.setStack(1,amulet); c.assertTrue(core.cycleRecipe(),"Select diamond");
         c.setBlockState(CX+1,y,CZ,ModBlocks.ALCHEMY_PIPE); c.setBlockState(CX+2,y,CZ,ModBlocks.ALCHEMY_PIPE);
         BlockPos pipe=c.getAbsolutePos(new BlockPos(CX+1,y,CZ));
         var terra=jar(c,CX+1,y,CZ-1,EssenceType.TERRA,1);
@@ -172,7 +250,7 @@ public class TransmutatorGameTests implements FabricGameTest {
         int y=CY+128; var pos=isolatedPlatform(c,y); var world=c.getWorld();
         var core=(TransmutatorCoreBlockEntity)world.getBlockEntity(pos);
         core.setStack(0,new ItemStack(Items.IRON_INGOT)); core.setStack(1,new ItemStack(ModItems.ALKAHEST_AMULET));
-        c.assertTrue(core.toggleIronRecipe(),"Select diamond");
+        c.assertTrue(core.cycleRecipe(),"Select diamond");
         var terra=jar(c,1,y,1,EssenceType.TERRA,1); var lux=jar(c,5,y,1,EssenceType.LUX,1);
         var ordo=jar(c,1,y,5,EssenceType.ORDO,1); var metal=jar(c,5,y,5,EssenceType.METALLUM,1);
         var saved=core.createNbt(world.getRegistryManager()); saved.putInt("Progress",2400);

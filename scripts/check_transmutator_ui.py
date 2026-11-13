@@ -67,8 +67,14 @@ assert 'amuletCharge()' in screen and 'ESSENCE_CHARGE' in screen and 'AlkahestAm
 assert 'for (EssenceStack e : handler.requirements())' in screen, 'full cost tooltip must remain available'
 for locale in ('ru_ru','en_us'):
     translations=json.loads(Path(f'src/main/resources/assets/alkahest/lang/{locale}.json').read_text())
-    for field in ('input','output','amulet','cost','progress','amulet_hint','amulet_charge','no_recipe','iron_choice','iron_choice_hint','ready','working','no_essence','blocked','unformed','no_amulet','dormant'):
+    for field in ('input','output','amulet','cost','progress','amulet_hint','amulet_charge','no_recipe','recipe_choice','recipe_choice_hint','ready','working','no_essence','blocked','unformed','no_amulet','dormant'):
         assert translations.get('screen.alkahest.transmutator.'+field), f'{locale} missing {field}'
     assert '%s' in translations['screen.alkahest.transmutator.progress']
     assert translations['screen.alkahest.transmutator.amulet_charge'].count('%s') == 2
 print(f'Transmutator UI validated: {W}x{H}, {len(slots)} slots, non-overlapping panels and localized tooltips')
+
+assert 'canSelectRecipe()' in screen and 'canSelectIronRecipe' not in screen
+assert 'TransmutationRecipe.choices(' in handler and 'core.cycleRecipe()' in handler
+for locale in ('ru_ru', 'en_us'):
+    data=json.loads(Path(f'src/main/resources/assets/alkahest/lang/{locale}.json').read_text())
+    assert data['screen.alkahest.transmutator.recipe_choice'].count('%s') == 3

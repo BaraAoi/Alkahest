@@ -427,6 +427,8 @@
   "screen.alkahest.transmutator.progress": "Progress: %s%%",
   "screen.alkahest.transmutator.amulet_charge": "Amulet charge: %s / %s",
   "screen.alkahest.transmutator.amulet_hint": "Place a charged Alkahest Amulet here",
+  "screen.alkahest.transmutator.recipe_choice": "Selected: %s (%s of %s)",
+  "screen.alkahest.transmutator.recipe_choice_hint": "Click to change recipe. Progress will reset.",
   "screen.alkahest.transmutator.iron_choice": "Selected: %s",
   "screen.alkahest.transmutator.iron_choice_hint": "Click to change the result. Progress will reset.",
   "screen.alkahest.transmutator.title": "Transmutator",

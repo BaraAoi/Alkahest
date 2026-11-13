@@ -427,6 +427,8 @@
   "screen.alkahest.transmutator.progress": "Прогресс: %s%%",
   "screen.alkahest.transmutator.amulet_charge": "Заряд амулета: %s / %s",
   "screen.alkahest.transmutator.amulet_hint": "Сюда положите заряженный Амулет с Алкагестом",
+  "screen.alkahest.transmutator.recipe_choice": "Выбрано: %s (%s из %s)",
+  "screen.alkahest.transmutator.recipe_choice_hint": "Нажмите, чтобы сменить рецепт. Прогресс сбросится.",
   "screen.alkahest.transmutator.iron_choice": "Выбрано: %s",
   "screen.alkahest.transmutator.iron_choice_hint": "Нажмите, чтобы сменить результат. Прогресс сбросится.",
   "screen.alkahest.transmutator.title": "Трансмутатор",

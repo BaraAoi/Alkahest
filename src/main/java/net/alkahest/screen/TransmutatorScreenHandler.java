@@ -61,21 +61,22 @@ public class TransmutatorScreenHandler extends ScreenHandler {
     public int progress() { return properties.get(0); }
     public int maxProgress() { return Math.max(1, properties.get(1)); }
     public int status() { return properties.get(2); }
-    public boolean ironDiamond() { return properties.get(3) != 0; }
-    public boolean canSelectIronRecipe() { return inventory.getStack(TransmutatorCoreBlockEntity.INPUT).isOf(net.minecraft.item.Items.IRON_INGOT); }
+    public int selectedRecipeIndex() { return properties.get(3); }
+    public int recipeCount() { return TransmutationRecipe.choices(inventory.getStack(TransmutatorCoreBlockEntity.INPUT)).size(); }
+    public boolean canSelectRecipe() { return recipeCount() > 1; }
     public ItemStack selectedOutput() {
-        var recipe = TransmutationRecipe.find(inventory.getStack(TransmutatorCoreBlockEntity.INPUT), ironDiamond());
+        var recipe = TransmutationRecipe.find(inventory.getStack(TransmutatorCoreBlockEntity.INPUT), selectedRecipeIndex());
         return recipe == null ? ItemStack.EMPTY : recipe.output();
     }
 
     @Override public boolean onButtonClick(PlayerEntity player, int id) {
         if (id != 0 || player.isSpectator() || !canUse(player) || !(inventory instanceof TransmutatorCoreBlockEntity core)) return false;
-        return core.toggleIronRecipe();
+        return core.cycleRecipe();
     }
 
     /** The cost of the current input, computed on both sides from the recipe table. */
     public java.util.List<net.alkahest.essence.EssenceStack> requirements() {
-        return TransmutatorCoreBlockEntity.requirements(inventory.getStack(TransmutatorCoreBlockEntity.INPUT), ironDiamond());
+        return TransmutatorCoreBlockEntity.requirements(inventory.getStack(TransmutatorCoreBlockEntity.INPUT), selectedRecipeIndex());
     }
 
     @Override public boolean canUse(PlayerEntity player) { return inventory.canPlayerUse(player); }

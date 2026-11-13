@@ -82,7 +82,7 @@ public final class TransmutatorScreen extends HandledScreen<TransmutatorScreenHa
             c.fill(bx + 1, by + 1, bx + 1 + fill, by + TRACK_HEIGHT - 1, 0xFFB6843F);
             c.fill(bx + 1, by + 1, bx + 1 + fill, by + 3, 0xFFFFD68A);
         }
-        if (handler.canSelectIronRecipe()) {
+        if (handler.canSelectRecipe()) {
             int sx = x + TransmutatorScreenHandler.CHOICE_X, sy = y + TransmutatorScreenHandler.CHOICE_Y;
             boolean hovered = inside(mouseX, mouseY, TransmutatorScreenHandler.CHOICE_X, TransmutatorScreenHandler.CHOICE_Y,
                 TransmutatorScreenHandler.CHOICE_WIDTH, TransmutatorScreenHandler.CHOICE_HEIGHT);
@@ -108,7 +108,7 @@ public final class TransmutatorScreen extends HandledScreen<TransmutatorScreenHa
         String chargeText = charge < 0 ? "—" : charge + " / " + AlkahestAmuletItem.MAX_CHARGE;
         c.drawTextWithShadow(textRenderer, fit(chargeText, 76), 51, 94, charge == 0 ? 0xFFFFAB89 : 0xFFE9D5A8);
         c.drawCenteredTextWithShadow(textRenderer, percent() + "%", 75, 63, 0xFFF1D49C);
-        if (handler.canSelectIronRecipe()) {
+        if (handler.canSelectRecipe()) {
             String choice = "↻ " + handler.selectedOutput().getName().getString();
             c.drawTextWithShadow(textRenderer, fit(choice, TransmutatorScreenHandler.CHOICE_WIDTH - 2),
                 TransmutatorScreenHandler.CHOICE_X + 1, TransmutatorScreenHandler.CHOICE_Y, 0xFFF1D49C);
@@ -141,7 +141,7 @@ public final class TransmutatorScreen extends HandledScreen<TransmutatorScreenHa
     }
 
     @Override public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (button == 0 && handler.canSelectIronRecipe()
+        if (button == 0 && handler.canSelectRecipe()
             && mouseX >= x + TransmutatorScreenHandler.CHOICE_X && mouseX < x + TransmutatorScreenHandler.CHOICE_X + TransmutatorScreenHandler.CHOICE_WIDTH
             && mouseY >= y + TransmutatorScreenHandler.CHOICE_Y && mouseY < y + TransmutatorScreenHandler.CHOICE_Y + TransmutatorScreenHandler.CHOICE_HEIGHT
             && client != null && client.interactionManager != null) {
@@ -157,10 +157,10 @@ public final class TransmutatorScreen extends HandledScreen<TransmutatorScreenHa
         drawMouseoverTooltip(c, mouseX, mouseY);
         if (inside(mouseX, mouseY, TRACK_X, TRACK_Y, TRACK_WIDTH, TRACK_HEIGHT)) {
             c.drawTooltip(textRenderer, Text.translatable("screen.alkahest.transmutator.progress", percent()), mouseX, mouseY);
-        } else if (handler.canSelectIronRecipe() && inside(mouseX, mouseY, TransmutatorScreenHandler.CHOICE_X, TransmutatorScreenHandler.CHOICE_Y,
+        } else if (handler.canSelectRecipe() && inside(mouseX, mouseY, TransmutatorScreenHandler.CHOICE_X, TransmutatorScreenHandler.CHOICE_Y,
             TransmutatorScreenHandler.CHOICE_WIDTH, TransmutatorScreenHandler.CHOICE_HEIGHT)) {
-            c.drawTooltip(textRenderer, List.of(Text.translatable("screen.alkahest.transmutator.iron_choice", handler.selectedOutput().getName()),
-                Text.translatable("screen.alkahest.transmutator.iron_choice_hint")), mouseX, mouseY);
+            c.drawTooltip(textRenderer, List.of(Text.translatable("screen.alkahest.transmutator.recipe_choice", handler.selectedOutput().getName(), handler.selectedRecipeIndex() + 1, handler.recipeCount()),
+                Text.translatable("screen.alkahest.transmutator.recipe_choice_hint")), mouseX, mouseY);
         } else if (inside(mouseX, mouseY, 10, 109, 216, 16)) {
             c.drawTooltip(textRenderer, statusText(), mouseX, mouseY);
         } else if (inside(mouseX, mouseY, 139, 43, 86, 59) && !handler.requirements().isEmpty()) {
