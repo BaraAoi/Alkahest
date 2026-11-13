@@ -105,6 +105,7 @@ public final class MonocleHud {
                 case Tier2DistilleryBlockEntity.STATUS_WORKING -> "screen.alkahest.monocle.working";
                 case Tier2DistilleryBlockEntity.STATUS_BLOCKED -> "screen.alkahest.monocle.blocked";
                 case Tier2DistilleryBlockEntity.STATUS_NO_BELLOWS -> "screen.alkahest.distillery_tier2.no_bellows";
+                case Tier2DistilleryBlockEntity.STATUS_PAUSED -> "screen.alkahest.distillery_tier2.paused";
                 default -> "screen.alkahest.monocle.idle";
             }));
             lines.add(Text.translatable("screen.alkahest.monocle.progress",

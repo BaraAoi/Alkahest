@@ -43,3 +43,16 @@ for locale in ('ru_ru', 'en_us'):
     assert translations.get('screen.alkahest.distillery_tier2.queue')
     assert '%s' in translations['screen.alkahest.distillery_tier2.queue_details']
 print('Tier II queued-essence indicator, tooltip and property sync validated')
+
+# The opt-in button has its own hitbox, separate from all slots and the progress and queue panels.
+assert 'REDSTONE_X = 10, REDSTONE_Y = 48, REDSTONE_W = 44, REDSTONE_H = 13' in tier2
+assert 'clickButton(handler.syncId, Tier2DistilleryScreenHandler.REDSTONE_BUTTON)' in tier2
+assert 'REDSTONE_PROPERTY = PENDING_START + EssenceType.values().length' in handler
+assert 'player.isSpectator() || !canUse(player)' in handler
+for locale in ('ru_ru', 'en_us'):
+    translations = json.loads(Path(f'src/main/resources/assets/alkahest/lang/{locale}.json').read_text())
+    for key in ('paused', 'redstone_on', 'redstone_off', 'redstone_hint'):
+        assert translations.get(f'screen.alkahest.distillery_tier2.{key}')
+    assert translations.get('tooltip.alkahest.distillery_redstone')
+loot = json.loads(Path('src/main/resources/data/alkahest/loot_table/blocks/distillery_tier2.json').read_text())
+assert 'alkahest:distillery_redstone' in loot['pools'][0]['entries'][0]['functions'][0]['include']

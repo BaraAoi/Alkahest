@@ -10,6 +10,7 @@ import net.minecraft.text.Text;
 /** Drawn entirely in code: no backdrop texture is needed for this compact machine panel. */
 public final class Tier2DistilleryScreen extends HandledScreen<Tier2DistilleryScreenHandler> {
     private static final int WIDTH = 176, HEIGHT = 166;
+    private static final int REDSTONE_X = 10, REDSTONE_Y = 48, REDSTONE_W = 44, REDSTONE_H = 13;
     private static final int TRACK_X = 62, TRACK_Y = 52, TRACK_WIDTH = 52, TRACK_HEIGHT = 6;
     private static final int QUEUE_X = 107, QUEUE_Y = 23, QUEUE_WIDTH = 63, QUEUE_HEIGHT = 24;
 
@@ -27,7 +28,12 @@ public final class Tier2DistilleryScreen extends HandledScreen<Tier2DistillerySc
         renderBackground(context, mouseX, mouseY, delta);
         super.render(context, mouseX, mouseY, delta);
         drawMouseoverTooltip(context, mouseX, mouseY);
-        if (handler.pendingTotal() > 0 && mouseX >= x + QUEUE_X && mouseX < x + QUEUE_X + QUEUE_WIDTH
+        if (mouseX >= x + REDSTONE_X && mouseX < x + REDSTONE_X + REDSTONE_W
+                && mouseY >= y + REDSTONE_Y && mouseY < y + REDSTONE_Y + REDSTONE_H) {
+            context.drawTooltip(textRenderer, java.util.List.of(
+                Text.translatable(handler.redstoneControl() ? "screen.alkahest.distillery_tier2.redstone_on" : "screen.alkahest.distillery_tier2.redstone_off"),
+                Text.translatable("screen.alkahest.distillery_tier2.redstone_hint")), mouseX, mouseY);
+        } else if (handler.pendingTotal() > 0 && mouseX >= x + QUEUE_X && mouseX < x + QUEUE_X + QUEUE_WIDTH
                 && mouseY >= y + QUEUE_Y && mouseY < y + QUEUE_Y + QUEUE_HEIGHT) {
             java.util.List<Text> lines = new java.util.ArrayList<>();
             lines.add(Text.translatable("screen.alkahest.distillery_tier2.queue_details", handler.pendingTotal()));
@@ -50,8 +56,19 @@ public final class Tier2DistilleryScreen extends HandledScreen<Tier2DistillerySc
             case 1 -> "screen.alkahest.distillery_tier2.working";
             case 2 -> "screen.alkahest.distillery_tier2.blocked";
             case 3 -> "screen.alkahest.distillery_tier2.no_bellows";
+            case 4 -> "screen.alkahest.distillery_tier2.paused";
             default -> "screen.alkahest.distillery_tier2.ready";
         });
+    }
+
+    @Override public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (button == 0 && mouseX >= x + REDSTONE_X && mouseX < x + REDSTONE_X + REDSTONE_W
+                && mouseY >= y + REDSTONE_Y && mouseY < y + REDSTONE_Y + REDSTONE_H
+                && client != null && client.interactionManager != null) {
+            client.interactionManager.clickButton(handler.syncId, Tier2DistilleryScreenHandler.REDSTONE_BUTTON);
+            return true;
+        }
+        return super.mouseClicked(mouseX, mouseY, button);
     }
 
     private void slotFrame(DrawContext context, int sx, int sy) {
@@ -73,6 +90,9 @@ public final class Tier2DistilleryScreen extends HandledScreen<Tier2DistillerySc
         for (int[] rivet : new int[][]{{4, 4}, {WIDTH - 7, 4}, {4, HEIGHT - 7}, {WIDTH - 7, HEIGHT - 7}}) {
             c.fill(x + rivet[0], y + rivet[1], x + rivet[0] + 3, y + rivet[1] + 3, 0xFFB08A52);
         }
+        c.fill(x + REDSTONE_X, y + REDSTONE_Y, x + REDSTONE_X + REDSTONE_W, y + REDSTONE_Y + REDSTONE_H, 0xFF8A6A3F);
+        c.fill(x + REDSTONE_X + 1, y + REDSTONE_Y + 1, x + REDSTONE_X + REDSTONE_W - 1, y + REDSTONE_Y + REDSTONE_H - 1,
+            handler.redstoneControl() ? 0xFF5D2523 : 0xFF302720);
         slotFrame(c, Tier2DistilleryScreenHandler.INPUT_X, Tier2DistilleryScreenHandler.INPUT_Y);
         for (int row = 0; row < 3; row++) for (int col = 0; col < 9; col++) slotFrame(c, 8 + col * 18, 84 + row * 18);
         for (int col = 0; col < 9; col++) slotFrame(c, 8 + col * 18, 142);
@@ -92,11 +112,12 @@ public final class Tier2DistilleryScreen extends HandledScreen<Tier2DistillerySc
         c.drawTextWithShadow(textRenderer, title, titleX, titleY, 0xFFF1D8A3);
         c.drawTextWithShadow(textRenderer, playerInventoryTitle, playerInventoryTitleX, playerInventoryTitleY, 0xFFDFD0AB);
         c.drawTextWithShadow(textRenderer, Text.translatable("screen.alkahest.distillery_tier2.input"), 14, 34, 0xFFE3D1A5);
+        c.drawCenteredTextWithShadow(textRenderer, Text.literal(handler.redstoneControl() ? "RS ON" : "RS OFF"), REDSTONE_X + REDSTONE_W / 2, REDSTONE_Y + 3, 0xFFE3D1A5);
         if (handler.pendingTotal() > 0) {
             c.drawTextWithShadow(textRenderer, Text.translatable("screen.alkahest.distillery_tier2.queue"), 109, 25, 0xFFDFD0AB);
             c.drawTextWithShadow(textRenderer, "◆ " + handler.pendingTotal(), 109, 36, 0xFFC9A6FF);
         }
-        int color = (handler.status() == 2 || handler.status() == 3) ? 0xFFFFC27D : handler.status() == 1 ? 0xFFC9A6FF : 0xFFD1C6AC;
+        int color = (handler.status() == 2 || handler.status() == 3 || handler.status() == 4) ? 0xFFFFC27D : handler.status() == 1 ? 0xFFC9A6FF : 0xFFD1C6AC;
         c.drawCenteredTextWithShadow(textRenderer, statusText(), 88, 64, color);
         c.drawTextWithShadow(textRenderer, percent() + "%", 118, 52, 0xFFE9D9AE);
     }

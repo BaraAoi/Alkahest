@@ -13,6 +13,7 @@ import net.minecraft.registry.Registry;
 
 public final class ModDataComponents {
     public static final ComponentType<JarContentsComponent> DISTILLERY_CONTENTS = register("distillery_contents", JarContentsComponent.DISTILLERY_CODEC);
+    public static final ComponentType<Boolean> DISTILLERY_REDSTONE = register("distillery_redstone", Codec.BOOL);
     public static final ComponentType<Boolean> JAR_PIPE_SOURCE = register("jar_pipe_source", Codec.BOOL);
     public static final ComponentType<JarContentsComponent> JAR_CONTENTS = register("jar_contents", JarContentsComponent.CODEC);
     public static final ComponentType<Integer> ESSENCE_CHARGE = register("essence_charge", Codec.intRange(0, 100));

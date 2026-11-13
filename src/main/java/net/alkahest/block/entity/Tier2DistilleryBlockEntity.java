@@ -46,11 +46,12 @@ public class Tier2DistilleryBlockEntity extends BlockEntity implements SidedInve
     public static final int DURATION = 300;
     public static final int MAX_BELLOWS = 8;
     private static final int[] INPUT_SLOTS = {0};
-    public static final int STATUS_IDLE = 0, STATUS_WORKING = 1, STATUS_BLOCKED = 2, STATUS_NO_BELLOWS = 3;
+    public static final int STATUS_IDLE = 0, STATUS_WORKING = 1, STATUS_BLOCKED = 2, STATUS_NO_BELLOWS = 3, STATUS_PAUSED = 4;
 
     private final DefaultedList<ItemStack> stacks = DefaultedList.ofSize(1, ItemStack.EMPTY);
     private final List<EssenceStack> pending = new ArrayList<>();
     private int progress;
+    private boolean redstoneControl;
 
     private final PropertyDelegate properties = new PropertyDelegate() {
         @Override public int get(int index) {
@@ -59,6 +60,7 @@ public class Tier2DistilleryBlockEntity extends BlockEntity implements SidedInve
                 case 1 -> DURATION;
                 case 2 -> status();
                 default -> {
+                    if (index == Tier2DistilleryScreenHandler.REDSTONE_PROPERTY) yield redstoneControl ? 1 : 0;
                     int indexOfType = index - Tier2DistilleryScreenHandler.PENDING_START;
                     if (indexOfType < 0 || indexOfType >= EssenceType.values().length) yield 0;
                     EssenceType type = EssenceType.values()[indexOfType];
@@ -76,8 +78,21 @@ public class Tier2DistilleryBlockEntity extends BlockEntity implements SidedInve
 
     public int progress() { return progress; }
     public List<EssenceStack> pending() { return pending; }
+    public boolean redstoneControl() { return redstoneControl; }
+    public boolean redstonePaused() { return redstoneControl && world != null && world.isReceivingRedstonePower(pos); }
+
+    /** Optional mode defaults to off in old and newly crafted machines. */
+    public void toggleRedstoneControl() {
+        redstoneControl = !redstoneControl;
+        markDirty();
+        if (world != null && !world.isClient) {
+            BlockState state = world.getBlockState(pos);
+            world.updateListeners(pos, state, state, Block.NOTIFY_LISTENERS);
+        }
+    }
 
     public int status() {
+        if (redstonePaused()) return STATUS_PAUSED;
         ItemStack input = stacks.get(0);
         if (bellows().isEmpty() && (!pending.isEmpty() || (!input.isEmpty() && accepts(input, world)))) return STATUS_NO_BELLOWS;
         if (!depositDryRun()) return STATUS_BLOCKED;
@@ -190,7 +205,9 @@ public class Tier2DistilleryBlockEntity extends BlockEntity implements SidedInve
     /** Shared by the real ticker and deterministic server GameTests. */
     static void tickWithMidas(World world, BlockPos pos, Tier2DistilleryBlockEntity self, boolean midas, long time) {
         if (world.isClient) return;
+        // Paid output may still leave the queue while paused; no new input is consumed.
         if (!self.deposit()) { setWorking(world, pos, false); return; }
+        if (self.redstonePaused()) { setWorking(world, pos, false); return; }
         ItemStack input = self.stacks.get(0);
         if (input.isEmpty() || !accepts(input, world)) {
             if (self.progress != 0) { self.progress = 0; self.markDirty(); }
@@ -250,9 +267,11 @@ public class Tier2DistilleryBlockEntity extends BlockEntity implements SidedInve
     @Override protected void addComponents(ComponentMap.Builder builder) {
         super.addComponents(builder);
         if (!pending.isEmpty()) builder.add(ModDataComponents.DISTILLERY_CONTENTS, new JarContentsComponent(pending));
+        if (redstoneControl) builder.add(ModDataComponents.DISTILLERY_REDSTONE, true);
     }
     @Override protected void readComponents(ComponentsAccess components) {
         super.readComponents(components);
+        redstoneControl = components.getOrDefault(ModDataComponents.DISTILLERY_REDSTONE, false);
         var saved = components.getOrDefault(ModDataComponents.DISTILLERY_CONTENTS, JarContentsComponent.EMPTY);
         pending.clear();
         saved.contents().stream().filter(entry -> entry.type() != EssenceType.VACUUM).forEach(pending::add);
@@ -263,6 +282,7 @@ public class Tier2DistilleryBlockEntity extends BlockEntity implements SidedInve
         super.writeNbt(nbt, registries);
         Inventories.writeNbt(nbt, stacks, registries);
         nbt.putInt("Progress", progress);
+        nbt.putBoolean("RedstoneControl", redstoneControl);
         if (!pending.isEmpty()) {
             NbtList list = new NbtList();
             for (EssenceStack stack : pending) {
@@ -280,6 +300,7 @@ public class Tier2DistilleryBlockEntity extends BlockEntity implements SidedInve
         super.readNbt(nbt, registries);
         Inventories.readNbt(nbt, stacks, registries);
         progress = nbt.getInt("Progress");
+        redstoneControl = nbt.getBoolean("RedstoneControl");
         pending.clear();
         if (nbt.contains("Pending", NbtElement.LIST_TYPE)) {
             NbtList list = nbt.getList("Pending", NbtElement.COMPOUND_TYPE);

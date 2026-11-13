@@ -18,7 +18,9 @@ public class Tier2DistilleryScreenHandler extends ScreenHandler {
     public static final int PLAYER_INV_START = 1;
     public static final int PLAYER_INV_END = PLAYER_INV_START + 36;
     public static final int INPUT_X = 80, INPUT_Y = 30;
-    public static final int PENDING_START = 3, PROPERTY_COUNT = PENDING_START + EssenceType.values().length;
+    public static final int PENDING_START = 3, REDSTONE_PROPERTY = PENDING_START + EssenceType.values().length;
+    public static final int PROPERTY_COUNT = REDSTONE_PROPERTY + 1;
+    public static final int REDSTONE_BUTTON = 0;
 
     private final Inventory inventory;
     private final PropertyDelegate properties;
@@ -56,6 +58,14 @@ public class Tier2DistilleryScreenHandler extends ScreenHandler {
     public int progress() { return properties.get(0); }
     public int maxProgress() { return properties.get(1); }
     public int status() { return properties.get(2); }
+    public boolean redstoneControl() { return properties.get(REDSTONE_PROPERTY) != 0; }
+
+    @Override public boolean onButtonClick(PlayerEntity player, int id) {
+        if (id != REDSTONE_BUTTON || player.isSpectator() || !canUse(player)
+                || !(inventory instanceof Tier2DistilleryBlockEntity machine)) return false;
+        machine.toggleRedstoneControl();
+        return true;
+    }
     public int pendingAmount(EssenceType type) { return properties.get(PENDING_START + type.ordinal()); }
     public int pendingTotal() {
         int total = 0;

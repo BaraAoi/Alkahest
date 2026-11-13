@@ -71,6 +71,97 @@ public class Tier2DistilleryGameTests implements FabricGameTest {
     }
 
     @GameTest(templateName = EMPTY_STRUCTURE)
+    public void redstoneControlIsOptInAndPreservesProgressAndQueue(TestContext c) {
+        build(c);
+        var world = c.getWorld(); var machine = core(c); BlockPos pos = corePos(c);
+        machine.setStack(0, new ItemStack(Items.APPLE, 2));
+        world.setBlockState(pos.west(), net.minecraft.block.Blocks.REDSTONE_BLOCK.getDefaultState());
+        c.assertTrue(world.isReceivingRedstonePower(pos), "Real adjacent redstone block powers the machine");
+        c.assertFalse(machine.redstoneControl(), "Old and new machines ignore redstone by default");
+        distil(c, 10);
+        c.assertTrue(machine.progress() == 10, "Default mode works despite power");
+
+        var player = c.createMockPlayer(GameMode.SURVIVAL);
+        player.setPosition(pos.getX() + .5, pos.getY() + .5, pos.getZ() + .5);
+        var server = (net.alkahest.screen.Tier2DistilleryScreenHandler)machine.createMenu(1, player.getInventory(), player);
+        var client = new net.alkahest.screen.Tier2DistilleryScreenHandler(1, player.getInventory());
+        server.addListener(new net.minecraft.screen.ScreenHandlerListener() {
+            public void onSlotUpdate(net.minecraft.screen.ScreenHandler handler, int slot, ItemStack stack) { }
+            public void onPropertyUpdate(net.minecraft.screen.ScreenHandler handler, int id, int value) { client.setProperty(id, value); }
+        });
+        c.assertFalse(server.onButtonClick(player, 17), "Unknown button ID rejected");
+        var spectator = c.createMockPlayer(GameMode.SPECTATOR);
+        spectator.setPosition(pos.getX() + .5, pos.getY() + .5, pos.getZ() + .5);
+        c.assertFalse(server.onButtonClick(spectator, 0), "Spectator cannot toggle mode");
+        c.assertTrue(server.onButtonClick(player, 0), "Nearby player may opt in");
+        c.assertTrue(machine.redstonePaused(), "Power pauses the opt-in machine");
+        machine.pending().add(new EssenceStack(EssenceType.IGNIS, 3, .7f));
+        distil(c, 20);
+        server.sendContentUpdates();
+        c.assertTrue(machine.progress() == 10 && machine.getStack(0).getCount() == 2, "Pause freezes progress and input");
+        c.assertTrue(machine.pending().isEmpty() && machine.bellows().stream().anyMatch(b -> b.storedType() == EssenceType.IGNIS && b.amount() == 3), "Already paid queue still delivers safely");
+        c.assertTrue(client.redstoneControl() && client.status() == Tier2DistilleryBlockEntity.STATUS_PAUSED, "Mode and paused state reach open client screen");
+        c.assertFalse(world.getBlockState(pos).get(net.alkahest.block.custom.Tier2DistilleryBlock.WORKING), "Visual running state is off while paused");
+
+        world.removeBlock(pos.west(), false);
+        distil(c, 1);
+        c.assertTrue(machine.progress() == 11 && machine.status() == Tier2DistilleryBlockEntity.STATUS_WORKING, "Unpowering resumes preserved progress");
+        world.setBlockState(pos.west(), net.minecraft.block.Blocks.REDSTONE_BLOCK.getDefaultState());
+        distil(c, 10);
+        c.assertTrue(machine.progress() == 11, "Power pauses again");
+        c.assertTrue(server.onButtonClick(player, 0), "Opting out is always possible");
+        distil(c, 1); server.sendContentUpdates();
+        c.assertTrue(machine.progress() == 12 && !client.redstoneControl(), "Ignoring power resumes and synchronizes");
+        distil(c, Tier2DistilleryBlockEntity.DURATION - 12);
+        c.assertTrue(machine.getStack(0).getCount() == 1 && machine.progress() == 0, "Resumed cycle consumes exactly one item");
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void redstoneModeNbtMigrationAndClientSync(TestContext c) {
+        build(c); var machine = core(c); var registry = c.getWorld().getRegistryManager();
+        machine.toggleRedstoneControl();
+        var saved = machine.createNbt(registry);
+        var restored = new Tier2DistilleryBlockEntity(corePos(c), c.getWorld().getBlockState(corePos(c)));
+        restored.readComponentlessNbt(saved, registry);
+        c.assertTrue(restored.redstoneControl(), "Control mode survives world NBT reload");
+        var packet = machine.toInitialChunkDataNbt(registry);
+        var client = new Tier2DistilleryBlockEntity(corePos(c), c.getWorld().getBlockState(corePos(c)));
+        client.readComponentlessNbt(packet, registry);
+        c.assertTrue(client.redstoneControl(), "Initial client snapshot includes mode");
+        saved.remove("RedstoneControl");
+        restored.readComponentlessNbt(saved, registry);
+        c.assertFalse(restored.redstoneControl(), "Legacy NBT without the new flag ignores redstone");
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE, tickLimit = 80)
+    public void redstoneModeAndQueuedOutputSurviveCoreItemRoundTrip(TestContext c) {
+        c.setBlockState(3, 2, 3, ModBlocks.DISTILLERY_TIER2);
+        var world = c.getWorld(); var machine = core(c); BlockPos pos = corePos(c);
+        machine.toggleRedstoneControl();
+        machine.pending().add(new EssenceStack(EssenceType.IGNIS, 7, .6f));
+        world.breakBlock(pos, true);
+        c.runAtTick(5, () -> {
+            var drops = world.getEntitiesByClass(net.minecraft.entity.ItemEntity.class, new net.minecraft.util.math.Box(pos).expand(3), e -> e.getStack().isOf(ModBlocks.DISTILLERY_TIER2.asItem()));
+            c.assertTrue(drops.size() == 1, "One core item drops");
+            ItemStack item = savedItem(c, drops.getFirst().getStack());
+            c.assertTrue(item.getOrDefault(net.alkahest.registry.ModDataComponents.DISTILLERY_REDSTONE, false), "Item remembers mode");
+            c.assertTrue(item.get(net.alkahest.registry.ModDataComponents.DISTILLERY_CONTENTS).total() == 7, "Item also retains queued essence");
+            drops.getFirst().discard();
+            BlockPos base = c.getAbsolutePos(new BlockPos(5, 1, 3));
+            world.setBlockState(base, net.minecraft.block.Blocks.STONE.getDefaultState());
+            var player = c.createMockPlayer(GameMode.SURVIVAL);
+            player.setStackInHand(Hand.MAIN_HAND, item);
+            var hit = new net.minecraft.util.hit.BlockHitResult(net.minecraft.util.math.Vec3d.ofCenter(base), net.minecraft.util.math.Direction.UP, base, false);
+            c.assertTrue(((net.minecraft.item.BlockItem)item.getItem()).place(new net.minecraft.item.ItemPlacementContext(player, Hand.MAIN_HAND, item, hit)).isAccepted(), "Core is replaced");
+            var placed = (Tier2DistilleryBlockEntity)world.getBlockEntity(base.up());
+            c.assertTrue(placed.redstoneControl() && placed.pending().size() == 1 && placed.pending().getFirst().amount() == 7, "Both mode and queue restore together");
+            c.complete();
+        });
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
     public void distilsEveryEssenceTypeIntoBellows(TestContext c) {
         build(c);
         Tier2DistilleryBlockEntity core = core(c);
