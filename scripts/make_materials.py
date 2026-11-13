@@ -16,28 +16,43 @@ cloth=['................','................','.....dddddd.....','....dlllmmmd...
 draw('cloth',cloth,{'d':(93,83,72),'m':(180,167,143),'l':(223,214,191)})
 draw('spirit_cloth',cloth,{'d':(95,83,137),'m':(184,175,224),'l':(236,234,252)})
 draw('stabilizing_reagent',['................','................','......dddd......','.....dllllD.....','....dlllllDd....','...dlllllDmmD...','..dlllllDmmmmD..','..dllllDmmmmmd..','..dlllDmmmum.md.','..dllllDmmum.md.','...dllllDmmmmD..','....ddlllDmmD...','......ddddDD....','................','................','................'],{'d':(75,63,60),'D':(119,96,71),'l':(231,218,167),'m':(181,145,83),'u':(255,246,211)})
-# Equal RGB mix of the actual six primal EssenceType colours (A68072).
-# Twenty-four subtle connected silhouettes form a cyclic, continuously morphing blob.
-primal = (0xFF4500, 0x1E90FF, 0x8B5A2B, 0xF0F8FF, 0xFFD700, 0x4B0082)
-blend = tuple(round(sum((color >> shift) & 255 for color in primal) / len(primal)) for shift in (16, 8, 0))
+# A polished, white alchemical ingot. The silhouette stays fixed; a soft highlight
+# glides over the surface without changing the six-essence gameplay composition.
+ingot = [
+    '................',
+    '................',
+    '..........dd....',
+    '.......dddhhd...',
+    '....dddhwwwwwd..',
+    '..ddhhwwwfffwwd.',
+    '.dhhwwwfffffwhwd',
+    '.dhwwwfffwwhhfmd',
+    '.dhhwwwwhhhfmmsd',
+    '.dmhhhhhfmmmsssd',
+    '.dmmmfmmmmmmssd.',
+    '..dmmfmmmmddd...',
+    '...dmssddd......',
+    '....ddd.........',
+    '................',
+    '................',
+]
+assert len(ingot)==16 and all(len(row)==16 for row in ingot)
+palette = {'d': (107, 116, 126), 's': (158, 169, 180), 'm': (191, 201, 209),
+           'f': (224, 232, 237), 'w': (242, 247, 249), 'h': (254, 255, 255)}
 frames=[]
 for frame in range(24):
-    phase=2*math.pi*frame/24
-    mask=set()
-    for y in range(16):
-        for x in range(16):
-            dx=(x-7.5)/1.08; dy=(y-7.5)/.92
-            angle=math.atan2(dy,dx)
-            radius=5.0 + .85*math.sin(3*angle+phase) + .55*math.sin(2*angle-phase)
-            if math.hypot(dx,dy) <= radius: mask.add((x,y))
     rows=[]
-    for y in range(16):
+    for y, pattern_row in enumerate(ingot):
         row=[]
-        for x in range(16):
-            if (x,y) not in mask: row.append((0,0,0,0)); continue
-            edge=any((x+dx,y+dy) not in mask for dx,dy in ((-1,0),(1,0),(0,-1),(0,1)))
-            shade=.60 if edge else 1.12 if x+y < 12 else 1.0 if x+y < 19 else .86
-            row.append((*tuple(min(255,round(c*shade)) for c in blend),255))
+        for x, ch in enumerate(pattern_row):
+            if ch == '.': row.append((0,0,0,0)); continue
+            rgb=palette[ch]
+            # A very subtle 24-frame sheen, visible on the top plane only.
+            if ch in 'fw':
+                phase = 2*math.pi*(frame/24 - (x+y)/24)
+                amount = max(0, math.cos(phase)) * 8
+                rgb=tuple(min(255, round(v+amount)) for v in rgb)
+            row.append((*rgb,255))
         rows.append(row)
     frames.extend(rows)
 (A/'textures/item/stable_material.png').write_bytes(png(frames))

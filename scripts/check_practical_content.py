@@ -216,7 +216,7 @@ for name, original in textures.items():
 assert len(set(textures.values())) == len(textures)
 assert 'cloth_to_spirit_cloth' in source and 'ModItems.STABILIZING_REAGENT' in matrix
 
-# The mixed material has an animated silhouette, not just a cycling palette.
+# The white ingot keeps its silhouette while its highlights gently animate.
 meta = json.loads((assets/'textures/item/stable_material.png.mcmeta').read_text())['animation']
 assert meta == {'frametime':4, 'interpolate':True}
 encoded = textures['stable_material']; offset, packed = 8, bytearray()
@@ -228,9 +228,18 @@ while offset < len(encoded):
     if kind == b'IEND': break
 raw = zlib.decompress(packed); assert len(raw) == 384*65
 masks=[]
+frames=[]
 for frame in range(24):
-    mask = frozenset((x,y) for y in range(16) for x in range(16) if raw[(frame*16+y)*65+1+x*4+3])
-    assert 40 < len(mask) < 150
+    pixels = [tuple(raw[(frame*16+y)*65+1+x*4:(frame*16+y)*65+5+x*4])
+              for y in range(16) for x in range(16)]
+    mask = frozenset((i%16,i//16) for i,p in enumerate(pixels) if p[3])
+    assert 40 < len(mask) < 150 and all(p[3] in (0,255) for p in pixels)
+    opaque = [p for p in pixels if p[3]]
+    assert all(max(p[:3])-min(p[:3]) <= 22 for p in opaque), 'only neutral or softly cool whites and greys'
+    assert sum(min(p[:3]) >= 190 for p in opaque) >= len(opaque)*.55, 'ingot should read as white'
     masks.append(mask)
-assert len(set(masks)) >= 12 and all(masks[i] != masks[(i+6)%24] for i in range(24))
-assert all(len(masks[i] ^ masks[(i+1)%24]) <= 25 for i in range(24)), 'morph frames should change gradually'
+    frames.append(tuple(pixels))
+assert len(set(masks)) == 1, 'the solid ingot must not morph'
+assert len(set(frames)) >= 12, 'soft highlights must animate'
+assert all(max(abs(a-b) for p,q in zip(frames[i],frames[(i+1)%24]) for a,b in zip(p,q)) <= 3
+           for i in range(24)), 'cyclic highlight should move smoothly'
