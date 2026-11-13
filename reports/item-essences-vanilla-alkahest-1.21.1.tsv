@@ -63,6 +63,7 @@ alkahest:infused_ignis	item	manual	ignis=7,potentia=2
 alkahest:infused_ordo	item	manual	ordo=9,metallum=4,lux=2
 alkahest:infused_perditio	item	manual	ordo=5,perditio=3,lux=3
 alkahest:infused_terra	item	manual	terra=5,metallum=6
+alkahest:iron_chain	item	recipe	terra=5,metallum=16
 alkahest:jar	block	recipe	terra=6,ordo=3
 alkahest:lightning_in_a_bottle	item	recipe	ignis=4,aer=4,metallum=13,potentia=6
 alkahest:matrix_core	block	recipe	ignis=2,aqua=2,terra=19,aer=2,ordo=80,perditio=4,herba=3,metallum=40,lux=31,motus=7,vitium=2,spiritus=7
