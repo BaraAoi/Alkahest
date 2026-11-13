@@ -115,7 +115,7 @@ for lang in ('ru_ru', 'en_us'):
     for key in ('search', 'search_hint', 'search_hint_more', 'search_empty'):
         assert strings.get(f'screen.alkahest.journal.{key}')
 
-# Six elemental materials retain vanilla silhouettes and have reproducible runic overlays.
+# Six elemental materials retain vanilla silhouettes and have reproducible translucent veins.
 material_inputs = {'ignis':'blaze_powder','aqua':'lapis_lazuli','terra':'iron_ingot',
                    'aer':'diamond','ordo':'gold_ingot','perditio':'amethyst_shard'}
 overlays = {}
@@ -132,3 +132,23 @@ for kind, base in material_inputs.items():
 subprocess.run(['python3', 'scripts/make_infused_materials.py'], check=True)
 assert all((assets / f'textures/item/infused_{k}.png').read_bytes() == v for k,v in overlays.items())
 assert len(set(overlays.values())) == 6
+
+# Every vein/mixture pixel stays inside the default material silhouette, not a floating symbol.
+import runpy, zlib
+generator = runpy.run_path('scripts/make_infused_materials.py')
+for kind, base in material_inputs.items():
+    encoded = overlays[kind]
+    offset, packed = 8, bytearray()
+    while offset < len(encoded):
+        size = struct.unpack_from('>I', encoded, offset)[0]
+        tag = encoded[offset+4:offset+8]
+        if tag == b'IDAT': packed.extend(encoded[offset+8:offset+8+size])
+        offset += 12 + size
+        if tag == b'IEND': break
+    raw = zlib.decompress(packed)
+    assert len(raw) == 16 * 65
+    pixels = [(x,y,raw[y*65+1+x*4+3]) for y in range(16) for x in range(16)]
+    mask = generator['masks'][base]
+    assert all(not a or mask[y][x] == 'X' for x,y,a in pixels), kind
+    assert sum(1 for x,y,a in pixels if a >= 160) >= 12, f'{kind} needs visible veins'
+    assert sum(1 for x,y,a in pixels if 0 < a < 160) >= 15, f'{kind} needs a blended tint'
