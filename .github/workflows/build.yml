@@ -49,6 +49,8 @@ jobs:
         run: python3 scripts/check_transmutator_ui.py
       - name: Check the matrix assets
         run: python3 scripts/check_matrix_assets.py
+      - name: Check stabilizer animation
+        run: python3 scripts/check_stabilizer_animation.py
       - name: Check shield visuals and HUD
         run: python3 scripts/check_shield_visuals.py
       - name: Check atmosphere HUD

@@ -155,4 +155,37 @@ public class StabilizerGameTests implements FabricGameTest {
         c.assertFalse(core.isActivated(), "A broken tower must switch itself off");
         c.complete();
     }
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void crestAnimationFollowsActivationAndRepairsOldWorlds(TestContext c) {
+        build(c);
+        var core=core(c);
+        var pos=c.getAbsolutePos(new BlockPos(2,4,2));
+        var prop=net.alkahest.block.custom.StabilizerCrestBlock.ROTATING;
+        c.assertFalse(c.getWorld().getBlockState(pos).get(prop), "Idle crystal is still");
+        core.setActivated(true);
+        c.assertTrue(c.getWorld().getBlockState(pos).get(prop), "Active formed tower starts rotation");
+        // A missing property from an old saved crest resolves to the default false state.
+        c.getWorld().setBlockState(pos,ModBlocks.STABILIZER_CREST.getDefaultState());
+        core.syncState();
+        c.assertTrue(c.getWorld().getBlockState(pos).get(prop), "Old-world crest state is repaired");
+        core.setActivated(false);
+        c.assertFalse(c.getWorld().getBlockState(pos).get(prop), "Turning off restores static model");
+        core.setActivated(true);
+        c.getWorld().setBlockState(core.getPos(),net.minecraft.block.Blocks.AIR.getDefaultState());
+        c.assertFalse(c.getWorld().getBlockState(pos).get(prop), "Removing the core stops the crest immediately");
+        c.complete();
+    }
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void brokenTowerStopsCrestAnimation(TestContext c) {
+        build(c);
+        var core=core(c);
+        var crest=c.getAbsolutePos(new BlockPos(2,4,2));
+        core.setActivated(true);
+        c.getWorld().setBlockState(receiverPos(c),net.minecraft.block.Blocks.AIR.getDefaultState());
+        core.syncState();
+        c.assertFalse(core.isActivated(), "Breaking the structure deactivates the core");
+        c.assertFalse(c.getWorld().getBlockState(crest).get(net.alkahest.block.custom.StabilizerCrestBlock.ROTATING), "Broken tower returns to a static crest");
+        c.complete();
+    }
+
 }

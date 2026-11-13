@@ -1,7 +1,10 @@
 {
   "variants": {
-    "": {
+    "rotating=false": {
       "model": "alkahest:block/stabilizer_crest"
+    },
+    "rotating=true": {
+      "model": "alkahest:block/stabilizer_crest_base"
     }
   }
 }
