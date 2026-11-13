@@ -52,7 +52,7 @@ public class TransmutatorCoreBlockEntity extends BlockEntity implements SidedInv
     private static final int[] INPUT_SLOTS = {INPUT}, OUTPUT_SLOTS = {OUTPUT};
 
     public static final int STATUS_IDLE = 0, STATUS_WORKING = 1, STATUS_NO_ESSENCE = 2,
-        STATUS_BLOCKED = 3, STATUS_UNFORMED = 4, STATUS_NO_AMULET = 5, STATUS_DORMANT = 6;
+        STATUS_BLOCKED = 3, STATUS_UNFORMED = 4, STATUS_NO_AMULET = 5, STATUS_DORMANT = 6, STATUS_CHOOSE_RECIPE = 7;
 
     private final DefaultedList<ItemStack> stacks = DefaultedList.ofSize(3, ItemStack.EMPTY);
     private int progress;
@@ -68,7 +68,7 @@ public class TransmutatorCoreBlockEntity extends BlockEntity implements SidedInv
                 case 0 -> progress;
                 case 1 -> duration();
                 case 2 -> status();
-                case 3 -> selectedRecipeIndex();
+                case 3 -> selectedRecipeIndex() + 1;
                 default -> 0;
             };
         }
@@ -96,15 +96,25 @@ public class TransmutatorCoreBlockEntity extends BlockEntity implements SidedInv
     public TransmutationRecipe recipe() { return TransmutationRecipe.find(stacks.get(INPUT), selectedRecipeIndex()); }
     public int duration() { TransmutationRecipe recipe = recipe(); return recipe == null ? DURATION : recipe.duration(); }
 
-    /** Cycle all recipes for the current input, without consuming or clearing any resources. */
-    public boolean cycleRecipe() {
+    /** A choice is required for ambiguous inputs; direct indices are validated on the server. */
+    public boolean selectRecipe(int index) {
         if (world == null || world.isClient) return false;
         ItemStack input = stacks.get(INPUT);
         var choices = TransmutationRecipe.choices(input);
-        var next = TransmutationRecipe.next(choices, selectedRecipes.get(inputId(input)));
-        if (next == null) return false;
-        if (next == choices.getFirst()) selectedRecipes.remove(inputId(input));
-        else selectedRecipes.put(inputId(input), next.id());
+        if (choices.size() < 2 || index < 0 || index >= choices.size()) return false;
+        selectedRecipes.put(inputId(input), choices.get(index).id());
+        progress = 0;
+        markDirty();
+        syncAnimationProgress();
+        return true;
+    }
+
+    /** Explicitly return to the selection screen; no further work starts until a choice is made. */
+    public boolean clearRecipeChoice() {
+        if (world == null || world.isClient) return false;
+        ItemStack input = stacks.get(INPUT);
+        if (TransmutationRecipe.choices(input).size() < 2 || selectedRecipeIndex() < 0) return false;
+        selectedRecipes.remove(inputId(input));
         progress = 0;
         markDirty();
         syncAnimationProgress();
@@ -115,7 +125,7 @@ public class TransmutatorCoreBlockEntity extends BlockEntity implements SidedInv
         if (!formed()) return STATUS_UNFORMED;
         if (verticalFormed() && !awake) return STATUS_DORMANT;
         TransmutationRecipe recipe = recipe();
-        if (recipe == null) return STATUS_IDLE;
+        if (recipe == null) return TransmutationRecipe.choices(stacks.get(INPUT)).size() > 1 ? STATUS_CHOOSE_RECIPE : STATUS_IDLE;
         if (!hasAmulet()) return STATUS_NO_AMULET;
         if (!canStoreOutput(recipe.output())) return STATUS_BLOCKED;
         if (progress >= recipe.duration()) return STATUS_NO_ESSENCE;
@@ -524,7 +534,7 @@ public class TransmutatorCoreBlockEntity extends BlockEntity implements SidedInv
             selectedRecipes.put("minecraft:iron_ingot", "iron_ingot_to_diamond");
         // Older iron-to-diamond operations could have up to 2400 ticks of progress. Preserve
         // completed work as ready under the shorter duration, but never leave an invalid counter.
-        progress = Math.max(0, Math.min(progress, duration()));
+        progress = recipe() == null ? 0 : Math.max(0, Math.min(progress, duration()));
         if (world != null && world.isClient) clientProgressSyncTick = world.getTime();
     }
 

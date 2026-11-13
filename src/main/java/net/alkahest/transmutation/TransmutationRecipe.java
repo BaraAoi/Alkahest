@@ -71,14 +71,11 @@ public record TransmutationRecipe(String id, ItemStack input, ItemStack output, 
     }
     public static int selectedIndex(List<TransmutationRecipe> choices, String id) {
         for (int i = 0; i < choices.size(); i++) if (choices.get(i).id().equals(id)) return i;
-        return 0; // Missing/removed recipe falls back to the current input's first recipe.
+        return choices.size() == 1 ? 0 : -1; // Multiple options require an explicit, still-valid choice.
     }
     public static TransmutationRecipe selected(List<TransmutationRecipe> choices, int index) {
-        if (choices.isEmpty()) return null;
-        return choices.get(index >= 0 && index < choices.size() ? index : 0);
-    }
-    public static TransmutationRecipe next(List<TransmutationRecipe> choices, String id) {
-        return choices.size() < 2 ? null : choices.get((selectedIndex(choices, id) + 1) % choices.size());
+        if (index < 0 || index >= choices.size()) return null;
+        return choices.get(index);
     }
     public static TransmutationRecipe find(ItemStack stack) { return selected(choices(stack), 0); }
     public static TransmutationRecipe find(ItemStack stack, int index) { return selected(choices(stack), index); }

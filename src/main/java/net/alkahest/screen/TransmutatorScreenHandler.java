@@ -61,17 +61,19 @@ public class TransmutatorScreenHandler extends ScreenHandler {
     public int progress() { return properties.get(0); }
     public int maxProgress() { return Math.max(1, properties.get(1)); }
     public int status() { return properties.get(2); }
-    public int selectedRecipeIndex() { return properties.get(3); }
+    public int selectedRecipeIndex() { return recipeCount() == 1 ? 0 : properties.get(3) - 1; }
     public int recipeCount() { return TransmutationRecipe.choices(inventory.getStack(TransmutatorCoreBlockEntity.INPUT)).size(); }
     public boolean canSelectRecipe() { return recipeCount() > 1; }
+    public boolean needsRecipeChoice() { return canSelectRecipe() && (selectedRecipeIndex() < 0 || selectedRecipeIndex() >= recipeCount()); }
+    public java.util.List<TransmutationRecipe> recipeChoices() { return TransmutationRecipe.choices(inventory.getStack(TransmutatorCoreBlockEntity.INPUT)); }
     public ItemStack selectedOutput() {
         var recipe = TransmutationRecipe.find(inventory.getStack(TransmutatorCoreBlockEntity.INPUT), selectedRecipeIndex());
         return recipe == null ? ItemStack.EMPTY : recipe.output();
     }
 
     @Override public boolean onButtonClick(PlayerEntity player, int id) {
-        if (id != 0 || player.isSpectator() || !canUse(player) || !(inventory instanceof TransmutatorCoreBlockEntity core)) return false;
-        return core.cycleRecipe();
+        if (id < 0 || player.isSpectator() || !canUse(player) || !(inventory instanceof TransmutatorCoreBlockEntity core)) return false;
+        return id == 0 ? core.clearRecipeChoice() : core.selectRecipe(id - 1);
     }
 
     /** The cost of the current input, computed on both sides from the recipe table. */
