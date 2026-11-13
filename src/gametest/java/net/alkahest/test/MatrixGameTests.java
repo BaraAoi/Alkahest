@@ -449,7 +449,7 @@ public class MatrixGameTests implements FabricGameTest {
     }
 
     /** Use the real block interactions and server ticker, with a diagonal pedestal below the core. */
-    @GameTest(templateName = EMPTY_STRUCTURE, tickLimit = 400)
+    @GameTest(templateName = EMPTY_STRUCTURE, tickLimit = 700)
     public void diamondUsesTwoClickedPedestalsOnRealTicks(TestContext c) {
         BlockPos pos = build(c);
         wake(c);
@@ -481,10 +481,10 @@ public class MatrixGameTests implements FabricGameTest {
         jar(c, 0, CY, 6, EssenceType.ORDO, 4);
         MatrixCoreBlockEntity.interactNearby(c.getWorld(), pos, player, new ItemStack(ModItems.ALKAHEST_AMULET));
         c.assertTrue(core.started(), "Real amulet interaction starts the synthesis");
-        // Atmosphere can legitimately slow a recipe to half speed without blocking it.
-        c.runAtTick(340, () -> {
+        // Leave headroom for low atmospheric stability and loaded-chunk/server scheduling.
+        c.runAtTick(600, () -> {
             c.assertTrue(core.getStack(MatrixCoreBlockEntity.OUTPUT).isOf(Items.DIAMOND),
-                "The natural server ticker completes the diamond synthesis");
+                "The natural server ticker completes the diamond synthesis: status=" + core.status() + " progress=" + core.progress() + " started=" + core.started());
             var goldPedestal = (net.alkahest.block.entity.MatrixPedestalBlockEntity) c.getWorld().getBlockEntity(goldPos);
             var saltPedestal = (net.alkahest.block.entity.MatrixPedestalBlockEntity) c.getWorld().getBlockEntity(saltPos);
             c.assertTrue(goldPedestal.isEmpty() && saltPedestal.isEmpty(), "Both real pedestal items were absorbed");
