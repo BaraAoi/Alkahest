@@ -265,6 +265,9 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
         if (focus.isOf(ModItems.ALKAHEST_AMULET)) {
             AlkahestAmuletItem amulet = (AlkahestAmuletItem) focus.getItem();
             if (!amulet.consumeUseStack(player, focus)) return false;
+        } else if (focus.getItem() instanceof net.alkahest.item.custom.CrystalWandItem) {
+            // Bootstrap only: the first amulet cannot require an amulet to make itself.
+            if (!recipe.output().isOf(ModItems.ALKAHEST_AMULET)) return false;
         } else if (!focus.isOf(ModItems.PHILOSOPHERS_STONE)) return false;
         startedRecipeKey = recipe.key();
         started = true;
@@ -737,7 +740,10 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
     public static void interactNearby(World world, BlockPos clicked, PlayerEntity player, ItemStack held) {
         if (world.isClient || player.isSneaking()) return;
         if (held.getItem() instanceof net.alkahest.item.custom.CrystalWandItem) {
-            awakenNearby(world, clicked, player);
+            MatrixCoreBlockEntity core = coreNearby(world, clicked);
+            boolean wasAwake = core != null && core.awake();
+            awakenNearby(world, clicked, player); // also records the assembled research when pedestals were added later
+            if (wasAwake) core.startWith(held, player);
             return;
         }
         MatrixCoreBlockEntity core = coreNearby(world, clicked);

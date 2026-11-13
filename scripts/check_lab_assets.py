@@ -43,8 +43,8 @@ for t in prima:
 
 powder_recipe = json.loads((recipes / 'crystallization_powder.json').read_text())
 assert powder_recipe['result']['id'] == 'alkahest:crystallization_powder'
-amulet_recipe = json.loads((recipes / 'alkahest_amulet.json').read_text())
-assert amulet_recipe['result']['id'] == 'alkahest:alkahest_amulet'
+assert not (recipes / 'alkahest_amulet.json').exists(), 'amulet is made in the Matrix, not on the workbench'
+assert 'synthesis(ModItems.IRON_CHAIN' in Path('src/main/java/net/alkahest/matrix/MatrixRecipe.java').read_text()
 
 biome = json.loads((data_root / 'worldgen/biome/alchemical_wastes.json').read_text())
 assert biome['effects']['grass_color'] == 6111187 and biome['effects']['fog_color'] == 9055202

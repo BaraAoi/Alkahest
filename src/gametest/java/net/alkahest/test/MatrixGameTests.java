@@ -76,6 +76,41 @@ public class MatrixGameTests implements FabricGameTest {
     }
 
     @GameTest(templateName = EMPTY_STRUCTURE)
+    public void firstAmuletIsMadeWithAWandInTheMatrix(TestContext c) {
+        BlockPos pos = build(c); var world = c.getWorld(); var core = core(c);
+        var player = c.createMockPlayer(net.minecraft.world.GameMode.SURVIVAL);
+        var wand = new ItemStack(ModItems.WANDS.get(EssenceType.ORDO));
+        var before = wand.getOrDefault(net.alkahest.registry.ModDataComponents.ESSENCE_CHARGE, 0);
+        core.setStack(MatrixCoreBlockEntity.BASE, new ItemStack(ModItems.IRON_CHAIN));
+        pedestal(c, 1, 1, 3, new ItemStack(ModItems.ALKAHEST_VIAL));
+        pedestal(c, 5, 1, 3, new ItemStack(ModItems.CRYSTALS.get(EssenceType.ORDO)));
+        pedestal(c, 3, 1, 5, new ItemStack(Items.GOLD_INGOT));
+        var ordo = jar(c, 0, 2, 3, EssenceType.ORDO, 8);
+        var metal = jar(c, 6, 2, 3, EssenceType.METALLUM, 8);
+        MatrixCoreBlockEntity.interactNearby(world, pos, player, wand);
+        c.assertTrue(core.awake() && !core.started(), "First wand click wakes, but does not start the Matrix");
+        MatrixCoreBlockEntity.interactNearby(world, pos, player, wand);
+        c.assertTrue(core.started(), "Second wand click starts the amulet recipe");
+        run(world, pos, MatrixCoreBlockEntity.DURATION * 2 + 10);
+        c.assertTrue(core.getStack(MatrixCoreBlockEntity.OUTPUT).isOf(ModItems.ALKAHEST_AMULET), "The synthesis produces an amulet");
+        c.assertTrue(core.getStack(MatrixCoreBlockEntity.BASE).isEmpty(), "Necklace base consumed");
+        for (var p : List.of(new BlockPos(1,1,3), new BlockPos(5,1,3), new BlockPos(3,1,5)))
+            c.assertTrue(((net.alkahest.block.entity.MatrixPedestalBlockEntity) world.getBlockEntity(c.getAbsolutePos(p))).isEmpty(), "Components consumed");
+        c.assertTrue(ordo.contents().total() == 0 && metal.contents().total() == 0, "Both essence costs paid");
+        c.assertTrue(wand.getOrDefault(net.alkahest.registry.ModDataComponents.ESSENCE_CHARGE, 0) == before, "Bootstrap wand use is free");
+        core.setStack(MatrixCoreBlockEntity.OUTPUT, ItemStack.EMPTY);
+        core.setStack(MatrixCoreBlockEntity.BASE, new ItemStack(Items.STRING));
+        c.assertFalse(core.startWith(wand, player), "A wand cannot start other Matrix recipes");
+        var input = net.minecraft.recipe.input.CraftingRecipeInput.create(3, 3, List.of(
+            ItemStack.EMPTY, new ItemStack(Items.STRING), ItemStack.EMPTY,
+            new ItemStack(Items.GOLD_INGOT), new ItemStack(ModItems.CRYSTALS.get(EssenceType.ORDO)), new ItemStack(Items.GOLD_INGOT),
+            ItemStack.EMPTY, new ItemStack(ModItems.ALKAHEST_VIAL), ItemStack.EMPTY));
+        var match = world.getServer().getRecipeManager().getFirstMatch(net.minecraft.recipe.RecipeType.CRAFTING, input, world);
+        c.assertFalse(match.isPresent() && match.get().value().craft(input, world.getRegistryManager()).isOf(ModItems.ALKAHEST_AMULET), "The old workbench recipe no longer makes an amulet");
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
     public void atmosphericOverloadSlowsButNeverBlocksSynthesis(TestContext c) {
         BlockPos pos = build(c); wake(c); var world = c.getWorld(); var core = core(c);
         var air = net.alkahest.atmosphere.AtmosphereState.of(world);
