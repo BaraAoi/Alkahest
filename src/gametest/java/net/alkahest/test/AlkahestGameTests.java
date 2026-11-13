@@ -211,16 +211,7 @@ public class AlkahestGameTests implements FabricGameTest {
         BlockPos pos = c.getAbsolutePos(new BlockPos(3, 2, 3));
         ServerPlayerEntity player = c.createMockCreativeServerPlayerInWorld();
 
-        // Verify Alkahest Amulet crafting recipe, 5-uses-per-charge efficiency, and Ordo recharging
-        var input = CraftingRecipeInput.create(3, 3, List.of(
-            ItemStack.EMPTY, new ItemStack(Items.STRING), ItemStack.EMPTY,
-            new ItemStack(Items.GOLD_INGOT), new ItemStack(ModItems.CRYSTALS.get(EssenceType.ORDO)), new ItemStack(Items.GOLD_INGOT),
-            ItemStack.EMPTY, new ItemStack(ModItems.ALKAHEST_VIAL), ItemStack.EMPTY
-        ));
-        var recipe = c.getWorld().getServer().getRecipeManager().getFirstMatch(RecipeType.CRAFTING, input, c.getWorld());
-        c.assertTrue(recipe.isPresent() && recipe.get().value().craft(input, c.getWorld().getRegistryManager()).isOf(ModItems.ALKAHEST_AMULET),
-            "Alkahest Amulet crafting recipe works");
-
+        // MatrixGameTests covers the synthesis; keep verifying amulet efficiency and recharge here.
         PlayerEntity survival = c.createMockPlayer(GameMode.SURVIVAL);
         ItemStack amulet = new ItemStack(ModItems.ALKAHEST_AMULET);
         for (int i = 0; i < 5; i++) {
