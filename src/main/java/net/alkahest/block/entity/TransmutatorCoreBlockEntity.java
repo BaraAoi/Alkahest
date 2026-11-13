@@ -496,6 +496,9 @@ public class TransmutatorCoreBlockEntity extends BlockEntity implements SidedInv
         progress = nbt.getInt("Progress");
         awake = nbt.getBoolean("VerticalAwake");
         ironDiamond = nbt.getBoolean("IronDiamond");
+        // Older iron-to-diamond operations could have up to 2400 ticks of progress. Preserve
+        // completed work as ready under the shorter duration, but never leave an invalid counter.
+        progress = Math.max(0, Math.min(progress, duration()));
         if (world != null && world.isClient) clientProgressSyncTick = world.getTime();
     }
 

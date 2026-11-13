@@ -15,27 +15,27 @@ import java.util.Map;
  */
 public record TransmutationRecipe(ItemStack input, ItemStack output, Map<EssenceType, Integer> cost, int duration) {
     public static final int DEFAULT_DURATION = 100;
-    private static final TransmutationRecipe IRON_DIAMOND = recipeWithDuration(Items.IRON_INGOT, Items.DIAMOND, 2400,
-        EssenceType.TERRA, 50, EssenceType.LUX, 30, EssenceType.ORDO, 25, EssenceType.METALLUM, 15);
+    private static final TransmutationRecipe IRON_DIAMOND = recipe(Items.IRON_INGOT, Items.DIAMOND,
+        EssenceType.TERRA, 1, EssenceType.LUX, 1, EssenceType.ORDO, 1, EssenceType.METALLUM, 1);
     private static final List<TransmutationRecipe> ALL = List.of(
-        recipe(Items.SAND, Items.GLASS, EssenceType.IGNIS, 2),
-        recipe(Items.COBBLESTONE, Items.STONE, EssenceType.TERRA, 2),
-        recipe(Items.STONE, Items.DEEPSLATE, EssenceType.TERRA, 2, EssenceType.PERDITIO, 2),
-        recipe(Items.DEEPSLATE, Items.CALCITE, EssenceType.ORDO, 2, EssenceType.AER, 1),
-        recipe(Items.COPPER_INGOT, Items.GOLD_INGOT, EssenceType.METALLUM, 3, EssenceType.ORDO, 2),
-        recipe(Items.IRON_INGOT, Items.GOLD_INGOT, EssenceType.METALLUM, 2, EssenceType.ORDO, 3),
-        recipe(Items.GOLD_INGOT, Items.EMERALD, EssenceType.METALLUM, 4, EssenceType.VITIUM, 2),
-        recipe(Items.COAL, Items.DIAMOND, EssenceType.METALLUM, 4, EssenceType.LUX, 4),
-        recipe(Items.ROTTEN_FLESH, Items.LEATHER, EssenceType.MORTUUS, 2, EssenceType.HERBA, 2),
-        recipe(Items.CLAY_BALL, Items.IRON_NUGGET, EssenceType.METALLUM, 2),
-        recipe(Items.QUARTZ, Items.AMETHYST_SHARD, EssenceType.LUX, 2, EssenceType.VITIUM, 1),
+        recipe(Items.SAND, Items.GLASS, EssenceType.IGNIS, 1),
+        recipe(Items.COBBLESTONE, Items.STONE, EssenceType.TERRA, 1),
+        recipe(Items.STONE, Items.DEEPSLATE, EssenceType.TERRA, 1, EssenceType.PERDITIO, 1),
+        recipe(Items.DEEPSLATE, Items.CALCITE, EssenceType.ORDO, 1, EssenceType.AER, 1),
+        recipe(Items.COPPER_INGOT, Items.GOLD_INGOT, EssenceType.METALLUM, 2, EssenceType.ORDO, 2),
+        recipe(Items.IRON_INGOT, Items.GOLD_INGOT, EssenceType.METALLUM, 1, EssenceType.ORDO, 2),
+        recipe(Items.GOLD_INGOT, Items.EMERALD, EssenceType.METALLUM, 2, EssenceType.VITIUM, 1),
+        recipe(Items.COAL, Items.DIAMOND, EssenceType.METALLUM, 3, EssenceType.LUX, 3),
+        recipe(Items.ROTTEN_FLESH, Items.LEATHER, EssenceType.MORTUUS, 1, EssenceType.HERBA, 1),
+        recipe(Items.CLAY_BALL, Items.IRON_NUGGET, EssenceType.METALLUM, 1),
+        recipe(Items.QUARTZ, Items.AMETHYST_SHARD, EssenceType.LUX, 1, EssenceType.VITIUM, 1),
         // Intermediate materials for later Matrix syntheses, always one input to one output.
-        recipe(Items.GRAVEL, Items.FLINT, EssenceType.TERRA, 2, EssenceType.ORDO, 1),
-        recipe(Items.FLINT, Items.QUARTZ, EssenceType.TERRA, 3, EssenceType.ORDO, 2),
-        recipe(Items.REDSTONE, Items.GLOWSTONE_DUST, EssenceType.LUX, 4, EssenceType.POTENTIA, 3),
-        recipe(Items.NETHERRACK, Items.NETHER_BRICK, EssenceType.IGNIS, 3, EssenceType.TERRA, 2),
-        recipe(Items.SOUL_SAND, Items.SOUL_SOIL, EssenceType.MORTUUS, 3, EssenceType.PERDITIO, 2),
-        recipe(Items.IRON_NUGGET, Items.GOLD_NUGGET, EssenceType.METALLUM, 2, EssenceType.ORDO, 1),
+        recipe(Items.GRAVEL, Items.FLINT, EssenceType.TERRA, 1, EssenceType.ORDO, 1),
+        recipe(Items.FLINT, Items.QUARTZ, EssenceType.TERRA, 2, EssenceType.ORDO, 1),
+        recipe(Items.REDSTONE, Items.GLOWSTONE_DUST, EssenceType.LUX, 2, EssenceType.POTENTIA, 2),
+        recipe(Items.NETHERRACK, Items.NETHER_BRICK, EssenceType.IGNIS, 2, EssenceType.TERRA, 1),
+        recipe(Items.SOUL_SAND, Items.SOUL_SOIL, EssenceType.MORTUUS, 2, EssenceType.PERDITIO, 1),
+        recipe(Items.IRON_NUGGET, Items.GOLD_NUGGET, EssenceType.METALLUM, 1, EssenceType.ORDO, 1),
         IRON_DIAMOND
     );
 

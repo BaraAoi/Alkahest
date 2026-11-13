@@ -89,19 +89,19 @@ public class TransmutatorGameTests implements FabricGameTest {
         spectator.setPosition(pos.getX()+.5,pos.getY()+.5,pos.getZ()+.5);
         c.assertFalse(h.onButtonClick(spectator,0),"Spectators cannot change the recipe");
         c.assertTrue(h.onButtonClick(player,0) && core.progress()==0,"Changing the recipe resets progress");
-        c.assertTrue(core.ironDiamond() && core.recipe().output().isOf(Items.DIAMOND) && core.duration()==2400,"Alternate recipe is selected");
-        c.assertTrue(h.maxProgress()==2400 && h.ironDiamond() && h.selectedOutput().isOf(Items.DIAMOND)
+        c.assertTrue(core.ironDiamond() && core.recipe().output().isOf(Items.DIAMOND) && core.duration()==100,"Alternate recipe is selected");
+        c.assertTrue(h.maxProgress()==100 && h.ironDiamond() && h.selectedOutput().isOf(Items.DIAMOND)
             && h.requirements().size()==4,"GUI properties and cost match the selected recipe");
         var clientInventory=new net.minecraft.inventory.SimpleInventory(3);
         clientInventory.setStack(0,new ItemStack(Items.IRON_INGOT));
         var clientProperties=new net.minecraft.screen.ArrayPropertyDelegate(4);
-        clientProperties.set(1,2400); clientProperties.set(3,1);
+        clientProperties.set(1,100); clientProperties.set(3,1);
         var clientScreen=new net.alkahest.screen.TransmutatorScreenHandler(2,player.getInventory(),clientInventory,clientProperties);
         c.assertTrue(clientScreen.selectedOutput().isOf(Items.DIAMOND) && clientScreen.requirements().size()==4
-            && clientScreen.maxProgress()==2400,"Client mirror displays the selected result, price and duration");
+            && clientScreen.maxProgress()==100,"Client mirror displays the selected result, price and duration");
         var rendered=new TransmutatorCoreBlockEntity(pos,core.getCachedState());
         rendered.readComponentlessNbt(core.toUpdatePacket().getNbt(),world.getRegistryManager());
-        c.assertTrue(rendered.ironDiamond() && rendered.duration()==2400,"Block update sync carries recipe to the renderer");
+        c.assertTrue(rendered.ironDiamond() && rendered.duration()==100,"Block update sync carries recipe to the renderer");
         var restored=new TransmutatorCoreBlockEntity(pos,core.getCachedState());
         restored.readComponentlessNbt(core.createNbt(world.getRegistryManager()),world.getRegistryManager());
         c.assertTrue(restored.ironDiamond() && restored.recipe().output().isOf(Items.DIAMOND),"Choice and input survive save/load");
@@ -123,20 +123,18 @@ public class TransmutatorGameTests implements FabricGameTest {
         core.setStack(1,amulet); c.assertTrue(core.toggleIronRecipe(),"Select diamond");
         c.setBlockState(CX+1,y,CZ,ModBlocks.ALCHEMY_PIPE); c.setBlockState(CX+2,y,CZ,ModBlocks.ALCHEMY_PIPE);
         BlockPos pipe=c.getAbsolutePos(new BlockPos(CX+1,y,CZ));
-        var terra=jar(c,CX+1,y,CZ-1,EssenceType.TERRA,50);
-        var lux=jar(c,CX+1,y,CZ+1,EssenceType.LUX,30);
-        var ordo=jar(c,CX+2,y,CZ-1,EssenceType.ORDO,25);
-        var metal=jar(c,CX+2,y,CZ+1,EssenceType.METALLUM,14);
-        run(world,pos,101);
-        c.assertTrue(core.progress()==101 && core.pipeCost().isEmpty(),"Diamond is not ready at the old 100-tick duration");
-        var saved=core.createNbt(world.getRegistryManager()); saved.putInt("Progress",2399);
-        core.readComponentlessNbt(saved,world.getRegistryManager()); run(world,pos,1);
+        var terra=jar(c,CX+1,y,CZ-1,EssenceType.TERRA,1);
+        var lux=jar(c,CX+1,y,CZ+1,EssenceType.LUX,1);
+        var ordo=jar(c,CX+2,y,CZ-1,EssenceType.ORDO,1);
+        run(world,pos,99);
+        c.assertTrue(core.progress()==99 && core.pipeCost().isEmpty(),"Diamond cannot be paid before 100 ticks");
+        run(world,pos,1);
         net.alkahest.block.entity.AlchemyPipeBlockEntity.pulse(world,pipe);
-        c.assertTrue(core.progress()==2400 && terra.contents().total()==50 && lux.contents().total()==30
-            && ordo.contents().total()==25 && metal.contents().total()==14,"Missing one unit prevents any partial payment");
+        c.assertTrue(core.progress()==100 && terra.contents().total()==1 && lux.contents().total()==1
+            && ordo.contents().total()==1,"Missing Metallum prevents any partial payment");
         c.assertTrue(core.getStack(0).getCount()==2 && core.getStack(2).isEmpty()
             && core.getStack(1).get(ModDataComponents.ESSENCE_CHARGE)==4,"Waiting preserves inputs, output and charge");
-        metal.setContents(of(EssenceType.METALLUM,15));
+        var metal=jar(c,CX+2,y,CZ+1,EssenceType.METALLUM,1);
         net.alkahest.block.entity.AlchemyPipeBlockEntity.pulse(world,pipe);
         c.assertTrue(terra.contents().total()==0 && lux.contents().total()==0 && ordo.contents().total()==0 && metal.contents().total()==0,
             "All four full costs are consumed atomically");
@@ -147,18 +145,66 @@ public class TransmutatorGameTests implements FabricGameTest {
     }
 
     @GameTest(templateName = EMPTY_STRUCTURE)
+    public void coalDiamondUsesItsReducedPrice(TestContext c) {
+        int y=CY+80; BlockPos pos=tower(c,y); var world=c.getWorld();
+        var core=(TransmutatorCoreBlockEntity)world.getBlockEntity(pos); core.wake();
+        core.setStack(0,new ItemStack(Items.COAL,2));
+        ItemStack amulet=new ItemStack(ModItems.ALKAHEST_AMULET); amulet.set(ModDataComponents.ESSENCE_CHARGE,4);
+        core.setStack(1,amulet);
+        c.setBlockState(CX+1,y,CZ,ModBlocks.ALCHEMY_PIPE);
+        BlockPos pipe=c.getAbsolutePos(new BlockPos(CX+1,y,CZ));
+        var lux=jar(c,CX+1,y,CZ-1,EssenceType.LUX,3);
+        var metal=jar(c,CX+1,y,CZ+1,EssenceType.METALLUM,2);
+        run(world,pos,100);
+        net.alkahest.block.entity.AlchemyPipeBlockEntity.pulse(world,pipe);
+        c.assertTrue(lux.contents().total()==3 && metal.contents().total()==2 && core.getStack(2).isEmpty(),
+            "The discounted coal recipe still requires full payment");
+        metal.setContents(of(EssenceType.METALLUM,3));
+        net.alkahest.block.entity.AlchemyPipeBlockEntity.pulse(world,pipe);
+        c.assertTrue(lux.contents().total()==0 && metal.contents().total()==0 && core.getStack(2).isOf(Items.DIAMOND)
+            && core.getStack(0).getCount()==1 && core.getStack(1).get(ModDataComponents.ESSENCE_CHARGE)==3,
+            "Three of each essence, one coal and one charge buy exactly one diamond");
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
     public void legacyPlatformCanPayDiamondRecipe(TestContext c) {
         int y=CY+128; var pos=isolatedPlatform(c,y); var world=c.getWorld();
         var core=(TransmutatorCoreBlockEntity)world.getBlockEntity(pos);
         core.setStack(0,new ItemStack(Items.IRON_INGOT)); core.setStack(1,new ItemStack(ModItems.ALKAHEST_AMULET));
         c.assertTrue(core.toggleIronRecipe(),"Select diamond");
-        var terra=jar(c,1,y,1,EssenceType.TERRA,50); var lux=jar(c,5,y,1,EssenceType.LUX,30);
-        var ordo=jar(c,1,y,5,EssenceType.ORDO,25); var metal=jar(c,5,y,5,EssenceType.METALLUM,15);
+        var terra=jar(c,1,y,1,EssenceType.TERRA,1); var lux=jar(c,5,y,1,EssenceType.LUX,1);
+        var ordo=jar(c,1,y,5,EssenceType.ORDO,1); var metal=jar(c,5,y,5,EssenceType.METALLUM,1);
         var saved=core.createNbt(world.getRegistryManager()); saved.putInt("Progress",2400);
-        core.readComponentlessNbt(saved,world.getRegistryManager()); run(world,pos,1);
-        c.assertTrue(core.getStack(2).isOf(Items.DIAMOND),"Old platform can pay the full 120-unit recipe");
+        core.readComponentlessNbt(saved,world.getRegistryManager());
+        c.assertTrue(core.progress()==100, "Old long-duration progress clamps to ready, not back to zero");
+        run(world,pos,1);
+        c.assertTrue(core.getStack(2).isOf(Items.DIAMOND),"Old platform can pay the new price");
         c.assertTrue(terra.contents().total()+lux.contents().total()+ordo.contents().total()+metal.contents().total()==0,
-            "Exact price was consumed from the jars");
+            "Exact new price was consumed from the jars");
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void diamondPricesAreBalancedAndAllRecipesGotCheaper(TestContext c) {
+        var recipes = net.alkahest.transmutation.TransmutationRecipe.all();
+        int[] oldTotals = {2, 2, 4, 3, 5, 5, 6, 8, 4, 2, 3, 3, 5, 7, 5, 5, 3, 120};
+        int[] newTotals = {1, 1, 2, 2, 4, 3, 3, 6, 2, 1, 2, 2, 3, 4, 3, 3, 2, 4};
+        c.assertTrue(recipes.size() == oldTotals.length, "All 18 recipes still exist");
+        for (int i = 0; i < recipes.size(); i++) {
+            var recipe = recipes.get(i);
+            int cost = net.alkahest.transmutation.TransmutationRecipe.cost(recipe.cost());
+            c.assertTrue(cost == newTotals[i] && cost < oldTotals[i], "Each old cost was reduced to the intended price: " + i);
+            c.assertTrue(recipe.duration() == 100 && recipe.input().getCount() == 1 && recipe.output().getCount() == 1,
+                "Every transmutation still takes five seconds and transforms one item");
+        }
+        var iron = net.alkahest.transmutation.TransmutationRecipe.find(new ItemStack(Items.IRON_INGOT), true);
+        var coal = net.alkahest.transmutation.TransmutationRecipe.find(new ItemStack(Items.COAL));
+        c.assertTrue(iron.output().isOf(Items.DIAMOND) && coal.output().isOf(Items.DIAMOND), "Both routes produce a diamond");
+        c.assertTrue(iron.cost().equals(java.util.Map.of(EssenceType.TERRA,1, EssenceType.LUX,1, EssenceType.ORDO,1, EssenceType.METALLUM,1)), "Iron has the intended four-unit price");
+        c.assertTrue(coal.cost().equals(java.util.Map.of(EssenceType.METALLUM,3, EssenceType.LUX,3)), "Coal has the intended six-unit price");
+        c.assertTrue(net.alkahest.transmutation.TransmutationRecipe.cost(iron.cost()) < net.alkahest.transmutation.TransmutationRecipe.cost(coal.cost())
+            && iron.duration() == coal.duration(), "Iron uses less essence and is no slower than coal");
         c.complete();
     }
 
@@ -274,12 +320,12 @@ public class TransmutatorGameTests implements FabricGameTest {
         var ordo = jar(c, CX + 1, y, CZ + 1, EssenceType.ORDO, 10);
         net.alkahest.block.entity.AlchemyPipeBlockEntity.pulse(c.getWorld(), pipe);
         c.assertTrue(core.getStack(TransmutatorCoreBlockEntity.OUTPUT).isOf(Items.GOLD_INGOT), "Connecting the missing jar resumes the operation");
-        c.assertTrue(metal.contents().total() == 57 && ordo.contents().total() == 8 && remoteOrdo.contents().total() == 20,
-            "A successful pipe operation spends exactly 3 Metallum and 2 Ordo");
+        c.assertTrue(metal.contents().total() == 58 && ordo.contents().total() == 8 && remoteOrdo.contents().total() == 20,
+            "A successful pipe operation spends exactly 2 Metallum and 2 Ordo");
         c.assertTrue(core.getStack(TransmutatorCoreBlockEntity.INPUT).getCount() == 1 && core.getStack(TransmutatorCoreBlockEntity.AMULET).get(ModDataComponents.ESSENCE_CHARGE) == 3,
             "Only one item and one charge are consumed");
         for (int i = 0; i < 20; i++) net.alkahest.block.entity.AlchemyPipeBlockEntity.pulse(c.getWorld(), pipe);
-        c.assertTrue(metal.contents().total() == 57 && ordo.contents().total() == 8, "An idle progress cycle does not drain or transfer jars");
+        c.assertTrue(metal.contents().total() == 58 && ordo.contents().total() == 8, "An idle progress cycle does not drain or transfer jars");
         c.complete();
     }
 
@@ -299,7 +345,7 @@ public class TransmutatorGameTests implements FabricGameTest {
         bellow.accept(EssenceType.METALLUM, 10, .7f);
         run(c.getWorld(), pos, 110);
         net.alkahest.block.entity.AlchemyPipeBlockEntity.pulse(c.getWorld(), pipe);
-        c.assertTrue(bellow.amount() == 6 && metal.contents().total() == 2 && ordo.contents().total() == 8,
+        c.assertTrue(bellow.amount() == 6 && metal.contents().total() == 3 && ordo.contents().total() == 8,
             "Bellows feed their jar while the tower pays the exact cost in the same network");
         c.assertTrue(core.getStack(TransmutatorCoreBlockEntity.OUTPUT).isOf(Items.GOLD_INGOT), "Shared distillery and storage network feeds the tower");
         c.assertTrue(metal.contents().contents().size() == 1 && ordo.contents().contents().size() == 1, "Jars remain single-type");
@@ -520,7 +566,7 @@ public class TransmutatorGameTests implements FabricGameTest {
             "Copper turns into gold");
         c.assertTrue(core.getStack(TransmutatorCoreBlockEntity.INPUT).getCount() == 1,
             "Only one input is spent");
-        c.assertTrue(metallum.contents().total() == 7, "Three metallum were taken from the jar");
+        c.assertTrue(metallum.contents().total() == 8, "Two metallum were taken from the jar");
         c.assertTrue(ordo.contents().total() == 8, "Two ordo were taken from the jar");
         c.assertTrue(core.getStack(TransmutatorCoreBlockEntity.AMULET).get(ModDataComponents.ESSENCE_CHARGE) == 3,
             "The amulet pays one charge for the operation");
@@ -587,8 +633,8 @@ public class TransmutatorGameTests implements FabricGameTest {
         var ordo = jar(c, CX - 3, y, CZ, EssenceType.ORDO, 10);
         run(c.getWorld(), pos, 1);
         c.assertTrue(core.getStack(TransmutatorCoreBlockEntity.OUTPUT).isOf(Items.GOLD_INGOT), "Providing the missing type completes one operation");
-        c.assertTrue(metallum.contents().total() + stored(core, EssenceType.METALLUM) == 57 &&
-            ordo.contents().total() + stored(core, EssenceType.ORDO) == 8, "Successful operation spends exactly 3 Metallum and 2 Ordo");
+        c.assertTrue(metallum.contents().total() + stored(core, EssenceType.METALLUM) == 58 &&
+            ordo.contents().total() + stored(core, EssenceType.ORDO) == 8, "Successful operation spends exactly 2 Metallum and 2 Ordo");
         c.assertTrue(core.getStack(TransmutatorCoreBlockEntity.AMULET).get(ModDataComponents.ESSENCE_CHARGE) == 3, "Exactly one charge is spent");
         c.setBlockState(CX + 3, y, CZ, net.minecraft.block.Blocks.AIR);
         c.setBlockState(CX - 3, y, CZ, net.minecraft.block.Blocks.AIR);
@@ -614,7 +660,7 @@ public class TransmutatorGameTests implements FabricGameTest {
         ordo.setContents(of(EssenceType.ORDO, savedOrdo));
         run(c.getWorld(), pos, 1);
         c.assertTrue(core.getStack(TransmutatorCoreBlockEntity.OUTPUT).isOf(Items.GOLD_INGOT), "Returning the jar resumes the waiting operation");
-        c.assertTrue(metallum.contents().total() + stored(core, EssenceType.METALLUM) == 17 &&
+        c.assertTrue(metallum.contents().total() + stored(core, EssenceType.METALLUM) == 18 &&
             ordo.contents().total() + stored(core, EssenceType.ORDO) == 8, "Only the successful price was spent");
         c.setBlockState(CX + 3, y, CZ, net.minecraft.block.Blocks.AIR);
         c.setBlockState(CX - 3, y, CZ, net.minecraft.block.Blocks.AIR);
@@ -680,7 +726,7 @@ public class TransmutatorGameTests implements FabricGameTest {
         net.alkahest.block.entity.AlchemyPipeBlockEntity.pulse(c.getWorld(), pipe);
         c.assertTrue(core.getStack(TransmutatorCoreBlockEntity.OUTPUT).isOf(Items.GLOWSTONE_DUST), "One redstone makes one glowstone dust");
         c.assertTrue(core.getStack(TransmutatorCoreBlockEntity.OUTPUT).getCount() == 1 && core.getStack(TransmutatorCoreBlockEntity.INPUT).getCount() == 1, "One input and one output per operation");
-        c.assertTrue(lux.contents().total() == 6 && potentia.contents().total() == 7, "Exactly Lux 4 and Potentia 3 are spent");
+        c.assertTrue(lux.contents().total() == 8 && potentia.contents().total() == 8, "Exactly Lux 2 and Potentia 2 are spent");
         c.assertTrue(core.getStack(TransmutatorCoreBlockEntity.AMULET).get(ModDataComponents.ESSENCE_CHARGE) == 3, "Exactly one amulet charge is spent");
         c.setBlockState(CX + 1, y, CZ - 1, net.minecraft.block.Blocks.AIR);
         c.setBlockState(CX + 1, y, CZ + 1, net.minecraft.block.Blocks.AIR);
@@ -705,7 +751,7 @@ public class TransmutatorGameTests implements FabricGameTest {
             && core.getStack(TransmutatorCoreBlockEntity.OUTPUT).isEmpty(), "No partial payment or output");
         segment.setFilter(null);
         net.alkahest.block.entity.AlchemyPipeBlockEntity.pulse(c.getWorld(), pipe);
-        c.assertTrue(metal.contents().total()==7 && ordo.contents().total()==8,
+        c.assertTrue(metal.contents().total()==8 && ordo.contents().total()==8,
             "Removing the filter permits exactly one complete payment");
         c.assertTrue(core.getStack(TransmutatorCoreBlockEntity.OUTPUT).isOf(Items.GOLD_INGOT), "Operation completes");
         c.complete();
@@ -726,7 +772,7 @@ public class TransmutatorGameTests implements FabricGameTest {
         var ordo = jar(c, CX + 1, y, CZ + 1, EssenceType.ORDO, 10);
         run(c.getWorld(), pos, 110);
         net.alkahest.block.entity.AlchemyPipeBlockEntity.pulse(c.getWorld(), pipe);
-        c.assertTrue(first.contents().total()==0 && second.contents().total()==8 && ordo.contents().total()==8,
+        c.assertTrue(first.contents().total()==0 && second.contents().total()==9 && ordo.contents().total()==8,
             "The exact price is combined from multiple jars");
         c.assertTrue(Math.abs(second.contents().contents().getFirst().stability()-.72f)<.001f,
             "The remaining essence retains its stability");
@@ -755,7 +801,7 @@ public class TransmutatorGameTests implements FabricGameTest {
             "Neither accessible nor blocked jars are partly drained");
         filter.setFilter(null);
         net.alkahest.block.entity.AlchemyPipeBlockEntity.pulse(c.getWorld(),pipe);
-        c.assertTrue(metal.contents().total()==7 && nearOrdo.contents().total()+blockedOrdo.contents().total()==9,
+        c.assertTrue(metal.contents().total()==8 && nearOrdo.contents().total()+blockedOrdo.contents().total()==9,
             "Opening the route pays exactly the missing price");
         c.assertTrue(core.getStack(TransmutatorCoreBlockEntity.OUTPUT).isOf(Items.GOLD_INGOT),"The operation resumes");
         c.complete();
@@ -782,7 +828,7 @@ public class TransmutatorGameTests implements FabricGameTest {
             "Closed valve never consumes a partial price, an item or charge");
         c.setBlockState(CX + 2, y - 1, CZ, net.minecraft.block.Blocks.REDSTONE_BLOCK);
         net.alkahest.block.entity.AlchemyPipeBlockEntity.pulse(c.getWorld(),first);
-        c.assertTrue(metal.contents().total()==7 && ordo.contents().total()==8
+        c.assertTrue(metal.contents().total()==8 && ordo.contents().total()==8
             && core.getStack(TransmutatorCoreBlockEntity.OUTPUT).isOf(Items.GOLD_INGOT)
             && core.getStack(TransmutatorCoreBlockEntity.AMULET).get(ModDataComponents.ESSENCE_CHARGE)==3,
             "Opening the valve commits the exact complete price once");
@@ -811,7 +857,7 @@ public class TransmutatorGameTests implements FabricGameTest {
             "A reversed branch cannot pay part of a recipe or spend an item or charge");
         branch.setDirection(net.alkahest.block.entity.PipeDirection.WEST);
         net.alkahest.block.entity.AlchemyPipeBlockEntity.pulse(c.getWorld(),first);
-        c.assertTrue(metal.contents().total()==7 && ordo.contents().total()==8
+        c.assertTrue(metal.contents().total()==8 && ordo.contents().total()==8
             && core.getStack(TransmutatorCoreBlockEntity.OUTPUT).isOf(Items.GOLD_INGOT)
             && core.getStack(TransmutatorCoreBlockEntity.AMULET).get(ModDataComponents.ESSENCE_CHARGE)==3,
             "Turning the branch toward the core pays the entire price exactly once");
@@ -836,8 +882,8 @@ public class TransmutatorGameTests implements FabricGameTest {
         c.assertTrue(core.getStack(TransmutatorCoreBlockEntity.OUTPUT).isOf(Items.GOLD_INGOT)
             && core.getStack(TransmutatorCoreBlockEntity.AMULET).get(ModDataComponents.ESSENCE_CHARGE)==3,
             "A fully payable finished operation gets priority over optional feeding");
-        c.assertTrue(metal.contents().total()==3 && ordo.contents().total()==4 && receiver.contents().total()==8,
-            "After the exact 3+2 payment each source sends four units, conserving the remainder");
+        c.assertTrue(metal.contents().total()==4 && ordo.contents().total()==4 && receiver.contents().total()==8,
+            "After the exact 2+2 payment each source sends four units, conserving the remainder");
         c.complete();
     }
 
