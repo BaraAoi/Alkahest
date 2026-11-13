@@ -101,3 +101,16 @@ assert 'TransmutationRecipe.find(new ItemStack(Items.IRON_INGOT), diamond)' in j
 assert 'entry.getKey().displayName()' in journal and 'recipe.duration() / 20' in journal
 for name in ('transmutation_gold', 'transmutation_diamond'):
     assert f'"{name}"' in plan
+
+# Both catalogues use the same filtered list for pagination, rows and hover details.
+assert 'RecipeCatalogueSearch.matches(catalogueSearch.getText(), recipe)' in journal
+assert 'cataloguePages(node, h, matrixRecipes.size(), transmutations.size())' in journal
+assert 'page, mouseX, mouseY, matrixRecipes)' in journal
+assert 'page, mouseX, mouseY, transmutations)' in journal
+assert 'if (searchChanged) { detailPage = textSpreads;' in journal
+assert 'catalogueSearch.charTyped(chr, modifiers)' in journal
+assert 'recipe.cost().get(type)' in journal and 'recipe.duration() / 20' in journal
+for lang in ('ru_ru', 'en_us'):
+    strings = json.loads((assets / f'lang/{lang}.json').read_text())
+    for key in ('search', 'search_hint', 'search_hint_more', 'search_empty'):
+        assert strings.get(f'screen.alkahest.journal.{key}')

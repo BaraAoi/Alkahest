@@ -9,6 +9,8 @@ import net.alkahest.registry.ModItems;
 import net.alkahest.research.PracticalResearchPlan;
 import net.alkahest.research.BookPagination;
 import net.alkahest.research.JournalLayout;
+import net.alkahest.research.RecipeCatalogueSearch;
+import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.alkahest.research.ResearchJournalContent;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
@@ -52,11 +54,20 @@ public final class JournalScreen extends Screen {
     private boolean dragging;
     private ItemStack diagramTooltip = ItemStack.EMPTY;
     private JournalLayout layout;
+    private TextFieldWidget catalogueSearch;
+    private boolean searchVisible, searchChanged;
 
     public JournalScreen(long researchFlags) { super(Text.translatable("screen.alkahest.journal")); this.researchFlags = researchFlags; }
 
     @Override protected void init() {
+        String previous = catalogueSearch == null ? "" : catalogueSearch.getText();
         layout = JournalLayout.of(width, height);
+        var content = layout.detailContent();
+        catalogueSearch = new TextFieldWidget(textRenderer, content.x() + 10, content.y() + 7,
+            Math.max(25, content.width() / 2 - 22), 16, Text.translatable("screen.alkahest.journal.search"));
+        catalogueSearch.setMaxLength(80);
+        catalogueSearch.setText(previous);
+        catalogueSearch.setChangedListener(value -> searchChanged = true);
         clampCamera();
     }
     private int mapX() { return layout.map().x(); }
@@ -194,16 +205,23 @@ public final class JournalScreen extends Screen {
         var lines = detailLines(node, textWidth);
         int diagrams = diagramCount(node);
         int textSpreads = BookPagination.detailSpreads(lines.size(), rows, diagrams);
-        int cataloguePages = cataloguePages(node, h);
+        var catalogue = ResearchJournalContent.catalogue(node.key());
+        var matrixRecipes = catalogue == ResearchJournalContent.Catalogue.MATRIX ? filteredMatrix() : List.<MatrixRecipe>of();
+        var transmutations = catalogue == ResearchJournalContent.Catalogue.TRANSMUTATOR ? filteredTransmutations() : List.<TransmutationRecipe>of();
+        int cataloguePages = cataloguePages(node, h, matrixRecipes.size(), transmutations.size());
         detailPages = textSpreads + cataloguePages;
+        if (searchChanged) { detailPage = textSpreads; searchChanged = false; }
         detailPage = MathHelper.clamp(detailPage, 0, detailPages - 1);
+        searchVisible = detailPage >= textSpreads && (catalogue == ResearchJournalContent.Catalogue.MATRIX
+            || catalogue == ResearchJournalContent.Catalogue.TRANSMUTATOR);
+        if (!searchVisible) catalogueSearch.setFocused(false);
         diagramTooltip = ItemStack.EMPTY;
         if (detailPage >= textSpreads) {
             int page = detailPage - textSpreads;
             switch (ResearchJournalContent.catalogue(node.key())) {
                 case CAULDRON -> renderCauldronIndex(c, x, y, w, h, page, mouseX, mouseY);
-                case MATRIX -> renderRecipes(c, x, y, w, h, page, mouseX, mouseY);
-                case TRANSMUTATOR -> renderTransmutations(c, x, y, w, h, page, mouseX, mouseY);
+                case MATRIX -> renderRecipes(c, x, y, w, h, page, mouseX, mouseY, matrixRecipes);
+                case TRANSMUTATOR -> renderTransmutations(c, x, y, w, h, page, mouseX, mouseY, transmutations);
                 default -> { }
             }
         } else for (int column = 0; column < 2; column++) {
@@ -227,6 +245,16 @@ public final class JournalScreen extends Screen {
                 c.getMatrices().pop();
             }
             c.disableScissor();
+        }
+        if (searchVisible) {
+            catalogueSearch.render(c, mouseX, mouseY, 0);
+            if (catalogueSearch.getText().isEmpty() && !catalogueSearch.isFocused())
+                c.drawText(textRenderer, textRenderer.trimToWidth(Text.translatable("screen.alkahest.journal.search").getString(),
+                    catalogueSearch.getWidth() - 8), catalogueSearch.getX() + 4, catalogueSearch.getY() + 4, 0xFF999999, false);
+            if (within(mouseX, mouseY, catalogueSearch.getX(), catalogueSearch.getY(),
+                    catalogueSearch.getX() + catalogueSearch.getWidth(), catalogueSearch.getY() + catalogueSearch.getHeight()))
+                c.drawTooltip(textRenderer, List.of(Text.translatable("screen.alkahest.journal.search_hint"),
+                    Text.translatable("screen.alkahest.journal.search_hint_more")), mouseX, mouseY);
         }
         if (!diagramTooltip.isEmpty()) c.drawTooltip(textRenderer, diagramTooltip.getName(), mouseX, mouseY);
         var book = layout.detail();
@@ -331,11 +359,11 @@ public final class JournalScreen extends Screen {
         wrapped(c, Text.translatable("screen.alkahest.journal.cauldron_hint"), pageLeft, y + 90, Math.max(20, width), 0xFF594633);
     }
     private int listRows(int height, int areaHeight) { return Math.max(1, (areaHeight - 33) / height); }
-    private int cataloguePages(Node node, int h) {
+    private int cataloguePages(Node node, int h, int matrixCount, int transmutationCount) {
         return switch (ResearchJournalContent.catalogue(node.key())) {
             case CAULDRON -> BookPagination.pages(net.alkahest.recipe.CauldronEssenceRecipes.all().size(), 2);
-            case MATRIX -> BookPagination.pages(MatrixRecipe.all().size(), listRows(21, h) * 2);
-            case TRANSMUTATOR -> BookPagination.pages(TransmutationRecipe.all().size(), listRows(21, h) * 2);
+            case MATRIX -> BookPagination.pages(matrixCount, listRows(21, h) * 2);
+            case TRANSMUTATOR -> BookPagination.pages(transmutationCount, listRows(21, h) * 2);
             default -> 0;
         };
     }
@@ -365,14 +393,23 @@ public final class JournalScreen extends Screen {
         if (!diagramTooltip.isEmpty()) c.drawTooltip(textRenderer, diagramTooltip.getName(), mouseX, mouseY);
     }
 
+    private List<MatrixRecipe> filteredMatrix() {
+        return MatrixRecipe.all().stream().filter(recipe -> RecipeCatalogueSearch.matches(catalogueSearch.getText(), recipe)).toList();
+    }
+    private List<TransmutationRecipe> filteredTransmutations() {
+        return TransmutationRecipe.all().stream().filter(recipe -> RecipeCatalogueSearch.matches(catalogueSearch.getText(), recipe)).toList();
+    }
+
     /** Each catalogue page is confined to one side of the binding. Hover for full ingredients. */
-    private void renderRecipes(DrawContext c, int x, int y, int w, int h, int page, int mouseX, int mouseY) {
-        var recipes = MatrixRecipe.all();
+    private void renderRecipes(DrawContext c, int x, int y, int w, int h, int page, int mouseX, int mouseY, List<MatrixRecipe> recipes) {
         int half = w / 2, rows = listRows(21, h);
+        if (recipes.isEmpty()) c.drawText(textRenderer,
+            textRenderer.trimToWidth(Text.translatable("screen.alkahest.journal.search_empty").getString(), half - 20),
+            x + 10, y + 29, 0xFF765A39, false);
         for (int column = 0; column < 2; column++) {
             int px = x + column * half + 10;
             c.enableScissor(px, y + 8, x + (column + 1) * half - 7, y + h - 6);
-            c.drawText(textRenderer, textRenderer.trimToWidth(Text.translatable("screen.alkahest.journal.recipes").getString(), half - 20), px, y + 10, 0xFF65462B, false);
+            if (column == 1) c.drawText(textRenderer, textRenderer.trimToWidth(Text.translatable("screen.alkahest.journal.recipes").getString(), half - 20), px, y + 10, 0xFF65462B, false);
             for (int row = 0; row < rows; row++) {
                 int index = BookPagination.index(page, column * rows + row, rows * 2);
                 if (index >= recipes.size()) break;
@@ -397,13 +434,15 @@ public final class JournalScreen extends Screen {
         }
     }
 
-    private void renderTransmutations(DrawContext c, int x, int y, int w, int h, int page, int mouseX, int mouseY) {
-        var recipes = TransmutationRecipe.all();
+    private void renderTransmutations(DrawContext c, int x, int y, int w, int h, int page, int mouseX, int mouseY, List<TransmutationRecipe> recipes) {
         int half = w / 2, rows = listRows(21, h);
+        if (recipes.isEmpty()) c.drawText(textRenderer,
+            textRenderer.trimToWidth(Text.translatable("screen.alkahest.journal.search_empty").getString(), half - 20),
+            x + 10, y + 29, 0xFF765A39, false);
         for (int column = 0; column < 2; column++) {
             int px = x + column * half + 10;
             c.enableScissor(px, y + 8, x + (column + 1) * half - 7, y + h - 6);
-            c.drawText(textRenderer, textRenderer.trimToWidth(Text.translatable("screen.alkahest.journal.transmutations").getString(), half - 20), px, y + 10, 0xFF65462B, false);
+            if (column == 1) c.drawText(textRenderer, textRenderer.trimToWidth(Text.translatable("screen.alkahest.journal.transmutations").getString(), half - 20), px, y + 10, 0xFF65462B, false);
             for (int row = 0; row < rows; row++) {
                 int index = BookPagination.index(page, column * rows + row, rows * 2);
                 if (index >= recipes.size()) break;
@@ -423,12 +462,14 @@ public final class JournalScreen extends Screen {
             int index = BookPagination.index(page, column * rows + row, rows * 2);
             if (index < recipes.size() && within(mouseX, mouseY, px, ry, x + (column + 1) * half - 8, Math.min(ry + 20, y + h - 6))) {
                 var recipe = recipes.get(index);
-                c.drawTooltip(textRenderer, List.of(
-                    Text.translatable("screen.alkahest.journal.transmutation_input", recipe.input().getName()),
-                    Text.translatable("screen.alkahest.journal.transmutation_output", recipe.output().getName()),
-                    Text.translatable("screen.alkahest.matrix.index_cost").copy().append(": " + MatrixRecipe.price(recipe.cost())),
-                    Text.translatable("screen.alkahest.journal.transmutation_time", recipe.duration() / 20)
-                ), mouseX, mouseY); return;
+                List<Text> lines = new ArrayList<>();
+                lines.add(Text.translatable("screen.alkahest.journal.transmutation_input", recipe.input().getName()));
+                lines.add(Text.translatable("screen.alkahest.journal.transmutation_output", recipe.output().getName()));
+                lines.add(Text.translatable("screen.alkahest.matrix.index_cost").copy().append(": " + TransmutationRecipe.cost(recipe.cost())));
+                for (EssenceType type : EssenceType.values()) if (recipe.cost().containsKey(type))
+                    lines.add(Text.literal(type.displayName() + " × " + recipe.cost().get(type)).formatted(Formatting.LIGHT_PURPLE));
+                lines.add(Text.translatable("screen.alkahest.journal.transmutation_time", recipe.duration() / 20));
+                c.drawTooltip(textRenderer, lines, mouseX, mouseY); return;
             }
         }
     }
@@ -465,7 +506,9 @@ public final class JournalScreen extends Screen {
     }
     @Override public boolean mouseClicked(double x, double y, int button) {
         if (selected != null) {
+            if (searchVisible && catalogueSearch.mouseClicked(x, y, button)) return true;
             if (button == 0) {
+                catalogueSearch.setFocused(false);
                 var book = layout.detail();
                 int bottom = book.y() + book.height();
                 if (!book.contains(x, y) || within(x, y, book.x() + 15, bottom - 25, book.x() + 85, bottom - 9)) selected = null;
@@ -476,16 +519,27 @@ public final class JournalScreen extends Screen {
         }
         if (button != 0) return super.mouseClicked(x, y, button);
         if (layout.map().contains(x, y)) {
-            for (Node node : NODES) if (!state(node).equals("hidden") && hitNode(node, x, y)) { selected = node; detailPage = 0; dragging = false; return true; }
+            for (Node node : NODES) if (!state(node).equals("hidden") && hitNode(node, x, y)) { selected = node; detailPage = 0; dragging = false;
+                catalogueSearch.setText(""); catalogueSearch.setFocused(false); searchChanged = false; searchVisible = false; return true; }
             dragging = true; return true;
         }
         return super.mouseClicked(x, y, button);
     }
     @Override public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (keyCode == 256 && selected != null) { selected = null; return true; }
+        if (keyCode == 256 && selected != null) { selected = null; catalogueSearch.setFocused(false); return true; }
+        if (searchVisible && catalogueSearch.isFocused()) {
+            catalogueSearch.keyPressed(keyCode, scanCode, modifiers);
+            return true;
+        }
         return super.keyPressed(keyCode, scanCode, modifiers);
     }
+    @Override public boolean charTyped(char chr, int modifiers) {
+        if (searchVisible && catalogueSearch.isFocused()) return catalogueSearch.charTyped(chr, modifiers);
+        return super.charTyped(chr, modifiers);
+    }
     @Override public boolean mouseDragged(double x, double y, int button, double dx, double dy) {
+        if (selected != null && searchVisible && catalogueSearch.isFocused()
+                && catalogueSearch.mouseDragged(x, y, button, dx, dy)) return true;
         if (button == 0 && dragging && selected == null) {
             camera.pan(dx, dy);
             clampCamera();
@@ -494,6 +548,8 @@ public final class JournalScreen extends Screen {
         return super.mouseDragged(x, y, button, dx, dy);
     }
     @Override public boolean mouseReleased(double x, double y, int button) {
+        if (selected != null && searchVisible && catalogueSearch.isFocused()
+                && catalogueSearch.mouseReleased(x, y, button)) return true;
         if (button == 0 && dragging) { dragging = false; return true; }
         return super.mouseReleased(x, y, button);
     }

@@ -40,6 +40,23 @@ public class PracticalResearchGameTests implements FabricGameTest {
     }
 
     @GameTest(templateName = EMPTY_STRUCTURE)
+    public void catalogueSearchUsesRealRecipesAndAllIngredients(TestContext c) {
+        var transmutations = net.alkahest.transmutation.TransmutationRecipe.all();
+        var matrix = net.alkahest.matrix.MatrixRecipe.all();
+        c.assertTrue(transmutations.stream().allMatch(r -> net.alkahest.research.RecipeCatalogueSearch.matches("", r)), "Empty search lists every transmutation");
+        c.assertTrue(matrix.stream().allMatch(r -> net.alkahest.research.RecipeCatalogueSearch.matches("", r)), "Empty search lists every synthesis");
+        var diamond = transmutations.stream().filter(r -> net.alkahest.research.RecipeCatalogueSearch.matches("iron_ingot diamond", r)).toList();
+        c.assertTrue(diamond.size() == 1 && diamond.getFirst().output().isOf(net.minecraft.item.Items.DIAMOND), "Find the alternate iron to diamond recipe");
+        c.assertTrue(net.alkahest.research.RecipeCatalogueSearch.matches("TERRA METALLUM", diamond.getFirst()), "Search across multiple essence fields");
+        c.assertFalse(net.alkahest.research.RecipeCatalogueSearch.matches("iron_ingot diamond aqua", diamond.getFirst()), "Missing terms must not match");
+        var arrows = matrix.stream().filter(r -> net.alkahest.research.RecipeCatalogueSearch.matches("feather arrow", r)).toList();
+        c.assertTrue(arrows.size() == 1 && arrows.getFirst().output().isOf(net.minecraft.item.Items.ARROW), "Search pedestal component and result together");
+        c.assertTrue(net.alkahest.research.RecipeCatalogueSearch.matches("flint aer", arrows.getFirst()), "Search base and essence together");
+        c.assertFalse(net.alkahest.research.RecipeCatalogueSearch.matches("aer terra", arrows.getFirst()), "Unrelated essence is not included");
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
     public void earlyGoldAndDiamondAreRememberedAcrossReload(TestContext c) {
         var player = c.createMockCreativeServerPlayerInWorld();
         for (var step : PracticalResearchPlan.STEPS) for (String kind : new String[]{"observed", "completed"}) {
