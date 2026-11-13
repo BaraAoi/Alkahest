@@ -39,13 +39,14 @@ public final class JournalScreen extends Screen {
     private static final Node[] NODES = {
         node(0, 30, 0), node(1, 155, -65), node(2, 155, 100), node(3, 295, 20),
         node(4, 425, -5), node(5, 425, 60), node(6, 555, 25), node(7, 690, 25), node(8, 820, -50),
-        node(9, 300, 160), node(10, 300, 220), node(11, 820, 70), node(13, 820, -130),
+        node(9, 300, 160), node(10, 300, 220), node(11, 820, 70), node(13, 1100, -130),
         node(14, 960, 155), node(17, 960, -130),
         node(19, 560, -220), node(20, 430, -145), node(21, 430, -80),
         node(22, 290, -15), node(23, 290, -270), node(24, 430, -270), node(25, 430, -220),
         node(26, 300, 280), node(29, 430, 280), node(30, 295, 80),
         node(31, 290, -210), node(32, 290, -145), node(33, 290, -80), node(35, 560, 125),
-        node(36, 1100, 155), node(37, 1240, 155)
+        node(36, 1100, 155), node(37, 1240, 155),
+        node(38, 155, -165), node(39, 155, -245)
     };
     private final long researchFlags;
     private Node selected;
@@ -191,6 +192,7 @@ public final class JournalScreen extends Screen {
         return lines;
     }
     private int diagramCount(Node node) {
+        if (node.key().equals("amulet")) return 2; // ingredients and essence/start on separate illustrated pages
         int crafts = JournalCraftingRecipes.BY_RESEARCH.getOrDefault(node.key(), List.of()).size();
         if (crafts > 0) return crafts;
         if (node.key().equals("alkahest") || node.key().equals("napalm") || node.key().equals("acid")
@@ -288,6 +290,10 @@ public final class JournalScreen extends Screen {
             if (recipe.count() > 1) c.drawText(textRenderer, Integer.toString(recipe.count()), x + 81, y + 43, 0xFF30251C, false);
             return;
         }
+        if (node.key().equals("amulet")) {
+            renderAmuletMatrixDiagram(c, page, pageLeft, y, width, mouseX, mouseY);
+            return;
+        }
         if (page != 0) return;
         if (node.key().equals("transmutation_gold") || node.key().equals("transmutation_diamond")) {
             boolean diamond = node.key().equals("transmutation_diamond");
@@ -333,6 +339,35 @@ public final class JournalScreen extends Screen {
         }
         var recipe = net.alkahest.recipe.CauldronEssenceRecipes.all().stream().filter(r -> r.result() == node.icon().getItem()).findFirst();
         recipe.ifPresent(brew -> renderCauldronDiagram(c, brew, pageLeft, y, width, mouseX, mouseY));
+    }
+    /** Uses the live Matrix registry, so ingredient icons and prices cannot drift from gameplay. */
+    private void renderAmuletMatrixDiagram(DrawContext c, int page, int left, int y, int width, int mx, int my) {
+        var recipe = MatrixRecipe.all().stream().filter(r -> r.output().isOf(ModItems.ALKAHEST_AMULET)).findFirst().orElseThrow();
+        int x = left + Math.max(0, (width - 92) / 2);
+        if (page == 0) {
+            diagramHeader(c, Text.translatable("screen.alkahest.journal.matrix_base"), left + width / 2, y, width);
+            diagramItem(c, mx, my, new ItemStack(recipe.base()), x, y + 13);
+            c.drawText(textRenderer, "→", x + 19, y + 17, 0xFF594633, false);
+            diagramItem(c, mx, my, new ItemStack(ModBlocks.MATRIX_CORE), x + 35, y + 13);
+            c.drawText(textRenderer, "→", x + 54, y + 17, 0xFF594633, false);
+            diagramItem(c, mx, my, recipe.output(), x + 71, y + 13);
+            c.drawText(textRenderer, textRenderer.trimToWidth(Text.translatable("screen.alkahest.journal.matrix_pedestals").getString(), Math.max(20, width)), x, y + 34, 0xFF594633, false);
+            for (int i = 0; i < recipe.components().size(); i++) {
+                int sx = x + (i % 3) * 29, sy = y + 45 + (i / 3) * 21;
+                diagramItem(c, mx, my, new ItemStack(recipe.components().get(i)), sx, sy);
+            }
+            wrapped(c, Text.translatable("screen.alkahest.journal.matrix_pedestals_hint"), left, y + 88, width, 0xFF594633);
+        } else if (page == 1) {
+            diagramHeader(c, Text.translatable("screen.alkahest.journal.matrix_essence"), left + width / 2, y, width);
+            diagramItem(c, mx, my, new ItemStack(ModBlocks.JAR), x, y + 15);
+            int row = 0;
+            for (var entry : recipe.cost().entrySet()) {
+                String amount = entry.getKey().displayName() + " × " + entry.getValue();
+                c.drawText(textRenderer, textRenderer.trimToWidth(amount, Math.max(20, width - 24)), x + 22, y + 14 + row++ * 11, 0xFF594633, false);
+            }
+            diagramItem(c, mx, my, new ItemStack(ModItems.WANDS.get(EssenceType.ORDO)), x, y + 55);
+            wrapped(c, Text.translatable("screen.alkahest.journal.matrix_wand_hint"), x + 21, y + 54, Math.max(20, width - 24), 0xFF594633);
+        }
     }
     private void diagramHeader(DrawContext c, Text text, int center, int y, int width) {
         centered(c, Text.literal(textRenderer.trimToWidth(text.getString(), Math.max(20, width))), center, y, 0xFF65462B);

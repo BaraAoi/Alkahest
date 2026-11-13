@@ -12,7 +12,7 @@ data = root / 'src/main/resources/data/alkahest'
 java = root / 'src/main/java/net/alkahest'
 plan = (java / 'research/PracticalResearchPlan.java').read_text()
 steps = re.findall(r'new Step\("([a-z0-9_]+)", "([a-z0-9_]+:[a-z0-9_]+)",', plan)
-assert len(steps) == 38 and len(set(steps)) == len(steps), 'all 38 steps must exist and be unique'
+assert len(steps) == 40 and len(set(steps)) == len(steps), 'all 40 steps must exist and be unique'
 # Every visible node must exist exactly once and have its own clickable area.
 journal = (root / 'src/client/java/net/alkahest/client/gui/JournalScreen.java').read_text()
 nodes = [(int(i), int(x), int(y)) for i, x, y in re.findall(r'node\((\d+),\s*(-?\d+),\s*(-?\d+)\)', journal)]
@@ -194,3 +194,11 @@ assert old == anklet.read_bytes()
 assert json.loads((assets/'models/item/anklet_blank.json').read_text())['textures']['layer0']=='alkahest:item/anklet_blank'
 for lang in ('ru_ru','en_us'):
     assert json.loads((assets/f'lang/{lang}.json').read_text()).get('item.alkahest.anklet_blank')
+
+# The amulet gets illustrated Matrix pages, and each blank has its own crafting entry.
+assert 'if (node.key().equals("amulet")) return 2' in journal
+assert 'renderAmuletMatrixDiagram(c, page' in journal
+assert 'recipe.components().size()' in journal and 'recipe.cost().entrySet()' in journal
+recipes = (root/'src/client/java/net/alkahest/client/gui/JournalCraftingRecipes.java').read_text()
+assert 'Map.entry("necklace_blank"' in recipes and 'Map.entry("anklet_blank"' in recipes
+assert 'Map.entry("amulet"' not in recipes

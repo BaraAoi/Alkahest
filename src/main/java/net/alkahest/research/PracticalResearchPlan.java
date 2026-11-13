@@ -30,7 +30,8 @@ public final class PracticalResearchPlan {
     public static final long AER_WAND = 1L << 34;
     public static final long WATER_FAUCET = 1L << 35;
     public static final long TRANSMUTATION_GOLD = 1L << 36, TRANSMUTATION_DIAMOND = 1L << 37;
-    public static final long ALL = (1L << 38) - 1;
+    public static final long NECKLACE_BLANK = 1L << 38, ANKLET_BLANK = 1L << 39;
+    public static final long ALL = (1L << 40) - 1;
     public static final long ASSEMBLIES = STABILIZER | TIER2 | TRANSMUTATOR | MATRIX;
     // Keep obsolete flags for saves, but group the component entries into their machine.
     public static final long HIDDEN_COMPONENTS = BELLOWS | CHAMBER | CROWN | PEDESTAL | STABILIZER_RECEIVER | STABILIZER_CREST | AER_WAND;
@@ -50,7 +51,7 @@ public final class PracticalResearchPlan {
         new Step("charger", "alkahest:essence_charger", CHARGER, DISTILLERY, 0),
         new Step("tier2", "alkahest:distillery_tier2", TIER2, ALKAHEST | DISTILLERY, 0),
         new Step("bellows", "alkahest:distillery_bellows", BELLOWS, TIER2, 0),
-        new Step("amulet", "alkahest:alkahest_amulet", AMULET, ALKAHEST | MATRIX, 0),
+        new Step("amulet", "alkahest:alkahest_amulet", AMULET, ALKAHEST | MATRIX | NECKLACE_BLANK, 0),
         new Step("transmutator", "alkahest:transmutator_core", TRANSMUTATOR, PIPE | JAR | AMULET, 0),
         new Step("chamber", "alkahest:transmutator_chamber", CHAMBER, TRANSMUTATOR, 0),
         new Step("crown", "alkahest:transmutator_crown", CROWN, TRANSMUTATOR, 0),
@@ -74,7 +75,9 @@ public final class PracticalResearchPlan {
         new Step("aer_wand", "alkahest:crystal_wand_aer", AER_WAND, MONOCLE, 0),
         new Step("water_faucet", "alkahest:water_faucet", WATER_FAUCET, WATER | DISTILLERY, 0),
         new Step("transmutation_gold", "minecraft:gold_ingot", TRANSMUTATION_GOLD, TRANSMUTATOR, 0),
-        new Step("transmutation_diamond", "minecraft:diamond", TRANSMUTATION_DIAMOND, TRANSMUTATION_GOLD, 0)
+        new Step("transmutation_diamond", "minecraft:diamond", TRANSMUTATION_DIAMOND, TRANSMUTATION_GOLD, 0),
+        new Step("necklace_blank", "alkahest:iron_chain", NECKLACE_BLANK, CAULDRON, 0),
+        new Step("anklet_blank", "alkahest:anklet_blank", ANKLET_BLANK, CAULDRON, 0)
     );
 
     public static Step forItem(String itemId) {

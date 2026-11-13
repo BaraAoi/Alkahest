@@ -360,8 +360,24 @@ public class PracticalResearchGameTests implements FabricGameTest {
     }
 
     @GameTest(templateName = EMPTY_STRUCTURE)
+    public void jewelryBlankResearchRemembersObtainedItems(TestContext c) {
+        var player = c.createMockCreativeServerPlayerInWorld(); clearResearch(player);
+        PracticalResearchStorage.observe(player, new ItemStack(ModItems.IRON_CHAIN));
+        PracticalResearchStorage.observe(player, new ItemStack(ModItems.ANKLET_BLANK));
+        long blanks = PracticalResearchPlan.NECKLACE_BLANK | PracticalResearchPlan.ANKLET_BLANK;
+        c.assertTrue((PracticalResearchStorage.observed(player) & blanks) == blanks, "Both independently observed");
+        c.assertTrue((PracticalResearchStorage.completed(player) & blanks) == 0, "Both wait for cauldron research");
+        grant(player, "cauldron"); PracticalResearchStorage.migrate(player);
+        c.assertTrue((PracticalResearchStorage.completed(player) & blanks) == blanks, "Obtained blanks complete separately");
+        player.getAdvancementTracker().save();
+        player.getAdvancementTracker().reload(c.getWorld().getServer().getAdvancementLoader());
+        c.assertTrue((PracticalResearchStorage.completed(player) & blanks) == blanks, "Blank research survives reload");
+        clearResearch(player); c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
     public void journalPayloadPreservesResearchBitsAboveThirtyOne(TestContext c) {
-        long flags = PracticalResearchPlan.CAULDRON | PracticalResearchPlan.FIRE_DUST | PracticalResearchPlan.CAUSTIC_SLIME | PracticalResearchPlan.AER_WAND;
+        long flags = PracticalResearchPlan.CAULDRON | PracticalResearchPlan.FIRE_DUST | PracticalResearchPlan.CAUSTIC_SLIME | PracticalResearchPlan.AER_WAND | PracticalResearchPlan.NECKLACE_BLANK | PracticalResearchPlan.ANKLET_BLANK;
         var buf = new net.minecraft.network.RegistryByteBuf(io.netty.buffer.Unpooled.buffer(), c.getWorld().getRegistryManager());
         try {
             net.alkahest.network.OpenJournalPayload.CODEC.encode(buf, new net.alkahest.network.OpenJournalPayload(flags));

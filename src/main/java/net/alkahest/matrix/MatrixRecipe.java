@@ -14,14 +14,15 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * A synthesis of the Matrix: one base item plus up to three additional items turn into a new
+ * A synthesis of the Matrix: one base item plus additional pedestal items turn into a new
  * item, paid for with essence that the cube draws out of the surrounding jars.
  */
 public record MatrixRecipe(Item base, List<Item> components, ItemStack output,
                            Map<EssenceType, Integer> cost) {
     private static final List<MatrixRecipe> ALL = List.of(
-        synthesis(ModItems.IRON_CHAIN, List.of(ModItems.ALKAHEST_VIAL, ModItems.CRYSTALS.get(EssenceType.ORDO), Items.GOLD_INGOT),
-            new ItemStack(ModItems.ALKAHEST_AMULET), EssenceType.ORDO, 8, EssenceType.METALLUM, 8),
+        synthesis(ModItems.IRON_CHAIN, List.of(ModItems.ALKAHEST_VIAL, ModItems.CRYSTALS.get(EssenceType.ORDO),
+                ModItems.CRYSTALS.get(EssenceType.ORDO), Items.GOLD_INGOT, Items.GOLD_INGOT, Items.DIAMOND),
+            new ItemStack(ModItems.ALKAHEST_AMULET), EssenceType.ORDO, 16, EssenceType.METALLUM, 16, EssenceType.LUX, 8),
         synthesis(Items.STRING, List.of(), new ItemStack(ModItems.BINDING_SALT, 3),
             EssenceType.ORDO, 4, EssenceType.AQUA, 2),
         synthesis(Items.GLASS_PANE, List.of(Items.GOLD_INGOT), new ItemStack(ModItems.ALCHEMISTS_MONOCLE),

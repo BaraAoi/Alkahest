@@ -36,7 +36,9 @@ class PracticalResearchPlanTest {
         assertEquals(parent | TRANSMUTATOR, resolve(parent, 0, TRANSMUTATOR));
         assertEquals(MATRIX | ALKAHEST, resolve(ALKAHEST, 0, MATRIX));
         assertEquals(ALKAHEST, resolve(ALKAHEST, AMULET, 0));
-        assertEquals(MATRIX | AMULET | ALKAHEST, resolve(ALKAHEST, AMULET, MATRIX));
+        assertEquals(MATRIX | ALKAHEST, resolve(ALKAHEST, AMULET, MATRIX));
+        assertEquals(MATRIX | AMULET | ALKAHEST | NECKLACE_BLANK | CAULDRON,
+            resolve(ALKAHEST | CAULDRON, AMULET | NECKLACE_BLANK, MATRIX));
         assertEquals(MATRIX | AMULET | ALKAHEST, resolve(AMULET | ALKAHEST, 0, MATRIX));
         assertEquals(MATRIX | AMULET | ALKAHEST, resolve(AMULET | ALKAHEST, FROST, MATRIX));
         assertEquals(WATER | DISTILLERY | FROST, resolve(WATER | DISTILLERY, FROST, 0));

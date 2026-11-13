@@ -76,6 +76,27 @@ public class MatrixGameTests implements FabricGameTest {
     }
 
     @GameTest(templateName = EMPTY_STRUCTURE)
+    public void amuletRequiresEverySeparatePedestal(TestContext c) {
+        BlockPos pos = build(c); wake(c); var core = core(c);
+        var player = c.createMockPlayer(net.minecraft.world.GameMode.SURVIVAL);
+        var wand = new ItemStack(ModItems.WANDS.get(EssenceType.ORDO));
+        core.setStack(MatrixCoreBlockEntity.BASE, new ItemStack(ModItems.IRON_CHAIN));
+        pedestal(c, 1, 1, 3, new ItemStack(ModItems.ALKAHEST_VIAL));
+        pedestal(c, 5, 1, 3, new ItemStack(ModItems.CRYSTALS.get(EssenceType.ORDO), 2));
+        pedestal(c, 3, 1, 5, new ItemStack(Items.GOLD_INGOT, 2));
+        pedestal(c, 1, 1, 1, new ItemStack(Items.DIAMOND));
+        c.assertFalse(core.startWith(wand, player), "Two-item stacks on single pedestals do not count twice");
+        pedestal(c, 5, 1, 1, new ItemStack(ModItems.CRYSTALS.get(EssenceType.ORDO)));
+        c.assertFalse(core.startWith(wand, player), "Missing second gold is rejected");
+        pedestal(c, 1, 1, 5, new ItemStack(Items.GOLD_INGOT));
+        c.assertTrue(core.startWith(wand, player), "All six pedestals allow start");
+        run(c.getWorld(), pos, MatrixCoreBlockEntity.DURATION * 2);
+        c.assertTrue(core.getStack(MatrixCoreBlockEntity.OUTPUT).isEmpty(), "No essence means no amulet");
+        c.assertFalse(core.getStack(MatrixCoreBlockEntity.BASE).isEmpty(), "Missing essence preserves the base");
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
     public void firstAmuletIsMadeWithAWandInTheMatrix(TestContext c) {
         BlockPos pos = build(c); var world = c.getWorld(); var core = core(c);
         var player = c.createMockPlayer(net.minecraft.world.GameMode.SURVIVAL);
@@ -85,8 +106,13 @@ public class MatrixGameTests implements FabricGameTest {
         pedestal(c, 1, 1, 3, new ItemStack(ModItems.ALKAHEST_VIAL));
         pedestal(c, 5, 1, 3, new ItemStack(ModItems.CRYSTALS.get(EssenceType.ORDO)));
         pedestal(c, 3, 1, 5, new ItemStack(Items.GOLD_INGOT));
-        var ordo = jar(c, 0, 2, 3, EssenceType.ORDO, 8);
-        var metal = jar(c, 6, 2, 3, EssenceType.METALLUM, 8);
+        // Two identical pieces require two distinct pedestals each; stacks cannot stand in for them.
+        pedestal(c, 1, 1, 1, new ItemStack(ModItems.CRYSTALS.get(EssenceType.ORDO)));
+        pedestal(c, 5, 1, 1, new ItemStack(Items.GOLD_INGOT));
+        pedestal(c, 1, 1, 5, new ItemStack(Items.DIAMOND));
+        var ordo = jar(c, 0, 2, 3, EssenceType.ORDO, 16);
+        var metal = jar(c, 6, 2, 3, EssenceType.METALLUM, 16);
+        var lux = jar(c, 3, 2, 0, EssenceType.LUX, 8);
         MatrixCoreBlockEntity.interactNearby(world, pos, player, wand);
         c.assertTrue(core.awake() && !core.started(), "First wand click wakes, but does not start the Matrix");
         MatrixCoreBlockEntity.interactNearby(world, pos, player, wand);
@@ -94,9 +120,9 @@ public class MatrixGameTests implements FabricGameTest {
         run(world, pos, MatrixCoreBlockEntity.DURATION * 2 + 10);
         c.assertTrue(core.getStack(MatrixCoreBlockEntity.OUTPUT).isOf(ModItems.ALKAHEST_AMULET), "The synthesis produces an amulet");
         c.assertTrue(core.getStack(MatrixCoreBlockEntity.BASE).isEmpty(), "Necklace base consumed");
-        for (var p : List.of(new BlockPos(1,1,3), new BlockPos(5,1,3), new BlockPos(3,1,5)))
+        for (var p : List.of(new BlockPos(1,1,3), new BlockPos(5,1,3), new BlockPos(3,1,5), new BlockPos(1,1,1), new BlockPos(5,1,1), new BlockPos(1,1,5)))
             c.assertTrue(((net.alkahest.block.entity.MatrixPedestalBlockEntity) world.getBlockEntity(c.getAbsolutePos(p))).isEmpty(), "Components consumed");
-        c.assertTrue(ordo.contents().total() == 0 && metal.contents().total() == 0, "Both essence costs paid");
+        c.assertTrue(ordo.contents().total() == 0 && metal.contents().total() == 0 && lux.contents().total() == 0, "All essence costs paid");
         c.assertTrue(wand.getOrDefault(net.alkahest.registry.ModDataComponents.ESSENCE_CHARGE, 0) == before, "Bootstrap wand use is free");
         core.setStack(MatrixCoreBlockEntity.OUTPUT, ItemStack.EMPTY);
         core.setStack(MatrixCoreBlockEntity.BASE, new ItemStack(Items.STRING));
