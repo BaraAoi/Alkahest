@@ -57,7 +57,7 @@ public class TransmutatorCoreBlockEntity extends BlockEntity implements SidedInv
     private final DefaultedList<ItemStack> stacks = DefaultedList.ofSize(3, ItemStack.EMPTY);
     private int progress;
     private boolean awake;
-    // A stable recipe ID per input item, not an index that can change when recipes are added.
+    // The stable recipe ID belongs to the currently loaded stack, not future insertions.
     private final Map<String, String> selectedRecipes = new java.util.HashMap<>();
     // Client-only visual interpolation timestamp. It is not saved and never changes real progress.
     private long clientProgressSyncTick = Long.MIN_VALUE;
@@ -286,7 +286,10 @@ public class TransmutatorCoreBlockEntity extends BlockEntity implements SidedInv
         else existing.increment(output.getCount());
         ItemStack input = stacks.get(INPUT);
         input.decrement(1);
-        if (input.isEmpty()) stacks.set(INPUT, ItemStack.EMPTY);
+        if (input.isEmpty()) {
+            stacks.set(INPUT, ItemStack.EMPTY);
+            selectedRecipes.clear();
+        }
         ItemStack amulet = stacks.get(AMULET);
         amulet.set(ModDataComponents.ESSENCE_CHARGE,
             Math.max(0, amulet.getOrDefault(ModDataComponents.ESSENCE_CHARGE, 0) - 1));
@@ -442,24 +445,36 @@ public class TransmutatorCoreBlockEntity extends BlockEntity implements SidedInv
     @Override public ItemStack getStack(int slot) { return stacks.get(slot); }
     @Override public ItemStack removeStack(int slot, int amount) {
         ItemStack removed = Inventories.splitStack(stacks, slot, amount);
-        if (!removed.isEmpty()) { if (slot != OUTPUT) progress = 0; markDirty(); if (slot == AMULET) syncAmulet(); else if (slot == INPUT) syncAnimationProgress(); }
+        if (!removed.isEmpty()) {
+            if (slot != OUTPUT) progress = 0;
+            if (slot == INPUT && stacks.get(INPUT).isEmpty()) selectedRecipes.clear();
+            markDirty();
+            if (slot == AMULET) syncAmulet(); else if (slot == INPUT) syncAnimationProgress();
+        }
         return removed;
     }
     @Override public ItemStack removeStack(int slot) {
         ItemStack removed = Inventories.removeStack(stacks, slot);
-        if (!removed.isEmpty()) { if (slot != OUTPUT) progress = 0; markDirty(); if (slot == AMULET) syncAmulet(); else if (slot == INPUT) syncAnimationProgress(); }
+        if (!removed.isEmpty()) {
+            if (slot != OUTPUT) progress = 0;
+            if (slot == INPUT && stacks.get(INPUT).isEmpty()) selectedRecipes.clear();
+            markDirty();
+            if (slot == AMULET) syncAmulet(); else if (slot == INPUT) syncAnimationProgress();
+        }
         return removed;
     }
     @Override public void setStack(int slot, ItemStack stack) {
         ItemStack current = stacks.get(slot);
-        if (slot == AMULET || (slot == INPUT && (current.isEmpty() || stack.isEmpty()
-            || !ItemStack.areItemsAndComponentsEqual(current, stack)))) progress = 0;
+        boolean changedInput = slot == INPUT && (current.isEmpty() || stack.isEmpty()
+            || !ItemStack.areItemsAndComponentsEqual(current, stack));
+        if (slot == AMULET || changedInput) progress = 0;
+        if (changedInput) selectedRecipes.clear();
         stacks.set(slot, stack);
         markDirty();
         if (slot == AMULET) syncAmulet();
         else if (slot == INPUT) syncAnimationProgress();
     }
-    @Override public void clear() { stacks.clear(); progress = 0; markDirty(); syncAmulet(); }
+    @Override public void clear() { stacks.clear(); selectedRecipes.clear(); progress = 0; markDirty(); syncAmulet(); }
 
     /** A few progress checkpoints per operation; initial chunk NBT covers newly tracking clients. */
     private void syncAnimationProgress() {
@@ -532,6 +547,10 @@ public class TransmutatorCoreBlockEntity extends BlockEntity implements SidedInv
         }
         if (nbt.getBoolean("IronDiamond") && !selectedRecipes.containsKey("minecraft:iron_ingot"))
             selectedRecipes.put("minecraft:iron_ingot", "iron_ingot_to_diamond");
+        // Old worlds could remember choices for other items even while the slot was empty.
+        // A selection belongs only to the stack actually loaded during this save.
+        String loadedInput = inputId(stacks.get(INPUT));
+        selectedRecipes.keySet().removeIf(key -> !key.equals(loadedInput));
         // Older iron-to-diamond operations could have up to 2400 ticks of progress. Preserve
         // completed work as ready under the shorter duration, but never leave an invalid counter.
         progress = recipe() == null ? 0 : Math.max(0, Math.min(progress, duration()));
@@ -547,6 +566,7 @@ public class TransmutatorCoreBlockEntity extends BlockEntity implements SidedInv
             if (!stack.isEmpty()) net.minecraft.util.ItemScatterer.spawn(world, pos.getX(), pos.getY(), pos.getZ(), stack);
         }
         stacks.clear();
+        selectedRecipes.clear();
         progress = 0;
     }
 

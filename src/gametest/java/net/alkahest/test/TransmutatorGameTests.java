@@ -146,6 +146,42 @@ public class TransmutatorGameTests implements FabricGameTest {
     }
 
     @GameTest(templateName = EMPTY_STRUCTURE)
+    public void eachNewInputStackImmediatelyRequiresSelection(TestContext c) {
+        BlockPos pos=tower(c,CY+32); var world=c.getWorld();
+        var core=(TransmutatorCoreBlockEntity)world.getBlockEntity(pos); core.wake();
+        var player=c.createMockPlayer(net.minecraft.world.GameMode.SURVIVAL);
+        player.setPosition(pos.getX()+.5,pos.getY()+.5,pos.getZ()+.5);
+        var h=(net.alkahest.screen.TransmutatorScreenHandler)core.createMenu(1,player.getInventory(),player);
+        core.setStack(0,new ItemStack(Items.IRON_INGOT,3));
+        c.assertTrue(h.needsRecipeChoice() && core.recipe()==null, "Inserting an ambiguous item shows the list immediately");
+        c.assertTrue(core.selectRecipe(1), "Choose diamond for this stack");
+        core.setStack(0,new ItemStack(Items.IRON_INGOT,5));
+        c.assertTrue(!h.needsRecipeChoice() && core.recipe().output().isOf(Items.DIAMOND), "Top-up of the same stack keeps the choice");
+        core.removeStack(0,1);
+        c.assertTrue(!h.needsRecipeChoice() && core.recipe().output().isOf(Items.DIAMOND), "Partial removal keeps the choice for the remaining stack");
+        core.removeStack(0,64);
+        core.setStack(0,new ItemStack(Items.IRON_INGOT));
+        c.assertTrue(h.needsRecipeChoice() && core.recipe()==null, "Fully removing then re-inserting the same item opens the list");
+        c.assertTrue(core.selectRecipe(0), "Select gold");
+        core.removeStack(0);
+        core.setStack(0,new ItemStack(Items.IRON_INGOT));
+        c.assertTrue(h.needsRecipeChoice(), "Whole-stack removal also clears selection");
+        c.assertTrue(core.selectRecipe(1), "Select again");
+        core.setStack(0,new ItemStack(Items.COPPER_INGOT));
+        c.assertTrue(!h.needsRecipeChoice() && core.recipe().output().isOf(Items.GOLD_INGOT), "One recipe starts without choice");
+        core.setStack(0,new ItemStack(Items.IRON_INGOT));
+        c.assertTrue(h.needsRecipeChoice(), "Switching input and switching back opens list immediately");
+        c.assertTrue(core.selectRecipe(1), "Select and reload");
+        var saved=core.createNbt(world.getRegistryManager());
+        core.readComponentlessNbt(saved,world.getRegistryManager());
+        c.assertTrue(core.selectedRecipeIndex()==1 && !h.needsRecipeChoice(), "Selection survives reload while the same stack remains loaded");
+        core.clear();
+        core.setStack(0,new ItemStack(Items.IRON_INGOT));
+        c.assertTrue(h.needsRecipeChoice(), "Clearing the inventory resets selection");
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
     public void genericRecipeSelectionSupportsThreeAndReordering(TestContext c) {
         var sand = new ItemStack(Items.SAND);
         var a = new net.alkahest.transmutation.TransmutationRecipe("sand_first", sand.copy(), new ItemStack(Items.GLASS), java.util.Map.of(EssenceType.IGNIS, 1), 100);
@@ -171,7 +207,7 @@ public class TransmutatorGameTests implements FabricGameTest {
     }
 
     @GameTest(templateName = EMPTY_STRUCTURE)
-    public void legacyIronChoiceMigratesEvenWithDifferentInputAndKeepsProgress(TestContext c) {
+    public void legacyIronChoiceMigratesOnlyForTheLoadedStack(TestContext c) {
         BlockPos pos=tower(c,CY+32); var world=c.getWorld();
         var core=(TransmutatorCoreBlockEntity)world.getBlockEntity(pos); core.wake();
         core.setStack(0,new ItemStack(Items.IRON_INGOT));
@@ -186,12 +222,12 @@ public class TransmutatorGameTests implements FabricGameTest {
         var restored=new TransmutatorCoreBlockEntity(pos,core.getCachedState());
         restored.readComponentlessNbt(saved,world.getRegistryManager());
         restored.setStack(0,new ItemStack(Items.IRON_INGOT));
-        c.assertTrue(restored.selectedRecipeIndex()==1 && restored.recipe().output().isOf(Items.DIAMOND), "Iron choice is remembered across another input and save/reload");
+        c.assertTrue(restored.selectedRecipeIndex()==-1 && restored.recipe()==null, "A new iron stack requires a fresh choice after input change and save/reload");
         var oldNoInput=core.createNbt(world.getRegistryManager());
         oldNoInput.remove("RecipeChoices"); oldNoInput.putBoolean("IronDiamond",true);
         core.readComponentlessNbt(oldNoInput,world.getRegistryManager());
         core.setStack(0,new ItemStack(Items.IRON_INGOT));
-        c.assertTrue(core.selectedRecipeIndex()==1, "Legacy selection migrates even when iron is not currently loaded");
+        c.assertTrue(core.selectedRecipeIndex()==-1 && core.recipe()==null, "Old inactive choice cannot apply to newly inserted iron");
         c.complete();
     }
 
@@ -206,7 +242,9 @@ public class TransmutatorGameTests implements FabricGameTest {
         var client=new net.alkahest.screen.TransmutatorScreenHandler(1,player.getInventory());
         client.getSlot(0).setStack(new ItemStack(Items.IRON_INGOT));
         server.addListener(new net.minecraft.screen.ScreenHandlerListener() {
-            public void onSlotUpdate(net.minecraft.screen.ScreenHandler handler,int slot,ItemStack stack) { }
+            public void onSlotUpdate(net.minecraft.screen.ScreenHandler handler,int slot,ItemStack stack) {
+                if (slot == 0) client.getSlot(0).setStack(stack.copy());
+            }
             public void onPropertyUpdate(net.minecraft.screen.ScreenHandler handler,int id,int value) { client.setProperty(id,value); }
         });
         server.sendContentUpdates();
@@ -217,6 +255,11 @@ public class TransmutatorGameTests implements FabricGameTest {
         c.assertTrue(client.needsRecipeChoice() && client.selectedOutput().isEmpty(), "Clearing synchronizes waiting state");
         c.assertTrue(server.onButtonClick(player,1), "Player selects gold directly"); server.sendContentUpdates();
         c.assertTrue(client.selectedRecipeIndex()==0 && client.selectedOutput().isOf(Items.GOLD_INGOT), "Explicit first choice syncs to screen");
+        core.removeStack(0); server.sendContentUpdates();
+        core.setStack(0,new ItemStack(Items.IRON_INGOT)); server.sendContentUpdates();
+        c.assertTrue(client.needsRecipeChoice() && client.selectedOutput().isEmpty(), "Reinsert automatically opens the selection list in the already open client screen");
+        c.assertTrue(server.onButtonClick(player,2), "Directly select again without a preliminary button"); server.sendContentUpdates();
+        c.assertTrue(client.selectedOutput().isOf(Items.DIAMOND), "New selection syncs normally");
         client.getSlot(0).setStack(new ItemStack(Items.SAND));
         c.assertFalse(client.canSelectRecipe(), "Single-recipe input hides the control");
         client.setProperty(3,999);
@@ -253,6 +296,15 @@ public class TransmutatorGameTests implements FabricGameTest {
         c.assertTrue(core.getStack(2).isOf(Items.DIAMOND) && core.getStack(2).getCount()==1
             && core.getStack(0).getCount()==1 && core.getStack(1).get(ModDataComponents.ESSENCE_CHARGE)==3 && core.progress()==0,
             "One iron and one charge produce exactly one diamond");
+        c.assertTrue(core.selectedRecipeIndex()==1, "Remaining iron in the same stack keeps its recipe");
+        terra.setContents(of(EssenceType.TERRA,1)); lux.setContents(of(EssenceType.LUX,1));
+        ordo.setContents(of(EssenceType.ORDO,1)); metal.setContents(of(EssenceType.METALLUM,1));
+        run(world,pos,100); net.alkahest.block.entity.AlchemyPipeBlockEntity.pulse(world,pipe);
+        c.assertTrue(core.getStack(0).isEmpty() && core.getStack(2).getCount()==2, "Last input completes normally");
+        core.setStack(0,new ItemStack(Items.IRON_INGOT));
+        c.assertTrue(core.recipe()==null && core.selectedRecipeIndex()==-1, "New stack after consumption requires a fresh choice");
+        run(world,pos,120);
+        c.assertTrue(core.progress()==0 && core.getStack(2).getCount()==2, "No automatic processing for the new stack");
         c.complete();
     }
 
