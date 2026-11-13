@@ -31,7 +31,9 @@ public final class PracticalResearchPlan {
     public static final long WATER_FAUCET = 1L << 35;
     public static final long TRANSMUTATION_GOLD = 1L << 36, TRANSMUTATION_DIAMOND = 1L << 37;
     public static final long NECKLACE_BLANK = 1L << 38, ANKLET_BLANK = 1L << 39;
-    public static final long ALL = (1L << 40) - 1;
+    public static final long CLOTH = 1L << 40, SPIRIT_CLOTH = 1L << 41;
+    public static final long STABILIZING_REAGENT = 1L << 42, STABLE_MATERIAL = 1L << 43;
+    public static final long ALL = (1L << 44) - 1;
     public static final long ASSEMBLIES = STABILIZER | TIER2 | TRANSMUTATOR | MATRIX;
     // Keep obsolete flags for saves, but group the component entries into their machine.
     public static final long HIDDEN_COMPONENTS = BELLOWS | CHAMBER | CROWN | PEDESTAL | STABILIZER_RECEIVER | STABILIZER_CREST | AER_WAND;
@@ -77,7 +79,11 @@ public final class PracticalResearchPlan {
         new Step("transmutation_gold", "minecraft:gold_ingot", TRANSMUTATION_GOLD, TRANSMUTATOR, 0),
         new Step("transmutation_diamond", "minecraft:diamond", TRANSMUTATION_DIAMOND, TRANSMUTATION_GOLD, 0),
         new Step("necklace_blank", "alkahest:iron_chain", NECKLACE_BLANK, CAULDRON, 0),
-        new Step("anklet_blank", "alkahest:anklet_blank", ANKLET_BLANK, CAULDRON, 0)
+        new Step("anklet_blank", "alkahest:anklet_blank", ANKLET_BLANK, CAULDRON, 0),
+        new Step("cloth", "alkahest:cloth", CLOTH, CAULDRON, 0),
+        new Step("spirit_cloth", "alkahest:spirit_cloth", SPIRIT_CLOTH, CLOTH | TRANSMUTATOR, 0),
+        new Step("stabilizing_reagent", "alkahest:stabilizing_reagent", STABILIZING_REAGENT, BINDING_SALT, 0),
+        new Step("stable_material", "alkahest:stable_material", STABLE_MATERIAL, STABILIZING_REAGENT | TRANSMUTATOR | MATRIX, 0)
     );
 
     public static Step forItem(String itemId) {

@@ -6,6 +6,19 @@ import static org.junit.jupiter.api.Assertions.*;
 import static net.alkahest.research.PracticalResearchPlan.*;
 
 class PracticalResearchPlanTest {
+    @Test void newMaterialBranchesRememberEarlyItemsAndPreserveOlderProgress() {
+        long observed = CLOTH | SPIRIT_CLOTH | STABILIZING_REAGENT | STABLE_MATERIAL;
+        assertEquals(0, resolve(0, observed, 0));
+        assertEquals(CAULDRON | CLOTH, resolve(CAULDRON, observed, 0));
+        long parents = CAULDRON | BINDING_SALT | TRANSMUTATOR | MATRIX;
+        assertEquals(parents | observed, resolve(parents, observed, 0));
+        assertEquals(AMULET | MATRIX, resolve(AMULET | MATRIX, 0, 0));
+        assertEquals(CLOTH, forItem("alkahest:cloth").bit());
+        assertEquals(SPIRIT_CLOTH, forItem("alkahest:spirit_cloth").bit());
+        assertEquals(STABILIZING_REAGENT, forItem("alkahest:stabilizing_reagent").bit());
+        assertEquals(STABLE_MATERIAL, forItem("alkahest:stable_material").bit());
+    }
+
     @Test void branchParentsAndEarlyObservations() {
         long observed = CAULDRON | MONOCLE | WATER;
         long completed = resolve(0, observed, 0);

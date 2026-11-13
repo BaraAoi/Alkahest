@@ -10,7 +10,7 @@ mapping = {
  'water_faucet':['water_faucet'],
  'stabilizer':['stabilizer_core','stabilizer_receiver','stabilizer_crest'],
  'pipe':['alchemy_pipe'], 'charger':['essence_charger'], 'tier2':['distillery_tier2','distillery_bellows'],
- 'necklace_blank':['iron_chain'], 'anklet_blank':['anklet_blank'], 'transmutator':['transmutator_core','transmutator_pillar_aqua','transmutator_chamber','transmutator_crown'],
+ 'necklace_blank':['iron_chain'], 'anklet_blank':['anklet_blank'], 'cloth':['cloth'], 'stabilizing_reagent':['stabilizing_reagent'], 'transmutator':['transmutator_core','transmutator_pillar_aqua','transmutator_chamber','transmutator_crown'],
  'matrix':['matrix_core','matrix_pillar_recipe','alchemical_brick','matrix_pedestal'],
  'midas':['midas_elixir'], 'frost':['frost_flask'], 'purification':['purifying_flask'],
  'jar':['jar'], 'separator':['essence_separator'], 'crystallization':['crystallization_powder'],

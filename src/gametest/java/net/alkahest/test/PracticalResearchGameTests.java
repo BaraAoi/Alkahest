@@ -361,6 +361,24 @@ public class PracticalResearchGameTests implements FabricGameTest {
     }
 
     @GameTest(templateName = EMPTY_STRUCTURE)
+    public void materialWorkbenchRecipesDoNotReplaceVanillaWool(TestContext c) {
+        var world=c.getWorld(); var manager=world.getServer().getRecipeManager();
+        var s=new ItemStack(net.minecraft.item.Items.STRING);
+        var cloth=net.minecraft.recipe.input.CraftingRecipeInput.create(3,2,java.util.List.of(s,s,s,ItemStack.EMPTY,s,ItemStack.EMPTY));
+        var match=manager.getFirstMatch(net.minecraft.recipe.RecipeType.CRAFTING,cloth,world);
+        c.assertTrue(match.isPresent() && match.get().value().craft(cloth,world.getRegistryManager()).isOf(ModItems.CLOTH), "Four strings in the T pattern yield cloth");
+        var wool=net.minecraft.recipe.input.CraftingRecipeInput.create(2,2,java.util.List.of(s,s,s,s));
+        var vanilla=manager.getFirstMatch(net.minecraft.recipe.RecipeType.CRAFTING,wool,world);
+        c.assertTrue(vanilla.isPresent() && vanilla.get().value().craft(wool,world.getRegistryManager()).isOf(net.minecraft.item.Items.WHITE_WOOL), "The vanilla wool recipe stays intact");
+        var mix=net.minecraft.recipe.input.CraftingRecipeInput.create(2,2,java.util.List.of(
+            new ItemStack(ModItems.BINDING_SALT), new ItemStack(net.minecraft.item.Items.AMETHYST_SHARD),
+            new ItemStack(ModItems.CRYSTALS.get(net.alkahest.essence.EssenceType.ORDO)), new ItemStack(net.minecraft.item.Items.GOLD_NUGGET)));
+        var reagent=manager.getFirstMatch(net.minecraft.recipe.RecipeType.CRAFTING,mix,world);
+        c.assertTrue(reagent.isPresent() && reagent.get().value().craft(mix,world.getRegistryManager()).isOf(ModItems.STABILIZING_REAGENT), "Reagent is crafted shapelessly");
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
     public void jewelryBlankResearchRemembersObtainedItems(TestContext c) {
         var player = c.createMockCreativeServerPlayerInWorld(); clearResearch(player);
         PracticalResearchStorage.observe(player, new ItemStack(ModItems.IRON_CHAIN));
@@ -378,7 +396,8 @@ public class PracticalResearchGameTests implements FabricGameTest {
 
     @GameTest(templateName = EMPTY_STRUCTURE)
     public void journalPayloadPreservesResearchBitsAboveThirtyOne(TestContext c) {
-        long flags = PracticalResearchPlan.CAULDRON | PracticalResearchPlan.FIRE_DUST | PracticalResearchPlan.CAUSTIC_SLIME | PracticalResearchPlan.AER_WAND | PracticalResearchPlan.NECKLACE_BLANK | PracticalResearchPlan.ANKLET_BLANK;
+        long flags = PracticalResearchPlan.CAULDRON | PracticalResearchPlan.FIRE_DUST | PracticalResearchPlan.CAUSTIC_SLIME | PracticalResearchPlan.AER_WAND | PracticalResearchPlan.NECKLACE_BLANK | PracticalResearchPlan.ANKLET_BLANK
+            | PracticalResearchPlan.CLOTH | PracticalResearchPlan.SPIRIT_CLOTH | PracticalResearchPlan.STABILIZING_REAGENT | PracticalResearchPlan.STABLE_MATERIAL;
         var buf = new net.minecraft.network.RegistryByteBuf(io.netty.buffer.Unpooled.buffer(), c.getWorld().getRegistryManager());
         try {
             net.alkahest.network.OpenJournalPayload.CODEC.encode(buf, new net.alkahest.network.OpenJournalPayload(flags));

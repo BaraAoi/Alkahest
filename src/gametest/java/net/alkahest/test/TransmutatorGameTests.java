@@ -350,6 +350,27 @@ public class TransmutatorGameTests implements FabricGameTest {
     }
 
     @GameTest(templateName = EMPTY_STRUCTURE)
+    public void clothInfusesWithSpiritus(TestContext c) {
+        int y=CY+80; var pos=tower(c,y); var world=c.getWorld();
+        var core=(TransmutatorCoreBlockEntity)world.getBlockEntity(pos); core.wake();
+        ItemStack amulet=new ItemStack(ModItems.ALKAHEST_AMULET); amulet.set(ModDataComponents.ESSENCE_CHARGE,2);
+        core.setStack(1,amulet); core.setStack(0,new ItemStack(ModItems.CLOTH));
+        c.setBlockState(CX+1,y,CZ,ModBlocks.ALCHEMY_PIPE);
+        BlockPos pipe=c.getAbsolutePos(new BlockPos(CX+1,y,CZ));
+        var supply=jar(c,CX+1,y,CZ-1,EssenceType.SPIRITUS,7);
+        c.assertTrue(core.recipe()!=null && core.recipe().output().isOf(ModItems.SPIRIT_CLOTH)
+            && core.recipe().cost().equals(java.util.Map.of(EssenceType.SPIRITUS,8)), "The cloth recipe is unambiguous and costs eight Spiritus");
+        run(world,pos,100); net.alkahest.block.entity.AlchemyPipeBlockEntity.pulse(world,pipe);
+        c.assertTrue(core.getStack(2).isEmpty() && core.getStack(0).isOf(ModItems.CLOTH)
+            && supply.contents().total()==7 && amulet.get(ModDataComponents.ESSENCE_CHARGE)==2, "Incomplete price preserves cloth and charge");
+        supply.setContents(of(EssenceType.SPIRITUS,8)); net.alkahest.block.entity.AlchemyPipeBlockEntity.pulse(world,pipe);
+        c.assertTrue(core.getStack(2).isOf(ModItems.SPIRIT_CLOTH) && core.getStack(0).isEmpty()
+            && supply.contents().total()==0 && amulet.get(ModDataComponents.ESSENCE_CHARGE)==1, "Full price yields spirit cloth");
+        c.assertFalse(net.alkahest.essence.ItemEssenceMap.get(new ItemStack(ModItems.SPIRIT_CLOTH),world).isEmpty(), "Spirit cloth has a composition");
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
     public void allPrimalInfusionsWorkAndConserveEssences(TestContext c) {
         int y=CY+80; BlockPos pos=tower(c,y); var world=c.getWorld();
         var core=(TransmutatorCoreBlockEntity)world.getBlockEntity(pos); core.wake();

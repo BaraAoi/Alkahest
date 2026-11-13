@@ -39,6 +39,8 @@ public record TransmutationRecipe(String id, ItemStack input, ItemStack output, 
         recipe("soul_sand_to_soul_soil", Items.SOUL_SAND, Items.SOUL_SOIL, EssenceType.MORTUUS, 2, EssenceType.PERDITIO, 1),
         recipe("iron_nugget_to_gold_nugget", Items.IRON_NUGGET, Items.GOLD_NUGGET, EssenceType.METALLUM, 1, EssenceType.ORDO, 1),
         IRON_DIAMOND,
+        // Spiritus cloth is a separate material, not part of the six-prima blend.
+        recipe("cloth_to_spirit_cloth", ModItems.CLOTH, ModItems.SPIRIT_CLOTH, EssenceType.SPIRITUS, INFUSION_COST),
         // Infusion retains the material and consumes eight units of one primal essence.
         recipe("blaze_powder_to_infused_ignis", Items.BLAZE_POWDER, ModItems.INFUSED_MATERIALS.get(EssenceType.IGNIS), EssenceType.IGNIS, INFUSION_COST),
         recipe("lapis_lazuli_to_infused_aqua", Items.LAPIS_LAZULI, ModItems.INFUSED_MATERIALS.get(EssenceType.AQUA), EssenceType.AQUA, INFUSION_COST),

@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "alkahest:binding_salt"
+    },
+    {
+      "item": "alkahest:crystal_ordo"
+    },
+    {
+      "item": "minecraft:amethyst_shard"
+    },
+    {
+      "item": "minecraft:gold_nugget"
+    }
+  ],
+  "result": {
+    "id": "alkahest:stabilizing_reagent",
+    "count": 1
+  }
+}

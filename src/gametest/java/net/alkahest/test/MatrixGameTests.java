@@ -76,6 +76,35 @@ public class MatrixGameTests implements FabricGameTest {
     }
 
     @GameTest(templateName = EMPTY_STRUCTURE)
+    public void stableMaterialCombinesSixInfusions(TestContext c) {
+        var pos = build(c); wake(c); var core = core(c); var world = c.getWorld();
+        var player = c.createMockPlayer(net.minecraft.world.GameMode.SURVIVAL);
+        core.setStack(MatrixCoreBlockEntity.BASE, new ItemStack(ModItems.STABILIZING_REAGENT));
+        var types = List.of(EssenceType.IGNIS, EssenceType.AQUA, EssenceType.TERRA,
+            EssenceType.AER, EssenceType.ORDO, EssenceType.PERDITIO);
+        var ped = List.of(new BlockPos(1,1,3),new BlockPos(5,1,3),new BlockPos(3,1,5),
+            new BlockPos(1,1,1),new BlockPos(5,1,1),new BlockPos(1,1,5));
+        var jars = List.of(new BlockPos(0,2,3),new BlockPos(6,2,3),new BlockPos(3,2,0),
+            new BlockPos(3,2,6),new BlockPos(0,2,0),new BlockPos(6,2,6));
+        for (int i=0; i<5; i++) pedestal(c, ped.get(i).getX(),ped.get(i).getY(),ped.get(i).getZ(), new ItemStack(ModItems.INFUSED_MATERIALS.get(types.get(i))));
+        c.assertFalse(core.startWith(new ItemStack(ModItems.ALKAHEST_AMULET), player), "Missing sixth infusion prevents synthesis");
+        var p=ped.get(5); pedestal(c,p.getX(),p.getY(),p.getZ(),new ItemStack(ModItems.INFUSED_MATERIALS.get(types.get(5))));
+        var recipe=core.recipe();
+        c.assertTrue(recipe != null && recipe.output().isOf(ModItems.STABLE_MATERIAL) && recipe.components().size()==6, "All six materials match");
+        c.assertFalse(recipe.components().contains(ModItems.SPIRIT_CLOTH), "Spirit cloth is not an ingredient");
+        c.assertTrue(types.stream().allMatch(t -> recipe.cost().getOrDefault(t,0)==8) && recipe.cost().size()==6, "Exactly eight of each primal essence");
+        c.assertFalse(core.startWith(new ItemStack(ModItems.WANDS.get(EssenceType.ORDO)), player), "Only amulet synthesis can start with a wand");
+        for (int i=0; i<types.size(); i++) { var q=jars.get(i); jar(c,q.getX(),q.getY(),q.getZ(),types.get(i),8); }
+        c.assertTrue(core.startWith(new ItemStack(ModItems.ALKAHEST_AMULET), player), "Amulet starts stable material synthesis");
+        run(world,pos,MatrixCoreBlockEntity.DURATION*2+10);
+        c.assertTrue(core.getStack(MatrixCoreBlockEntity.OUTPUT).isOf(ModItems.STABLE_MATERIAL), "Stable material is created");
+        c.assertTrue(core.getStack(MatrixCoreBlockEntity.BASE).isEmpty(), "Reagent consumed");
+        for (var q : ped) c.assertTrue(((net.alkahest.block.entity.MatrixPedestalBlockEntity) world.getBlockEntity(c.getAbsolutePos(q))).isEmpty(), "Infusion consumed");
+        for (var q : jars) c.assertTrue(((JarBlockEntity) world.getBlockEntity(c.getAbsolutePos(q))).contents().total()==0, "Each essence paid");
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
     public void amuletRequiresEverySeparatePedestal(TestContext c) {
         BlockPos pos = build(c); wake(c); var core = core(c);
         var player = c.createMockPlayer(net.minecraft.world.GameMode.SURVIVAL);
