@@ -395,9 +395,27 @@ public class PracticalResearchGameTests implements FabricGameTest {
     }
 
     @GameTest(templateName = EMPTY_STRUCTURE)
+    public void ringBlankRecipeAndResearch(TestContext c) {
+        var world=c.getWorld(); var player=c.createMockCreativeServerPlayerInWorld(); clearResearch(player);
+        var nugget=new ItemStack(net.minecraft.item.Items.GOLD_NUGGET);
+        var input=net.minecraft.recipe.input.CraftingRecipeInput.create(3,3,java.util.List.of(ItemStack.EMPTY,nugget,ItemStack.EMPTY,nugget,ItemStack.EMPTY,nugget,ItemStack.EMPTY,nugget,ItemStack.EMPTY));
+        var result=world.getServer().getRecipeManager().getFirstMatch(net.minecraft.recipe.RecipeType.CRAFTING,input,world);
+        c.assertTrue(result.isPresent() && result.get().value().craft(input,world.getRegistryManager()).isOf(ModItems.RING_BLANK),"Four nuggets craft the ring blank without research");
+        PracticalResearchStorage.observe(player,new ItemStack(ModItems.RING_BLANK));
+        PracticalResearchStorage.observe(player,new ItemStack(ModItems.RING_TERRA));
+        long bits=PracticalResearchPlan.RING_BLANK|PracticalResearchPlan.RING_TERRA;
+        c.assertTrue((PracticalResearchStorage.observed(player)&bits)==bits && (PracticalResearchStorage.completed(player)&bits)==0,"Early ring observations are remembered");
+        grant(player,"cauldron"); grant(player,"stable_material"); grant(player,"matrix"); PracticalResearchStorage.migrate(player);
+        c.assertTrue((PracticalResearchStorage.completed(player)&bits)==bits,"Parents unlock both obtained items");
+        player.getAdvancementTracker().save(); player.getAdvancementTracker().reload(world.getServer().getAdvancementLoader());
+        c.assertTrue((PracticalResearchStorage.completed(player)&bits)==bits,"Ring research persists");
+        clearResearch(player); c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
     public void journalPayloadPreservesResearchBitsAboveThirtyOne(TestContext c) {
         long flags = PracticalResearchPlan.CAULDRON | PracticalResearchPlan.FIRE_DUST | PracticalResearchPlan.CAUSTIC_SLIME | PracticalResearchPlan.AER_WAND | PracticalResearchPlan.NECKLACE_BLANK | PracticalResearchPlan.ANKLET_BLANK
-            | PracticalResearchPlan.CLOTH | PracticalResearchPlan.SPIRIT_CLOTH | PracticalResearchPlan.STABILIZING_REAGENT | PracticalResearchPlan.STABLE_MATERIAL;
+            | PracticalResearchPlan.CLOTH | PracticalResearchPlan.SPIRIT_CLOTH | PracticalResearchPlan.STABILIZING_REAGENT | PracticalResearchPlan.STABLE_MATERIAL | PracticalResearchPlan.RING_BLANK | PracticalResearchPlan.RING_TERRA;
         var buf = new net.minecraft.network.RegistryByteBuf(io.netty.buffer.Unpooled.buffer(), c.getWorld().getRegistryManager());
         try {
             net.alkahest.network.OpenJournalPayload.CODEC.encode(buf, new net.alkahest.network.OpenJournalPayload(flags));

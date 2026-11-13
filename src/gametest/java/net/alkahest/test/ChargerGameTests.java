@@ -224,4 +224,60 @@ public class ChargerGameTests implements FabricGameTest {
         c.complete();
     }
 
+    @GameTest(templateName=EMPTY_STRUCTURE)
+    public void terraRingChargeAndStoredUsage(TestContext c) {
+        c.setBlockState(3,3,3,ModBlocks.JAR);
+        var jar=(JarBlockEntity)c.getWorld().getBlockEntity(c.getAbsolutePos(new BlockPos(3,3,3)));
+        var player=c.createMockPlayer(GameMode.SURVIVAL);
+        var ring=new ItemStack(ModItems.RING_TERRA);
+        var item=(net.alkahest.item.custom.TerraRingItem)ring.getItem();
+        c.assertTrue(ring.getOrDefault(ModDataComponents.ESSENCE_CHARGE,-1)==0,"A new ring is empty");
+        player.getInventory().setStack(0,ring);
+        jar.setContents(new JarContentsComponent(List.of(new EssenceStack(EssenceType.ORDO,2,.5f))));
+        c.assertTrue(EssenceChargerBlockEntity.chargeFirst(jar,player)==null && jar.contents().total()==2,"Wrong essence is rejected");
+        jar.setContents(new JarContentsComponent(List.of(new EssenceStack(EssenceType.TERRA,3,.5f))));
+        c.assertTrue(EssenceChargerBlockEntity.chargeFirst(jar,player)==EssenceType.TERRA && ring.get(ModDataComponents.ESSENCE_CHARGE)==1 && jar.contents().total()==2,"One Terra is one ring charge");
+        for(int i=0;i<1200;i++) item.tick(ring,null,player);
+        c.assertTrue(ring.get(ModDataComponents.ESSENCE_CHARGE)==1 && ring.get(ModDataComponents.RING_ACTIVE_TICKS)==1200 && player.hasStatusEffect(net.minecraft.entity.effect.StatusEffects.HASTE),"Haste and partial usage accrue only while worn");
+        var ops=c.getWorld().getRegistryManager().getOps(net.minecraft.nbt.NbtOps.INSTANCE);
+        var encoded=ItemStack.CODEC.encodeStart(ops,ring).getOrThrow();
+        var restored=ItemStack.CODEC.parse(ops,encoded).getOrThrow();
+        c.assertTrue(restored.get(ModDataComponents.RING_ACTIVE_TICKS)==1200 && restored.get(ModDataComponents.ESSENCE_CHARGE)==1,"Charge and fractional use survive serialization");
+        for(int i=0;i<1199;i++) item.tick(restored,null,player);
+        c.assertTrue(restored.get(ModDataComponents.ESSENCE_CHARGE)==1 && restored.get(ModDataComponents.RING_ACTIVE_TICKS)==2399,"No early charge consumption");
+        item.tick(restored,null,player);
+        c.assertTrue(restored.get(ModDataComponents.ESSENCE_CHARGE)==0 && restored.get(ModDataComponents.RING_ACTIVE_TICKS)==0,"Exactly 2400 equipped ticks consume one Terra");
+        player.removeStatusEffect(net.minecraft.entity.effect.StatusEffects.HASTE);
+        item.tick(restored,null,player);
+        c.assertFalse(player.hasStatusEffect(net.minecraft.entity.effect.StatusEffects.HASTE),"An empty ring grants no effect");
+        restored.set(ModDataComponents.ESSENCE_CHARGE,100); player.getInventory().setStack(0,restored);
+        c.assertTrue(EssenceChargerBlockEntity.chargeFirst(jar,player)==null && jar.contents().total()==2,"A full ring wastes no essence");
+        c.complete();
+    }
+
+    @GameTest(templateName=EMPTY_STRUCTURE)
+    public void equippedRingSlotAndCharger(TestContext c) {
+        var player=c.createMockCreativeServerPlayerInWorld();
+        var component=dev.emi.trinkets.api.TrinketsApi.getTrinketComponent(player).orElseThrow();
+        var ringInventory=component.getInventory().get("hand").get("ring");
+        c.assertTrue(ringInventory.size()>=1,"Trinkets exposes the ring slot");
+        var ring=new ItemStack(ModItems.RING_TERRA);
+        var ref=new dev.emi.trinkets.api.SlotReference(ringInventory,0);
+        c.assertTrue(dev.emi.trinkets.TrinketSlot.canInsert(ring,ref,player),"The ring is allowed in its slot");
+        c.assertFalse(dev.emi.trinkets.TrinketSlot.canInsert(new ItemStack(ModItems.RING_BLANK),ref,player),"The blank is not wearable");
+        ringInventory.setStack(0,ring);
+        c.setBlockState(3,3,3,ModBlocks.JAR);
+        var jar=(JarBlockEntity)c.getWorld().getBlockEntity(c.getAbsolutePos(new BlockPos(3,3,3)));
+        jar.setContents(new JarContentsComponent(List.of(new EssenceStack(EssenceType.TERRA,2,.5f))));
+        c.assertTrue(EssenceChargerBlockEntity.chargeFirst(jar,player)==EssenceType.TERRA && ring.get(ModDataComponents.ESSENCE_CHARGE)==1,"Equipped ring is charged");
+        c.runAtTick(3,()->{
+            c.assertTrue(player.hasStatusEffect(net.minecraft.entity.effect.StatusEffects.HASTE) && ring.getOrDefault(ModDataComponents.RING_ACTIVE_TICKS,0)>0,"Trinkets ticks the equipped ring");
+            ringInventory.setStack(0,ItemStack.EMPTY);
+        });
+        c.runAtTick(12,()->{
+            c.assertFalse(player.hasStatusEffect(net.minecraft.entity.effect.StatusEffects.HASTE),"Effect expires after removing the ring");
+            c.complete();
+        });
+    }
+
 }
