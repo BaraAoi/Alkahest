@@ -28,8 +28,8 @@ required = ['minecraft:blast_furnace', 'alkahest:distillery_tier2', 'minecraft:c
     'minecraft:chiseled_sandstone', 'minecraft:smooth_sandstone', 'minecraft:cake', 'minecraft:honey_block',
     'minecraft:brown_dye', 'minecraft:brown_wool', 'minecraft:black_concrete', 'minecraft:shulker_box',
     'minecraft:exposed_copper', 'minecraft:weathered_copper', 'minecraft:oxidized_copper',
-    'minecraft:waxed_oxidized_copper', 'minecraft:netherite_ingot', 'alkahest:purifying_flask']
-# Infused materials must preserve the exact source and their paid three primal units.
+    'minecraft:waxed_oxidized_copper', 'minecraft:netherite_ingot', 'alkahest:purifying_flask', 'alkahest:iron_chain']
+# Older and new infused materials retain the exact source plus three units; infusion now costs eight.
 for kind, source in {'ignis':'blaze_powder', 'aqua':'lapis_lazuli', 'terra':'iron_ingot',
                      'aer':'diamond', 'ordo':'gold_ingot', 'perditio':'amethyst_shard'}.items():
     output = by_id['alkahest:infused_' + kind]

@@ -205,19 +205,11 @@ public final class ItemEssenceMap {
         for (var entry : net.alkahest.registry.ModItems.CRYSTALS.entrySet()) {
             if (entry.getKey() != VACUUM && stack.isOf(entry.getValue())) return List.of(s(entry.getKey(), 1));
         }
-        // Infused materials preserve the source composition plus exactly the paid essence.
-        // Explicit values avoid the recipe-depth bonus creating essence from a reversible process.
+        // Existing infused items predate the price increase. Keep their composition stable:
+        // source plus three units. The additional infusion cost is consumed, not returned.
         for (var entry : net.alkahest.registry.ModItems.INFUSED_MATERIALS.entrySet()) {
             if (!stack.isOf(entry.getValue())) continue;
-            Item source = switch (entry.getKey()) {
-                case IGNIS -> Items.BLAZE_POWDER;
-                case AQUA -> Items.LAPIS_LAZULI;
-                case TERRA -> Items.IRON_INGOT;
-                case AER -> Items.DIAMOND;
-                case ORDO -> Items.GOLD_INGOT;
-                case PERDITIO -> Items.AMETHYST_SHARD;
-                default -> throw new IllegalStateException("Unexpected infused material: " + entry.getKey());
-            };
+            Item source = net.alkahest.item.custom.InfusedMaterialItem.source(entry.getKey());
             java.util.EnumMap<EssenceType, Integer> values = new java.util.EnumMap<>(EssenceType.class);
             for (EssenceStack value : VALUES.get(source)) values.put(value.type(), value.amount());
             values.merge(entry.getKey(), 3, Integer::sum);

@@ -57,6 +57,26 @@ public class PracticalResearchGameTests implements FabricGameTest {
     }
 
     @GameTest(templateName = EMPTY_STRUCTURE)
+    public void ironNecklaceCraftsOnTheNormalWorkbench(TestContext c) {
+        var world=c.getWorld();
+        var manager=world.getServer().getRecipeManager();
+        var iron=new ItemStack(net.minecraft.item.Items.IRON_INGOT);
+        var chain=new ItemStack(net.minecraft.item.Items.CHAIN);
+        for (var stacks : java.util.List.of(java.util.List.of(iron,chain),java.util.List.of(chain,iron))) {
+            var input=net.minecraft.recipe.input.CraftingRecipeInput.create(2,1,stacks);
+            var match=manager.getFirstMatch(net.minecraft.recipe.RecipeType.CRAFTING,input,world);
+            c.assertTrue(match.isPresent(), "Necklace has a shapeless workbench recipe");
+            var out=match.get().value().craft(input,world.getRegistryManager());
+            c.assertTrue(out.isOf(ModItems.IRON_CHAIN) && out.getCount()==1, "Iron and chain make exactly one necklace");
+        }
+        var wrong=net.minecraft.recipe.input.CraftingRecipeInput.create(2,1,java.util.List.of(iron,new ItemStack(net.minecraft.item.Items.STRING)));
+        var other=manager.getFirstMatch(net.minecraft.recipe.RecipeType.CRAFTING,wrong,world);
+        c.assertFalse(other.isPresent() && other.get().value().craft(wrong,world.getRegistryManager()).isOf(ModItems.IRON_CHAIN), "Wrong ingredients cannot produce the necklace");
+        c.assertFalse(net.alkahest.essence.ItemEssenceMap.get(new ItemStack(ModItems.IRON_CHAIN),world).isEmpty(), "New recipe has a calculated essence composition");
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
     public void earlyGoldAndDiamondAreRememberedAcrossReload(TestContext c) {
         var player = c.createMockCreativeServerPlayerInWorld();
         for (var step : PracticalResearchPlan.STEPS) for (String kind : new String[]{"observed", "completed"}) {

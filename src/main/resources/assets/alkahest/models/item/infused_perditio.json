@@ -1,7 +1,6 @@
 {
   "parent": "minecraft:item/generated",
   "textures": {
-    "layer0": "minecraft:item/amethyst_shard",
-    "layer1": "alkahest:item/infused_perditio"
+    "layer0": "alkahest:item/infused_perditio"
   }
 }

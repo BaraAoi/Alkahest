@@ -16,6 +16,7 @@ import java.util.Map;
  */
 public record TransmutationRecipe(String id, ItemStack input, ItemStack output, Map<EssenceType, Integer> cost, int duration) {
     public static final int DEFAULT_DURATION = 100;
+    public static final int INFUSION_COST = 8;
     private static final TransmutationRecipe IRON_DIAMOND = recipe("iron_ingot_to_diamond", Items.IRON_INGOT, Items.DIAMOND,
         EssenceType.TERRA, 1, EssenceType.LUX, 1, EssenceType.ORDO, 1, EssenceType.METALLUM, 1);
     private static final List<TransmutationRecipe> ALL = List.of(
@@ -38,13 +39,13 @@ public record TransmutationRecipe(String id, ItemStack input, ItemStack output, 
         recipe("soul_sand_to_soul_soil", Items.SOUL_SAND, Items.SOUL_SOIL, EssenceType.MORTUUS, 2, EssenceType.PERDITIO, 1),
         recipe("iron_nugget_to_gold_nugget", Items.IRON_NUGGET, Items.GOLD_NUGGET, EssenceType.METALLUM, 1, EssenceType.ORDO, 1),
         IRON_DIAMOND,
-        // Infusion retains the material and binds three units of one primal essence.
-        recipe("blaze_powder_to_infused_ignis", Items.BLAZE_POWDER, ModItems.INFUSED_MATERIALS.get(EssenceType.IGNIS), EssenceType.IGNIS, 3),
-        recipe("lapis_lazuli_to_infused_aqua", Items.LAPIS_LAZULI, ModItems.INFUSED_MATERIALS.get(EssenceType.AQUA), EssenceType.AQUA, 3),
-        recipe("iron_ingot_to_infused_terra", Items.IRON_INGOT, ModItems.INFUSED_MATERIALS.get(EssenceType.TERRA), EssenceType.TERRA, 3),
-        recipe("diamond_to_infused_aer", Items.DIAMOND, ModItems.INFUSED_MATERIALS.get(EssenceType.AER), EssenceType.AER, 3),
-        recipe("gold_ingot_to_infused_ordo", Items.GOLD_INGOT, ModItems.INFUSED_MATERIALS.get(EssenceType.ORDO), EssenceType.ORDO, 3),
-        recipe("amethyst_shard_to_infused_perditio", Items.AMETHYST_SHARD, ModItems.INFUSED_MATERIALS.get(EssenceType.PERDITIO), EssenceType.PERDITIO, 3)
+        // Infusion retains the material and consumes eight units of one primal essence.
+        recipe("blaze_powder_to_infused_ignis", Items.BLAZE_POWDER, ModItems.INFUSED_MATERIALS.get(EssenceType.IGNIS), EssenceType.IGNIS, INFUSION_COST),
+        recipe("lapis_lazuli_to_infused_aqua", Items.LAPIS_LAZULI, ModItems.INFUSED_MATERIALS.get(EssenceType.AQUA), EssenceType.AQUA, INFUSION_COST),
+        recipe("iron_ingot_to_infused_terra", Items.IRON_INGOT, ModItems.INFUSED_MATERIALS.get(EssenceType.TERRA), EssenceType.TERRA, INFUSION_COST),
+        recipe("diamond_to_infused_aer", Items.DIAMOND, ModItems.INFUSED_MATERIALS.get(EssenceType.AER), EssenceType.AER, INFUSION_COST),
+        recipe("gold_ingot_to_infused_ordo", Items.GOLD_INGOT, ModItems.INFUSED_MATERIALS.get(EssenceType.ORDO), EssenceType.ORDO, INFUSION_COST),
+        recipe("amethyst_shard_to_infused_perditio", Items.AMETHYST_SHARD, ModItems.INFUSED_MATERIALS.get(EssenceType.PERDITIO), EssenceType.PERDITIO, INFUSION_COST)
     );
 
     static {

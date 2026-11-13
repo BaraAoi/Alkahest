@@ -1,7 +1,6 @@
 {
   "parent": "minecraft:item/generated",
   "textures": {
-    "layer0": "minecraft:item/iron_ingot",
-    "layer1": "alkahest:item/infused_terra"
+    "layer0": "alkahest:item/infused_terra"
   }
 }

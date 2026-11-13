@@ -371,22 +371,42 @@ public class TransmutatorGameTests implements FabricGameTest {
             if (choices.size()>1) {
                 c.assertTrue(core.recipe()==null && core.selectRecipe(index), "Ambiguous source needs direct selection: " + type);
             }
-            c.assertTrue(core.recipe().cost().equals(java.util.Map.of(type,3)) && core.recipe().duration()==100, "Infusion costs exactly three matching essence and five seconds: " + type);
+            c.assertTrue(core.recipe().cost().equals(java.util.Map.of(type,8)) && core.recipe().duration()==100, "Infusion costs exactly eight matching essence and five seconds: " + type);
             var expected=new java.util.EnumMap<EssenceType,Integer>(EssenceType.class);
             for (var e : net.alkahest.essence.ItemEssenceMap.base(new ItemStack(source))) expected.put(e.type(),e.amount());
             expected.merge(type,3,Integer::sum);
             var actual=new java.util.EnumMap<EssenceType,Integer>(EssenceType.class);
             for (var e : net.alkahest.essence.ItemEssenceMap.get(new ItemStack(output),world)) actual.put(e.type(),e.amount());
-            c.assertTrue(actual.equals(expected), "Dissolving returns source plus paid essence, no extra recipe depth bonus: " + type);
-            supply.setContents(of(type,2)); run(world,pos,100);
+            c.assertTrue(actual.equals(expected), "Dissolving returns source plus three, preserving older items without granting free essence: " + type);
+            supply.setContents(of(type,7)); run(world,pos,100);
             net.alkahest.block.entity.AlchemyPipeBlockEntity.pulse(world,pipe);
-            c.assertTrue(core.getStack(2).isEmpty() && core.getStack(0).isOf(source) && supply.contents().total()==2
+            c.assertTrue(core.getStack(2).isEmpty() && core.getStack(0).isOf(source) && supply.contents().total()==7
                 && core.getStack(1).get(ModDataComponents.ESSENCE_CHARGE)==10-i, "Insufficient essence never charges or consumes input: " + type);
-            supply.setContents(of(type,3)); net.alkahest.block.entity.AlchemyPipeBlockEntity.pulse(world,pipe);
+            supply.setContents(of(type,8)); net.alkahest.block.entity.AlchemyPipeBlockEntity.pulse(world,pipe);
             c.assertTrue(core.getStack(2).isOf(output) && core.getStack(0).isEmpty() && supply.contents().total()==0
                 && core.getStack(1).get(ModDataComponents.ESSENCE_CHARGE)==9-i, "A real pipe pulse consumes exactly one item, charge and cost: " + type);
             core.removeStack(2);
         }
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void oldReadyInfusionWaitsForIncreasedPriceOnLegacyPlatform(TestContext c) {
+        int y=CY+128; var pos=isolatedPlatform(c,y); var world=c.getWorld();
+        var core=(TransmutatorCoreBlockEntity)world.getBlockEntity(pos);
+        var amulet=new ItemStack(ModItems.ALKAHEST_AMULET); amulet.set(ModDataComponents.ESSENCE_CHARGE,3);
+        core.setStack(0,new ItemStack(Items.LAPIS_LAZULI)); core.setStack(1,amulet);
+        var jar=jar(c,1,y,1,EssenceType.AQUA,3);
+        var old=core.createNbt(world.getRegistryManager()); old.putInt("Progress",100);
+        core.readComponentlessNbt(old,world.getRegistryManager());
+        run(world,pos,3);
+        c.assertTrue(core.progress()==100 && core.getStack(0).isOf(Items.LAPIS_LAZULI) && core.getStack(2).isEmpty()
+            && jar.contents().total()==3 && core.getStack(1).get(ModDataComponents.ESSENCE_CHARGE)==3,
+            "An already-completed old cycle waits for the new full price without consuming anything");
+        jar.setContents(of(EssenceType.AQUA,8)); run(world,pos,1);
+        c.assertTrue(core.getStack(2).isOf(ModItems.INFUSED_MATERIALS.get(EssenceType.AQUA))
+            && jar.contents().total()==0 && core.getStack(1).get(ModDataComponents.ESSENCE_CHARGE)==2,
+            "Legacy platform completes once eight essence units are available");
         c.complete();
     }
 
@@ -400,7 +420,7 @@ public class TransmutatorGameTests implements FabricGameTest {
         core.setStack(0,new ItemStack(Items.IRON_INGOT));
         c.assertTrue(h.recipeCount()==3 && h.needsRecipeChoice(), "Three iron results are exposed immediately");
         c.assertTrue(h.onButtonClick(player,3) && h.selectedOutput().isOf(ModItems.INFUSED_MATERIALS.get(EssenceType.TERRA)), "Third visible choice selects Terra-infused iron on the server");
-        c.assertTrue(h.requirements().size()==1 && h.requirements().getFirst().amount()==3, "Selected cost is displayed");
+        c.assertTrue(h.requirements().size()==1 && h.requirements().getFirst().amount()==8, "Selected cost is displayed");
         var saved=core.createNbt(world.getRegistryManager()); core.readComponentlessNbt(saved,world.getRegistryManager());
         c.assertTrue(core.recipe().output().isOf(ModItems.INFUSED_MATERIALS.get(EssenceType.TERRA)), "Infused choice survives reload with loaded stack");
         c.complete();

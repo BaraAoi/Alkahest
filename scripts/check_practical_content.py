@@ -115,7 +115,7 @@ for lang in ('ru_ru', 'en_us'):
     for key in ('search', 'search_hint', 'search_hint_more', 'search_empty'):
         assert strings.get(f'screen.alkahest.journal.{key}')
 
-# Six elemental materials retain vanilla silhouettes and have reproducible translucent veins.
+# Six elemental materials retain source silhouettes and use full elemental textures.
 material_inputs = {'ignis':'blaze_powder','aqua':'lapis_lazuli','terra':'iron_ingot',
                    'aer':'diamond','ordo':'gold_ingot','perditio':'amethyst_shard'}
 overlays = {}
@@ -125,7 +125,7 @@ for kind, base in material_inputs.items():
     assert overlays[kind][:8] == b'\x89PNG\r\n\x1a\n'
     assert struct.unpack('>IIBB', overlays[kind][16:26]) == (16,16,8,6)
     model = json.loads((assets / f'models/item/infused_{kind}.json').read_text())
-    assert model['textures'] == {'layer0':f'minecraft:item/{base}', 'layer1':f'alkahest:item/infused_{kind}'}
+    assert model['textures'] == {'layer0':f'alkahest:item/infused_{kind}'}
     for lang in ('ru_ru','en_us'):
         assert json.loads((assets / f'lang/{lang}.json').read_text()).get(f'item.alkahest.infused_{kind}')
     assert f'{base}_to_infused_{kind}' in source
@@ -152,4 +152,19 @@ for kind, base in material_inputs.items():
     assert all(not a or mask[y][x] == 'X' for x,y,a in pixels), kind
     assert sum(1 for x,y,a in pixels if a >= 235) >= 15, f'{kind} needs opaque contrasting veins'
     assert sum(1 for x,y,a in pixels if a >= 200) >= 20, f'{kind} needs broad vein highlights'
-    assert sum(1 for x,y,a in pixels if 0 < a < 160) >= 15, f'{kind} needs a blended tint'
+    assert all((a == 255) == (mask[y][x] == 'X') for x,y,a in pixels), f'{kind} must fully use essence colours while preserving the source shape'
+
+# The plain necklace is a shapeless workbench material, not a replacement amulet.
+chain_recipe=json.loads((data/'recipe/iron_chain.json').read_text())
+assert chain_recipe == {'type':'minecraft:crafting_shapeless', 'ingredients':[{'item':'minecraft:iron_ingot'}, {'item':'minecraft:chain'}], 'result':{'id':'alkahest:iron_chain','count':1}}
+chain_texture=assets/'textures/item/iron_chain.png'
+original=chain_texture.read_bytes()
+assert original[:8] == b'\x89PNG\r\n\x1a\n' and struct.unpack('>IIBB',original[16:26]) == (16,16,8,6)
+subprocess.run(['python3','scripts/make_iron_chain.py'],check=True)
+assert original == chain_texture.read_bytes()
+assert json.loads((assets/'models/item/iron_chain.json').read_text())['textures']['layer0']=='alkahest:item/iron_chain'
+for lang in ('ru_ru','en_us'):
+    translation=json.loads((assets/f'lang/{lang}.json').read_text())
+    assert translation.get('item.alkahest.iron_chain')
+    assert translation['tooltip.alkahest.infused_material'].count('%s') == 2
+assert 'INFUSION_COST = 8' in source

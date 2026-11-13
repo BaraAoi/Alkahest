@@ -1,7 +1,6 @@
 {
   "parent": "minecraft:item/generated",
   "textures": {
-    "layer0": "minecraft:item/diamond",
-    "layer1": "alkahest:item/infused_aer"
+    "layer0": "alkahest:item/infused_aer"
   }
 }

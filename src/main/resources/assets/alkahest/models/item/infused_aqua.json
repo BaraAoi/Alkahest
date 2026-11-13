@@ -1,7 +1,6 @@
 {
   "parent": "minecraft:item/generated",
   "textures": {
-    "layer0": "minecraft:item/lapis_lazuli",
-    "layer1": "alkahest:item/infused_aqua"
+    "layer0": "alkahest:item/infused_aqua"
   }
 }
