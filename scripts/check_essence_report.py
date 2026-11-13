@@ -39,6 +39,12 @@ for kind, source in {'ignis':'blaze_powder', 'aqua':'lapis_lazuli', 'terra':'iro
     expected = composition(by_id['minecraft:' + source])
     expected[kind] = expected.get(kind, 0) + 3
     assert composition(output) == expected, f'Infusion composition mismatch: {kind}'
+# Spiritweave retains the four-string cloth and only three Spiritus, not a depth-bonused nine.
+assert by_id['alkahest:spirit_cloth']['status'] == 'manual'
+cloth = composition(by_id['alkahest:cloth'])
+spirit_cloth = composition(by_id['alkahest:spirit_cloth'])
+cloth['spiritus'] = cloth.get('spiritus', 0) + 3
+assert spirit_cloth == cloth, 'Spiritweave must not generate free Spiritus on recycling'
 for name in required:
     assert name in by_id and by_id[name]['status'] != 'missing', f'Missing composition for {name}'
 missing = [row for row in rows if row['status'] == 'missing']

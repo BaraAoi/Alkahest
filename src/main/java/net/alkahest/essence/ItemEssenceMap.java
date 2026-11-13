@@ -205,6 +205,16 @@ public final class ItemEssenceMap {
         for (var entry : net.alkahest.registry.ModItems.CRYSTALS.entrySet()) {
             if (entry.getKey() != VACUUM && stack.isOf(entry.getValue())) return List.of(s(entry.getKey(), 1));
         }
+        // Like the six infused materials, preserve the base plus three units on recycling;
+        // recipe-depth bonuses must not return more Spiritus than infusion costs.
+        if (stack.isOf(net.alkahest.registry.ModItems.SPIRIT_CLOTH)) {
+            java.util.EnumMap<EssenceType, Integer> values = new java.util.EnumMap<>(EssenceType.class);
+            for (EssenceStack value : base(new ItemStack(Items.STRING))) values.put(value.type(), value.amount() * 4);
+            values.merge(SPIRITUS, 3, Integer::sum);
+            List<EssenceStack> result = new java.util.ArrayList<>();
+            values.forEach((type, amount) -> result.add(s(type, amount)));
+            return List.copyOf(result);
+        }
         // Existing infused items predate the price increase. Keep their composition stable:
         // source plus three units. The additional infusion cost is consumed, not returned.
         for (var entry : net.alkahest.registry.ModItems.INFUSED_MATERIALS.entrySet()) {
