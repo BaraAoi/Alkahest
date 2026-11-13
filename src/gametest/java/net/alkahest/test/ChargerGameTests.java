@@ -270,14 +270,13 @@ public class ChargerGameTests implements FabricGameTest {
         var jar=(JarBlockEntity)c.getWorld().getBlockEntity(c.getAbsolutePos(new BlockPos(3,3,3)));
         jar.setContents(new JarContentsComponent(List.of(new EssenceStack(EssenceType.TERRA,2,.5f))));
         c.assertTrue(EssenceChargerBlockEntity.chargeFirst(jar,player)==EssenceType.TERRA && ring.get(ModDataComponents.ESSENCE_CHARGE)==1,"Equipped ring is charged");
-        c.runAtTick(3,()->{
-            c.assertTrue(player.hasStatusEffect(net.minecraft.entity.effect.StatusEffects.HASTE) && ring.getOrDefault(ModDataComponents.RING_ACTIVE_TICKS,0)>0,"Trinkets ticks the equipped ring");
-            ringInventory.setStack(0,ItemStack.EMPTY);
-        });
-        c.runAtTick(12,()->{
-            c.assertFalse(player.hasStatusEffect(net.minecraft.entity.effect.StatusEffects.HASTE),"Effect expires after removing the ring");
-            c.complete();
-        });
+        // Mock server players are not scheduled like connected clients; explicitly tick the entity.
+        player.tick();
+        c.assertTrue(player.hasStatusEffect(net.minecraft.entity.effect.StatusEffects.HASTE) && ring.getOrDefault(ModDataComponents.RING_ACTIVE_TICKS,0)>0,"Trinkets ticks the equipped ring");
+        ringInventory.setStack(0,ItemStack.EMPTY);
+        for (int i=0;i<8;i++) player.tick();
+        c.assertFalse(player.hasStatusEffect(net.minecraft.entity.effect.StatusEffects.HASTE),"Effect expires after removing the ring");
+        c.complete();
     }
 
 }
