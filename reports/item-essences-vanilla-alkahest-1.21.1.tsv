@@ -20,6 +20,7 @@ alkahest:binding_salt_ordo	item	recipe	aqua=1,ordo=3,herba=1
 alkahest:binding_salt_perditio	item	recipe	aqua=1,ordo=2,perditio=1,herba=1
 alkahest:binding_salt_terra	item	recipe	aqua=1,terra=1,ordo=2,herba=1
 alkahest:caustic_slime	item	manual	vitium=2,herba=1
+alkahest:cloth	item	recipe	ordo=4,herba=4
 alkahest:crystal_aer	item	manual	aer=1
 alkahest:crystal_aqua	item	manual	aqua=1
 alkahest:crystal_gelum	item	manual	gelum=1
@@ -78,9 +79,12 @@ alkahest:purified_water	item	recipe	ignis=2,aqua=1,terra=2,ordo=1
 alkahest:purifying_flask	item	recipe	ignis=2,aqua=5,terra=2,ordo=2,herba=2
 alkahest:salt	item	manual	ordo=2,terra=1,aqua=1
 alkahest:salt_ore	block	manual	terra=3,ordo=2,aqua=1
+alkahest:spirit_cloth	item	manual	ordo=4,herba=4,spiritus=3
 alkahest:stabilizer_core	block	recipe	ignis=1,aqua=1,terra=16,aer=1,ordo=19,perditio=3,herba=3,metallum=28,lux=10,motus=6,potentia=7,vitium=2,spiritus=6
 alkahest:stabilizer_crest	block	recipe	ordo=10,metallum=4,lux=2
 alkahest:stabilizer_receiver	block	recipe	terra=2,ordo=1,metallum=16,potentia=4
+alkahest:stabilizing_reagent	item	recipe	aqua=1,ordo=10,herba=1,lux=4
+alkahest:stable_material	item	recipe	ignis=18,aqua=14,terra=34,aer=13,ordo=58,perditio=13,herba=1,metallum=13,lux=24,potentia=2
 alkahest:transmutator_chamber	block	recipe	aqua=1,terra=2,ordo=11,metallum=9,lux=2,potentia=3
 alkahest:transmutator_core	block	recipe	ordo=13,metallum=16,potentia=12
 alkahest:transmutator_crown	block	recipe	ordo=17,metallum=9,lux=6,potentia=3
