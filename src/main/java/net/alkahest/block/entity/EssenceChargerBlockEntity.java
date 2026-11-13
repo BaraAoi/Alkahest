@@ -81,6 +81,7 @@ public class EssenceChargerBlockEntity extends BlockEntity {
         if (stack.getItem() instanceof CrystalWandItem wand) return wand.essenceType();
         if (stack.getItem() instanceof AlkahestAmuletItem amulet) return amulet.rechargeType();
         if (stack.getItem() instanceof net.alkahest.item.custom.TerraRingItem) return EssenceType.TERRA;
+        if (stack.getItem() instanceof net.alkahest.item.custom.ShieldRingItem) return EssenceType.ORDO;
         return null;
     }
 
@@ -96,7 +97,7 @@ public class EssenceChargerBlockEntity extends BlockEntity {
         if (source.amount() > 1) next.add(new EssenceStack(source.type(), source.amount() - 1, source.stability()));
         jar.setContents(new JarContentsComponent(next));
         // Rings store real essence units: one jar unit grants one ring charge.
-        int updated = Math.min(100, charge + (stack.getItem() instanceof net.alkahest.item.custom.TerraRingItem ? 1 : 10));
+        int updated = Math.min(100, charge + ((stack.getItem() instanceof net.alkahest.item.custom.TerraRingItem || stack.getItem() instanceof net.alkahest.item.custom.ShieldRingItem) ? 1 : 10));
         stack.set(ModDataComponents.ESSENCE_CHARGE, updated);
         if (updated >= 100 && stack.getItem() instanceof AlkahestAmuletItem) {
             stack.set(ModDataComponents.AMULET_USES_STEP, 0);
@@ -119,7 +120,7 @@ public class EssenceChargerBlockEntity extends BlockEntity {
         var trinkets = TrinketsApi.getTrinketComponent(player).orElse(null);
         if (trinkets != null) {
             for (var equipped : trinkets.getEquipped(stack -> stack.isOf(ModItems.ALKAHEST_AMULET)
-                    || stack.isOf(ModItems.RING_TERRA))) {
+                    || stack.isOf(ModItems.RING_TERRA) || stack.isOf(ModItems.RING_SHIELD))) {
                 ItemStack stack = equipped.getRight();
                 EssenceType used = applyJarCharge(jar, current, stack);
                 if (used != null) {

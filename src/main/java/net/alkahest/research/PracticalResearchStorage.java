@@ -57,6 +57,8 @@ public final class PracticalResearchStorage {
         dev.emi.trinkets.api.TrinketsApi.getTrinketComponent(player).ifPresent(component -> {
             if (component.isEquipped(net.alkahest.registry.ModItems.ALCHEMISTS_MONOCLE))
                 observe(player, new ItemStack(net.alkahest.registry.ModItems.ALCHEMISTS_MONOCLE));
+            if (component.isEquipped(net.alkahest.registry.ModItems.RING_SHIELD))
+                observe(player, new ItemStack(net.alkahest.registry.ModItems.RING_SHIELD));
             if (component.isEquipped(net.alkahest.registry.ModItems.RING_TERRA))
                 observe(player, new ItemStack(net.alkahest.registry.ModItems.RING_TERRA));
             if (component.isEquipped(net.alkahest.registry.ModItems.ALKAHEST_AMULET))

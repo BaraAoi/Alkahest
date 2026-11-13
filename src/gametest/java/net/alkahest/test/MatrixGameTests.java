@@ -76,6 +76,29 @@ public class MatrixGameTests implements FabricGameTest {
     }
 
     @GameTest(templateName = EMPTY_STRUCTURE)
+    public void shieldRingUsesSeparateMatrixRecipe(TestContext c) {
+        var pos=build(c); wake(c); var core=core(c); var player=c.createMockPlayer(net.minecraft.world.GameMode.SURVIVAL);
+        core.setStack(MatrixCoreBlockEntity.BASE,new ItemStack(ModItems.RING_BLANK));
+        pedestal(c,1,1,3,new ItemStack(ModItems.INFUSED_MATERIALS.get(EssenceType.ORDO)));
+        pedestal(c,5,1,3,new ItemStack(ModItems.CRYSTALS.get(EssenceType.ORDO)));
+        pedestal(c,3,1,5,new ItemStack(ModItems.STABLE_MATERIAL));
+        c.assertFalse(core.startWith(new ItemStack(ModItems.ALKAHEST_AMULET),player),"Shield is required");
+        pedestal(c,1,1,1,new ItemStack(Items.SHIELD));
+        var recipe=core.recipe();
+        c.assertTrue(recipe!=null && recipe.output().isOf(ModItems.RING_SHIELD) && recipe.components().size()==4
+            && recipe.cost().size()==2 && recipe.cost().get(EssenceType.ORDO)==30 && recipe.cost().get(EssenceType.METALLUM)==15,"Exact shield recipe and price");
+        var ordo=jar(c,0,2,3,EssenceType.ORDO,30); var metal=jar(c,6,2,3,EssenceType.METALLUM,15);
+        c.assertTrue(core.startWith(new ItemStack(ModItems.ALKAHEST_AMULET),player),"The shield recipe starts without research gates");
+        run(c.getWorld(),pos,MatrixCoreBlockEntity.DURATION*2+10);
+        var result=core.getStack(MatrixCoreBlockEntity.OUTPUT);
+        c.assertTrue(result.isOf(ModItems.RING_SHIELD) && result.getOrDefault(net.alkahest.registry.ModDataComponents.ESSENCE_CHARGE,-1)==0,"Result is an empty shield ring");
+        c.assertTrue(core.getStack(MatrixCoreBlockEntity.BASE).isEmpty() && ordo.contents().total()==0 && metal.contents().total()==0,"Base and essences consumed");
+        for(var q:List.of(new BlockPos(1,1,3),new BlockPos(5,1,3),new BlockPos(3,1,5),new BlockPos(1,1,1)))
+            c.assertTrue(((net.alkahest.block.entity.MatrixPedestalBlockEntity)c.getWorld().getBlockEntity(c.getAbsolutePos(q))).isEmpty(),"Each component consumed");
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
     public void terraRingRequiresAllMaterialsAndPaysEssence(TestContext c) {
         var pos=build(c); wake(c); var core=core(c); var player=c.createMockPlayer(net.minecraft.world.GameMode.SURVIVAL);
         core.setStack(MatrixCoreBlockEntity.BASE,new ItemStack(ModItems.RING_BLANK));

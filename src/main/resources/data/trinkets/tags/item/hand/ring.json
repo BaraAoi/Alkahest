@@ -1,6 +1,7 @@
 {
   "replace": false,
   "values": [
-    "alkahest:ring_terra"
+    "alkahest:ring_terra",
+    "alkahest:ring_shield"
   ]
 }

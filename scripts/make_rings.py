@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Pixel art for the gold ring blank and Terra ring."""
+"""Pixel art for ring blanks and enchanted rings."""
 import json,struct,zlib
 from pathlib import Path
 A=Path('src/main/resources/assets/alkahest')
@@ -15,3 +15,7 @@ terra=['................','.....ddddd......','....dttlltd.....','...dtllllttd...
 colors={'d':(83,59,35),'g':(191,143,58),'l':(255,226,141),'t':(156,99,51)}
 write('ring_blank',base,colors)
 write('ring_terra',terra,colors)
+
+shield=['................','.....ddddd......','....dmmhhmd.....','...dmmhhhhmd....','..dgmhmmhmgd....','.dglgmhmmgggd...','.dggddmmddggd...','.dggd.dd..dgd...','.dggd.....dgd...','.dggd.....dgd...','..dggd...dgd....','...dggddggd.....','....ddgggd......','......ddd.......','................','................']
+shield_colors={**colors, 'm':(173,185,206), 'h':(238,246,255)}
+write('ring_shield',shield,shield_colors)

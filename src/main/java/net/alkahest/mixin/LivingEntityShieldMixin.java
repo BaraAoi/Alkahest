@@ -1,0 +1,20 @@
+package net.alkahest.mixin;
+
+import net.alkahest.item.custom.ShieldRingItem;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.damage.DamageSource;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.registry.tag.DamageTypeTags;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+
+@Mixin(LivingEntity.class)
+public abstract class LivingEntityShieldMixin {
+    @Inject(method = "modifyAppliedDamage", at = @At("RETURN"), cancellable = true)
+    private void alkahest$shieldAfterMitigation(DamageSource source, float amount, CallbackInfoReturnable<Float> cir) {
+        if ((Object)this instanceof PlayerEntity player && !source.isIn(DamageTypeTags.BYPASSES_INVULNERABILITY))
+            cir.setReturnValue(ShieldRingItem.absorb(player, cir.getReturnValueF()));
+    }
+}

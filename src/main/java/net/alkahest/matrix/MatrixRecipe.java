@@ -20,6 +20,9 @@ import java.util.Map;
 public record MatrixRecipe(Item base, List<Item> components, ItemStack output,
                            Map<EssenceType, Integer> cost) {
     private static final List<MatrixRecipe> ALL = List.of(
+        synthesis(ModItems.RING_BLANK, List.of(ModItems.INFUSED_MATERIALS.get(EssenceType.ORDO),
+                ModItems.CRYSTALS.get(EssenceType.ORDO), ModItems.STABLE_MATERIAL, Items.SHIELD),
+            new ItemStack(ModItems.RING_SHIELD), EssenceType.ORDO, 30, EssenceType.METALLUM, 15),
         synthesis(ModItems.RING_BLANK, List.of(ModItems.INFUSED_MATERIALS.get(EssenceType.TERRA),
                 ModItems.CRYSTALS.get(EssenceType.TERRA), ModItems.STABLE_MATERIAL),
             new ItemStack(ModItems.RING_TERRA), EssenceType.TERRA, 30, EssenceType.ORDO, 10),
