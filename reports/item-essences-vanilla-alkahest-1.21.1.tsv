@@ -78,6 +78,7 @@ alkahest:philosophers_stone	item	manual	ordo=10,spiritus=10
 alkahest:purified_water	item	recipe	ignis=2,aqua=1,terra=2,ordo=1
 alkahest:purifying_flask	item	recipe	ignis=2,aqua=5,terra=2,ordo=2,herba=2
 alkahest:ring_blank	item	recipe	ordo=3,metallum=2,lux=1
+alkahest:ring_shield	item	recipe	ignis=10,aqua=10,terra=26,aer=10,ordo=61,perditio=10,herba=29,metallum=32,lux=3
 alkahest:ring_terra	item	recipe	ignis=10,aqua=10,terra=53,aer=10,ordo=25,perditio=10,metallum=9,lux=1
 alkahest:salt	item	manual	ordo=2,terra=1,aqua=1
 alkahest:salt_ore	block	manual	terra=3,ordo=2,aqua=1
