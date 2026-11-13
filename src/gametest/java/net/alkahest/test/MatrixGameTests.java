@@ -27,19 +27,20 @@ public class MatrixGameTests implements FabricGameTest {
         return new JarContentsComponent(List.of(new EssenceStack(type, amount, 0.5f)));
     }
 
-    private static BlockPos build(TestContext c) {
-        c.setBlockState(CX, CY, CZ, ModBlocks.MATRIX_CORE);
+    private static BlockPos build(TestContext c) { return build(c, CY); }
+    private static BlockPos build(TestContext c, int y) {
+        c.setBlockState(CX, y, CZ, ModBlocks.MATRIX_CORE);
         for (int dx = -1; dx <= 1; dx++) {
             for (int dy = -1; dy <= 1; dy++) {
                 for (int dz = -1; dz <= 1; dz++) {
                     if (dx == 0 && dy == 0 && dz == 0) continue;
                     boolean corner = dx != 0 && dy != 0 && dz != 0;
-                    c.setBlockState(CX + dx, CY + dy, CZ + dz,
+                    c.setBlockState(CX + dx, y + dy, CZ + dz,
                         corner ? ModBlocks.MATRIX_PILLAR : ModBlocks.ALCHEMICAL_BRICK);
                 }
             }
         }
-        return c.getAbsolutePos(new BlockPos(CX, CY, CZ));
+        return c.getAbsolutePos(new BlockPos(CX, y, CZ));
     }
 
     private static MatrixCoreBlockEntity core(TestContext c) {
@@ -449,19 +450,22 @@ public class MatrixGameTests implements FabricGameTest {
     }
 
     /** Use the real block interactions and server ticker, with a diagonal pedestal below the core. */
-    @GameTest(templateName = EMPTY_STRUCTURE, tickLimit = 700)
+    @GameTest(templateName = EMPTY_STRUCTURE, tickLimit = 400)
     public void diamondUsesTwoClickedPedestalsOnRealTicks(TestContext c) {
-        BlockPos pos = build(c);
-        wake(c);
-        var core = core(c);
+        // Other GameTests also run Matrix syntheses in this shared world. Place this
+        // one well above them so their jars cannot be drained by a neighbouring core.
+        int y = CY + 240;
+        BlockPos pos = build(c, y);
+        var core = (MatrixCoreBlockEntity) c.getWorld().getBlockEntity(pos);
+        core.setAwake(c.getWorld(), pos, true);
         var player = c.createMockPlayer(net.minecraft.world.GameMode.SURVIVAL);
         ItemStack coal = new ItemStack(Items.COAL);
         MatrixCoreBlockEntity.interactNearby(c.getWorld(), pos, player, coal);
         c.assertTrue(coal.isEmpty(), "A real core click inserts the base");
-        c.setBlockState(7, CY - 1, 7, ModBlocks.MATRIX_PEDESTAL);
-        c.setBlockState(0, CY - 1, CZ, ModBlocks.MATRIX_PEDESTAL);
-        BlockPos goldPos = c.getAbsolutePos(new BlockPos(7, CY - 1, 7));
-        BlockPos saltPos = c.getAbsolutePos(new BlockPos(0, CY - 1, CZ));
+        c.setBlockState(7, y - 1, 7, ModBlocks.MATRIX_PEDESTAL);
+        c.setBlockState(0, y - 1, CZ, ModBlocks.MATRIX_PEDESTAL);
+        BlockPos goldPos = c.getAbsolutePos(new BlockPos(7, y - 1, 7));
+        BlockPos saltPos = c.getAbsolutePos(new BlockPos(0, y - 1, CZ));
         ItemStack gold = new ItemStack(Items.GOLD_INGOT);
         ItemStack salt = new ItemStack(ModItems.SALT);
         for (var entry : java.util.Map.of(goldPos, gold, saltPos, salt).entrySet()) {
@@ -476,13 +480,13 @@ public class MatrixGameTests implements FabricGameTest {
             "Diagonal pedestal one level below is linked to the Matrix");
         c.assertTrue(core.recipe() != null && core.recipe().output().isOf(Items.DIAMOND),
             "Both components are recognised before work starts");
-        jar(c, 0, CY, 0, EssenceType.METALLUM, 8);
-        jar(c, 6, CY, 0, EssenceType.LUX, 6);
-        jar(c, 0, CY, 6, EssenceType.ORDO, 4);
+        jar(c, 0, y, 0, EssenceType.METALLUM, 8);
+        jar(c, 6, y, 0, EssenceType.LUX, 6);
+        jar(c, 0, y, 6, EssenceType.ORDO, 4);
         MatrixCoreBlockEntity.interactNearby(c.getWorld(), pos, player, new ItemStack(ModItems.ALKAHEST_AMULET));
         c.assertTrue(core.started(), "Real amulet interaction starts the synthesis");
-        // Leave headroom for low atmospheric stability and loaded-chunk/server scheduling.
-        c.runAtTick(600, () -> {
+        // Atmosphere can legitimately slow a recipe to half speed without blocking it.
+        c.runAtTick(340, () -> {
             c.assertTrue(core.getStack(MatrixCoreBlockEntity.OUTPUT).isOf(Items.DIAMOND),
                 "The natural server ticker completes the diamond synthesis: status=" + core.status() + " progress=" + core.progress() + " started=" + core.started());
             var goldPedestal = (net.alkahest.block.entity.MatrixPedestalBlockEntity) c.getWorld().getBlockEntity(goldPos);
