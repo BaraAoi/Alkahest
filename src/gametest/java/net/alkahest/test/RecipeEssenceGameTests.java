@@ -20,6 +20,25 @@ import net.minecraft.test.TestContext;
 
 public class RecipeEssenceGameTests implements FabricGameTest {
     @GameTest(templateName = EMPTY_STRUCTURE)
+    public void stableMaterialAndCobwebHaveTheirRequestedEssences(TestContext c) {
+        var world = c.getWorld();
+        var stable = CauldronBlockEntity.essencesOf(new ItemStack(ModItems.STABLE_MATERIAL), world);
+        c.assertTrue(stable.size()==6, "Stable material contains exactly six primary types");
+        for (var type : java.util.List.of(EssenceType.IGNIS, EssenceType.AQUA, EssenceType.TERRA,
+                EssenceType.AER, EssenceType.ORDO, EssenceType.PERDITIO))
+            c.assertTrue(stable.getOrDefault(type,0)==8, "Eight units of each primal type: " + type);
+        c.assertTrue(Tier2DistilleryBlockEntity.outputs(new ItemStack(ModItems.STABLE_MATERIAL), world.random, false, world)
+            .stream().allMatch(e -> e.type().tier() == EssenceType.Tier.PRIMA), "Distillation never yields secondary essences from stable material");
+        var web = CauldronBlockEntity.essencesOf(new ItemStack(Items.COBWEB), world);
+        c.assertTrue(web.size()==2 && web.getOrDefault(EssenceType.MOTUS,0)==2 && web.getOrDefault(EssenceType.ORDO,0)==1,
+            "Cobweb yields Motus and Ordo, not Herba");
+        var string = CauldronBlockEntity.essencesOf(new ItemStack(Items.STRING), world);
+        c.assertTrue(string.getOrDefault(EssenceType.HERBA,0)==1 && string.getOrDefault(EssenceType.ORDO,0)==1,
+            "String remains a separate material with its existing composition");
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
     public void bucketCompositionAndVaporSources(TestContext c) {
         var world = c.getWorld();
         var bucket = CauldronBlockEntity.essencesOf(new ItemStack(Items.BUCKET), world);

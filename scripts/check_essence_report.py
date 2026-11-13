@@ -45,6 +45,12 @@ cloth = composition(by_id['alkahest:cloth'])
 spirit_cloth = composition(by_id['alkahest:spirit_cloth'])
 cloth['spiritus'] = cloth.get('spiritus', 0) + 3
 assert spirit_cloth == cloth, 'Spiritweave must not generate free Spiritus on recycling'
+# Exact result applies to existing and new stable material; only six primary types remain.
+assert by_id['alkahest:stable_material']['status'] == 'manual'
+assert composition(by_id['alkahest:stable_material']) == {kind:8 for kind in ('ignis','aqua','terra','aer','ordo','perditio')}
+assert composition(by_id['minecraft:cobweb']) == {'motus':2,'ordo':1}
+# String is a separate item; its composition was not requested to change.
+assert composition(by_id['minecraft:string']) == {'herba':1,'ordo':1}
 for name in required:
     assert name in by_id and by_id[name]['status'] != 'missing', f'Missing composition for {name}'
 missing = [row for row in rows if row['status'] == 'missing']

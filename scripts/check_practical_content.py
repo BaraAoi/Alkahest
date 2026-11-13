@@ -209,9 +209,28 @@ textures = {name: (assets/f'textures/item/{name}.png').read_bytes() for name in 
 subprocess.run(['python3','scripts/make_materials.py'], check=True)
 for name, original in textures.items():
     assert (assets/f'textures/item/{name}.png').read_bytes() == original
-    assert struct.unpack('>IIBB', original[16:26]) == (16,16,8,6)
+    assert struct.unpack('>IIBB', original[16:26]) == (16, 384 if name == 'stable_material' else 16, 8, 6)
     assert json.loads((assets/f'models/item/{name}.json').read_text())['textures']['layer0'] == f'alkahest:item/{name}'
     for lang in ('ru_ru','en_us'):
         assert json.loads((assets/f'lang/{lang}.json').read_text()).get(f'item.alkahest.{name}')
 assert len(set(textures.values())) == len(textures)
 assert 'cloth_to_spirit_cloth' in source and 'ModItems.STABILIZING_REAGENT' in matrix
+
+# The mixed material has an animated silhouette, not just a cycling palette.
+meta = json.loads((assets/'textures/item/stable_material.png.mcmeta').read_text())['animation']
+assert meta == {'frametime':4, 'interpolate':True}
+encoded = textures['stable_material']; offset, packed = 8, bytearray()
+while offset < len(encoded):
+    length = struct.unpack_from('>I',encoded,offset)[0]
+    kind = encoded[offset+4:offset+8]
+    if kind == b'IDAT': packed.extend(encoded[offset+8:offset+8+length])
+    offset += length+12
+    if kind == b'IEND': break
+raw = zlib.decompress(packed); assert len(raw) == 384*65
+masks=[]
+for frame in range(24):
+    mask = frozenset((x,y) for y in range(16) for x in range(16) if raw[(frame*16+y)*65+1+x*4+3])
+    assert 40 < len(mask) < 150
+    masks.append(mask)
+assert len(set(masks)) >= 12 and all(masks[i] != masks[(i+6)%24] for i in range(24))
+assert all(len(masks[i] ^ masks[(i+1)%24]) <= 25 for i in range(24)), 'morph frames should change gradually'

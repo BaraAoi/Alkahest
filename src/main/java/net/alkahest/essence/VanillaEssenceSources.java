@@ -123,7 +123,7 @@ final class VanillaEssenceSources {
             Items.BEDROCK, Items.REINFORCED_DEEPSLATE, Items.END_PORTAL_FRAME,
             Items.PETRIFIED_OAK_SLAB, Items.SUSPICIOUS_SAND, Items.SUSPICIOUS_GRAVEL);
         put(values, List.of(new EssenceStack(HERBA, 2, 1f), new EssenceStack(ORDO, 1, 1f)),
-            Items.BEE_NEST, Items.COBWEB, Items.BUNDLE, Items.TURTLE_EGG, Items.SNIFFER_EGG, Items.FROGSPAWN);
+            Items.BEE_NEST, Items.BUNDLE, Items.TURTLE_EGG, Items.SNIFFER_EGG, Items.FROGSPAWN);
         put(values, List.of(new EssenceStack(MORTUUS, 3, 1f), new EssenceStack(ORDO, 1, 1f)),
             Items.CREEPER_HEAD, Items.DRAGON_HEAD, Items.PIGLIN_HEAD, Items.PLAYER_HEAD,
             Items.SKELETON_SKULL, Items.WITHER_SKELETON_SKULL, Items.ZOMBIE_HEAD);

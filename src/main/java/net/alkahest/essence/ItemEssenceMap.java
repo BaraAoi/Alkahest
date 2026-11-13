@@ -167,6 +167,8 @@ public final class ItemEssenceMap {
         e(Items.CACTUS, s(HERBA, 2), s(AQUA, 1)),
         e(Items.SLIME_BALL, s(AQUA, 2), s(HERBA, 1)),
         e(Items.STRING, s(HERBA, 1), s(ORDO, 1)),
+        // Spider web is animal silk: motion and ordered structure, not plant essence.
+        e(Items.COBWEB, s(MOTUS, 2), s(ORDO, 1)),
         e(Items.FERMENTED_SPIDER_EYE, s(VITIUM, 4), s(MORTUUS, 2)),
         // Filled buckets are consumed whole, including the three iron ingots of the vessel.
         e(Items.WATER_BUCKET, s(AQUA, 10), s(METALLUM, 18), s(TERRA, 6)),
@@ -205,6 +207,10 @@ public final class ItemEssenceMap {
         for (var entry : net.alkahest.registry.ModItems.CRYSTALS.entrySet()) {
             if (entry.getKey() != VACUUM && stack.isOf(entry.getValue())) return List.of(s(entry.getKey(), 1));
         }
+        // Stable material consists solely of the six primal essences; explicit values also
+        // apply to previously crafted items and never return more than its synthesis cost.
+        if (stack.isOf(net.alkahest.registry.ModItems.STABLE_MATERIAL))
+            return List.of(s(IGNIS, 8), s(AQUA, 8), s(TERRA, 8), s(AER, 8), s(ORDO, 8), s(PERDITIO, 8));
         // Like the six infused materials, preserve the base plus three units on recycling;
         // recipe-depth bonuses must not return more Spiritus than infusion costs.
         if (stack.isOf(net.alkahest.registry.ModItems.SPIRIT_CLOTH)) {
