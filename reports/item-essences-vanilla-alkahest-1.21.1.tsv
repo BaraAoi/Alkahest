@@ -78,8 +78,12 @@ alkahest:philosophers_stone	item	manual	ordo=10,spiritus=10
 alkahest:purified_water	item	recipe	ignis=2,aqua=1,terra=2,ordo=1
 alkahest:purifying_flask	item	recipe	ignis=2,aqua=5,terra=2,ordo=2,herba=2
 alkahest:ring_blank	item	recipe	ordo=3,metallum=2,lux=1
-alkahest:ring_shield	item	recipe	ignis=10,aqua=10,terra=26,aer=10,ordo=61,perditio=10,herba=29,metallum=32,lux=3
-alkahest:ring_terra	item	recipe	ignis=10,aqua=10,terra=53,aer=10,ordo=25,perditio=10,metallum=9,lux=1
+alkahest:ring_shield	item	recipe	terra=17,ordo=51,herba=29,metallum=32,lux=3
+alkahest:ring_shield_2	item	recipe	ignis=10,aqua=10,terra=29,aer=10,ordo=117,perditio=10,herba=31,metallum=61,lux=9
+alkahest:ring_shield_3	item	recipe	ignis=22,aqua=22,terra=63,aer=22,ordo=217,perditio=22,herba=34,metallum=93,lux=26
+alkahest:ring_shield_4	item	recipe	ignis=36,aqua=36,terra=125,aer=36,ordo=366,perditio=36,herba=36,metallum=142,lux=61
+alkahest:ring_terra	item	recipe	terra=43,ordo=15,metallum=9,lux=1
+alkahest:ring_terra_2	item	recipe	ignis=10,aqua=10,terra=137,aer=10,ordo=72,perditio=10,metallum=18,lux=14
 alkahest:salt	item	manual	ordo=2,terra=1,aqua=1
 alkahest:salt_ore	block	manual	terra=3,ordo=2,aqua=1
 alkahest:spirit_cloth	item	manual	motus=2,ordo=2,spiritus=5
