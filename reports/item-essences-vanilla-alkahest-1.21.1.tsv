@@ -10,6 +10,7 @@ alkahest:alchemy_cauldron	block	recipe	terra=22,ordo=3,metallum=64,potentia=4
 alkahest:alchemy_pipe	block	recipe	metallum=1
 alkahest:alkahest_amulet	item	recipe	ignis=1,aqua=1,terra=16,aer=1,ordo=32,perditio=3,herba=4,metallum=8,lux=14,motus=6,vitium=2,spiritus=6
 alkahest:alkahest_vial	item	manual	ignis=1,aqua=1,terra=16,aer=1,ordo=18,perditio=3,herba=3,vitium=2,spiritus=6,motus=6,lux=10
+alkahest:anklet_blank	item	recipe	terra=3,metallum=10
 alkahest:ash	item	manual	perditio=1
 alkahest:binding_salt	item	recipe	aqua=1,ordo=2,herba=1
 alkahest:binding_salt_aer	item	recipe	aqua=1,aer=1,ordo=2,herba=1
