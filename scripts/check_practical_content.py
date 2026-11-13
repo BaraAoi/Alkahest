@@ -159,9 +159,23 @@ chain_recipe=json.loads((data/'recipe/iron_chain.json').read_text())
 assert chain_recipe == {'type':'minecraft:crafting_shapeless', 'ingredients':[{'item':'minecraft:iron_ingot'}, {'item':'minecraft:chain'}], 'result':{'id':'alkahest:iron_chain','count':1}}
 chain_texture=assets/'textures/item/iron_chain.png'
 original=chain_texture.read_bytes()
-assert original[:8] == b'\x89PNG\r\n\x1a\n' and struct.unpack('>IIBB',original[16:26]) == (16,16,8,6)
+assert original[:8] == b'\x89PNG\r\n\x1a\n' and struct.unpack('>IIBB',original[16:26]) == (32,32,8,6)
 subprocess.run(['python3','scripts/make_iron_chain.py'],check=True)
 assert original == chain_texture.read_bytes()
+# The centre remains open and the necklace has distinct steel shades and open link holes.
+pos, packed = 8, bytearray()
+while pos < len(original):
+    n=struct.unpack_from('>I',original,pos)[0]
+    kind=original[pos+4:pos+8]
+    if kind==b'IDAT': packed.extend(original[pos+8:pos+8+n])
+    pos += 12+n
+    if kind==b'IEND': break
+raw=zlib.decompress(packed)
+assert len(raw)==32*(1+32*4)
+def rgba(x,y): return tuple(raw[y*129+1+x*4:y*129+1+x*4+4])
+assert rgba(16,16)[3] == 0, 'necklace must have a transparent centre'
+assert len({rgba(x,y) for y in range(32) for x in range(32) if rgba(x,y)[3]}) >= 4
+assert sum(rgba(x,y)[3] > 0 for y in range(32) for x in range(32)) < 500
 assert json.loads((assets/'models/item/iron_chain.json').read_text())['textures']['layer0']=='alkahest:item/iron_chain'
 for lang in ('ru_ru','en_us'):
     translation=json.loads((assets/f'lang/{lang}.json').read_text())
