@@ -120,7 +120,8 @@ public class EssenceChargerBlockEntity extends BlockEntity {
         var trinkets = TrinketsApi.getTrinketComponent(player).orElse(null);
         if (trinkets != null) {
             for (var equipped : trinkets.getEquipped(stack -> stack.isOf(ModItems.ALKAHEST_AMULET)
-                    || stack.isOf(ModItems.RING_TERRA) || stack.isOf(ModItems.RING_SHIELD))) {
+                    || stack.getItem() instanceof net.alkahest.item.custom.TerraRingItem
+                    || stack.getItem() instanceof net.alkahest.item.custom.ShieldRingItem)) {
                 ItemStack stack = equipped.getRight();
                 EssenceType used = applyJarCharge(jar, current, stack);
                 if (used != null) {

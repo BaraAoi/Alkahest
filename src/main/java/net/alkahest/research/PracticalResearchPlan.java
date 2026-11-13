@@ -35,7 +35,9 @@ public final class PracticalResearchPlan {
     public static final long STABILIZING_REAGENT = 1L << 42, STABLE_MATERIAL = 1L << 43;
     public static final long RING_BLANK = 1L << 44, RING_TERRA = 1L << 45;
     public static final long RING_SHIELD = 1L << 46;
-    public static final long ALL = (1L << 47) - 1;
+    public static final long RING_TERRA_2 = 1L << 47, RING_SHIELD_2 = 1L << 48,
+        RING_SHIELD_3 = 1L << 49, RING_SHIELD_4 = 1L << 50;
+    public static final long ALL = (1L << 51) - 1;
     public static final long ASSEMBLIES = STABILIZER | TIER2 | TRANSMUTATOR | MATRIX;
     // Keep obsolete flags for saves, but group the component entries into their machine.
     public static final long HIDDEN_COMPONENTS = BELLOWS | CHAMBER | CROWN | PEDESTAL | STABILIZER_RECEIVER | STABILIZER_CREST | AER_WAND;
@@ -87,8 +89,12 @@ public final class PracticalResearchPlan {
         new Step("stabilizing_reagent", "alkahest:stabilizing_reagent", STABILIZING_REAGENT, BINDING_SALT, 0),
         new Step("stable_material", "alkahest:stable_material", STABLE_MATERIAL, STABILIZING_REAGENT | TRANSMUTATOR | MATRIX, 0),
         new Step("ring_blank", "alkahest:ring_blank", RING_BLANK, CAULDRON, 0),
-        new Step("ring_terra", "alkahest:ring_terra", RING_TERRA, RING_BLANK | STABLE_MATERIAL | MATRIX, 0),
-        new Step("ring_shield", "alkahest:ring_shield", RING_SHIELD, RING_BLANK | STABLE_MATERIAL | MATRIX, 0)
+        new Step("ring_terra", "alkahest:ring_terra", RING_TERRA, RING_BLANK | TRANSMUTATOR | MATRIX, 0),
+        new Step("ring_shield", "alkahest:ring_shield", RING_SHIELD, RING_BLANK | TRANSMUTATOR | MATRIX, 0),
+        new Step("ring_terra_2", "alkahest:ring_terra_2", RING_TERRA_2, RING_TERRA | STABLE_MATERIAL, 0),
+        new Step("ring_shield_2", "alkahest:ring_shield_2", RING_SHIELD_2, RING_SHIELD | STABLE_MATERIAL, 0),
+        new Step("ring_shield_3", "alkahest:ring_shield_3", RING_SHIELD_3, RING_SHIELD_2, 0),
+        new Step("ring_shield_4", "alkahest:ring_shield_4", RING_SHIELD_4, RING_SHIELD_3, 0)
     );
 
     public static Step forItem(String itemId) {

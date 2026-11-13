@@ -30,10 +30,10 @@ public class ShieldRingGameTests implements FabricGameTest {
         var player=c.createMockPlayer(GameMode.SURVIVAL);
         player.getHungerManager().setFoodLevel(0);
         var inv=TrinketsApi.getTrinketComponent(player).orElseThrow().getInventory().get("hand").get("ring");
-        var ref=new SlotReference(inv,0); var ring=new ItemStack(ModItems.RING_SHIELD);
+        var ref=new SlotReference(inv,0); var ring=new ItemStack(ModItems.RING_SHIELD_4);
         c.assertTrue(dev.emi.trinkets.TrinketSlot.canInsert(ring,ref,player),"Shield ring fits in hand/ring");
         inv.setStack(0,ring);
-        if (inv.size()>1) c.assertFalse(dev.emi.trinkets.TrinketSlot.canInsert(new ItemStack(ModItems.RING_SHIELD),new SlotReference(inv,1),player),"Cannot equip two shield rings");
+        if (inv.size()>1) c.assertFalse(dev.emi.trinkets.TrinketSlot.canInsert(new ItemStack(ModItems.RING_SHIELD_4),new SlotReference(inv,1),player),"Cannot equip two shield rings");
         c.setBlockState(3,3,3,ModBlocks.JAR);
         var jar=(JarBlockEntity)c.getWorld().getBlockEntity(c.getAbsolutePos(new BlockPos(3,3,3)));
         jar.setContents(new JarContentsComponent(List.of(new EssenceStack(EssenceType.TERRA,2,.5f))));
@@ -58,7 +58,7 @@ public class ShieldRingGameTests implements FabricGameTest {
     public void realDamageStopsRecoveryAndAbsorbsBeforeHealth(TestContext c) {
         var player=c.createMockPlayer(GameMode.SURVIVAL);
         var inv=TrinketsApi.getTrinketComponent(player).orElseThrow().getInventory().get("hand").get("ring");
-        var ring=new ItemStack(ModItems.RING_SHIELD); inv.setStack(0,ring); var ref=new SlotReference(inv,0);
+        var ring=new ItemStack(ModItems.RING_SHIELD_4); inv.setStack(0,ring); var ref=new SlotReference(inv,0);
         ring.set(ModDataComponents.SHIELD_POINTS,6f); ring.set(ModDataComponents.SHIELD_DELAY,120);
         ring.set(ModDataComponents.ESSENCE_CHARGE,10);
         float health=player.getHealth();
@@ -78,7 +78,7 @@ public class ShieldRingGameTests implements FabricGameTest {
     public void shieldDoesNotOverwritePotionAbsorption(TestContext c) {
         var player=c.createMockPlayer(GameMode.SURVIVAL);
         var inv=TrinketsApi.getTrinketComponent(player).orElseThrow().getInventory().get("hand").get("ring");
-        var ring=new ItemStack(ModItems.RING_SHIELD); inv.setStack(0,ring); ring.set(ModDataComponents.SHIELD_POINTS,6f);
+        var ring=new ItemStack(ModItems.RING_SHIELD_4); inv.setStack(0,ring); ring.set(ModDataComponents.SHIELD_POINTS,6f);
         player.addStatusEffect(new StatusEffectInstance(StatusEffects.ABSORPTION,600,0));
         float potion=player.getAbsorptionAmount(), health=player.getHealth();
         c.assertTrue(potion>=4f,"Vanilla absorption is present");
@@ -91,7 +91,7 @@ public class ShieldRingGameTests implements FabricGameTest {
     public void armorMitigationPrecedesShieldAndAdminKillBypassesIt(TestContext c) {
         var player=c.createMockPlayer(GameMode.SURVIVAL);
         var inv=TrinketsApi.getTrinketComponent(player).orElseThrow().getInventory().get("hand").get("ring");
-        var ring=new ItemStack(ModItems.RING_SHIELD); inv.setStack(0,ring); ring.set(ModDataComponents.SHIELD_POINTS,6f);
+        var ring=new ItemStack(ModItems.RING_SHIELD_4); inv.setStack(0,ring); ring.set(ModDataComponents.SHIELD_POINTS,6f);
         player.equipStack(net.minecraft.entity.EquipmentSlot.CHEST,new ItemStack(net.minecraft.item.Items.IRON_CHESTPLATE));
         player.addStatusEffect(new StatusEffectInstance(StatusEffects.RESISTANCE,600,0));
         c.assertTrue(player.damage(c.getWorld().getDamageSources().generic(),4f),"A real mitigated hit lands");
@@ -106,10 +106,49 @@ public class ShieldRingGameTests implements FabricGameTest {
     public void shieldPayloadPreservesFractionAndCharge(TestContext c) {
         var buf=new net.minecraft.network.RegistryByteBuf(io.netty.buffer.Unpooled.buffer(),c.getWorld().getRegistryManager());
         try {
-            net.alkahest.network.ShieldPayload.CODEC.encode(buf,new net.alkahest.network.ShieldPayload(2.75f,42));
+            net.alkahest.network.ShieldPayload.CODEC.encode(buf,new net.alkahest.network.ShieldPayload(2.75f,6,42));
             var decoded=net.alkahest.network.ShieldPayload.CODEC.decode(buf);
-            c.assertTrue(decoded.points()==2.75f && decoded.charge()==42,"HUD payload preserves shield and charge");
+            c.assertTrue(decoded.points()==2.75f && decoded.max()==6 && decoded.charge()==42,"HUD payload preserves shield and charge");
         } finally { buf.release(); }
+        c.complete();
+    }
+
+    @GameTest(templateName=EMPTY_STRUCTURE)
+    public void everyShieldLevelUsesItsOwnCapAndDelay(TestContext c) {
+        var player=c.createMockPlayer(GameMode.SURVIVAL); player.getHungerManager().setFoodLevel(0);
+        var inv=TrinketsApi.getTrinketComponent(player).orElseThrow().getInventory().get("hand").get("ring");
+        var ref=new SlotReference(inv,0);
+        var items=List.of(ModItems.RING_SHIELD,ModItems.RING_SHIELD_2,ModItems.RING_SHIELD_3,ModItems.RING_SHIELD_4);
+        int[] caps={2,4,6,6}, delays={240,200,180,120};
+        for(int tier=0;tier<items.size();tier++) {
+            var stack=new ItemStack(items.get(tier)); inv.setStack(0,stack);
+            var item=(ShieldRingItem)stack.getItem(); stack.set(ModDataComponents.ESSENCE_CHARGE,50);
+            c.assertTrue(item.maxShield()==caps[tier] && item.damageDelay()==delays[tier],"Level parameters match the requested values");
+            ticks(item,stack,ref,player,delays[tier]+9);
+            c.assertTrue(ShieldRingItem.points(stack)==0 && stack.get(ModDataComponents.ESSENCE_CHARGE)==50,"No restoration before the cooldown and first half-second");
+            ticks(item,stack,ref,player,1);
+            c.assertTrue(ShieldRingItem.points(stack)==1 && stack.get(ModDataComponents.ESSENCE_CHARGE)==49,"One HP costs one Ordo charge");
+            ticks(item,stack,ref,player,(caps[tier]-1)*10+20);
+            c.assertTrue(ShieldRingItem.points(stack)==caps[tier] && stack.get(ModDataComponents.ESSENCE_CHARGE)==50-caps[tier],"Cap and two HP per second are respected");
+            ShieldRingItem.absorb(player,1f);
+            ticks(item,stack,ref,player,delays[tier]+9);
+            c.assertTrue(ShieldRingItem.points(stack)==caps[tier]-1,"Damage restarts the complete delay");
+            ticks(item,stack,ref,player,1);
+            c.assertTrue(ShieldRingItem.points(stack)==caps[tier],"Regen resumes exactly after the delay at every tier");
+        }
+        var legacy=new ItemStack(ModItems.RING_SHIELD); legacy.set(ModDataComponents.SHIELD_POINTS,6f); inv.setStack(0,legacy);
+        c.assertTrue(ShieldRingItem.points(legacy)==2 && ShieldRingItem.absorb(player,3)==1,"Existing tier-one ring cannot retain the former six HP cap");
+        c.complete();
+    }
+    @GameTest(templateName=EMPTY_STRUCTURE)
+    public void upgradedTerraRingGrantsHasteTwo(TestContext c) {
+        var player=c.createMockPlayer(GameMode.SURVIVAL);
+        var item=(net.alkahest.item.custom.TerraRingItem)ModItems.RING_TERRA_2;
+        var stack=new ItemStack(ModItems.RING_TERRA_2); stack.set(ModDataComponents.ESSENCE_CHARGE,1);
+        item.tick(stack,null,player);
+        c.assertTrue(player.getStatusEffect(StatusEffects.HASTE)!=null && player.getStatusEffect(StatusEffects.HASTE).getAmplifier()==1,"Terra II grants Haste II");
+        for(int i=1;i<2400;i++) item.tick(stack,null,player);
+        c.assertTrue(stack.get(ModDataComponents.ESSENCE_CHARGE)==0 && stack.get(ModDataComponents.RING_ACTIVE_TICKS)==0,"Terra II retains the same 2400-tick charge duration");
         c.complete();
     }
 

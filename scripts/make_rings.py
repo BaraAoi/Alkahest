@@ -19,3 +19,15 @@ write('ring_terra',terra,colors)
 shield=['................','.....ddddd......','....dmmhhmd.....','...dmmhhhhmd....','..dgmhmmhmgd....','.dglgmhmmgggd...','.dggddmmddggd...','.dggd.dd..dgd...','.dggd.....dgd...','.dggd.....dgd...','..dggd...dgd....','...dggddggd.....','....ddgggd......','......ddd.......','................','................']
 shield_colors={**colors, 'm':(173,185,206), 'h':(238,246,255)}
 write('ring_shield',shield,shield_colors)
+
+# Gems and small inlaid level marks distinguish upgrades at inventory size.
+def marked(rows, count):
+    out=rows.copy()
+    positions={2:(6,8),3:(5,7,9),4:(4,6,8,10)}[count]
+    line=list(out[14])
+    for x in positions: line[x]='v'
+    out[14]=''.join(line)
+    return out
+write('ring_terra_2', marked(terra,2), {**colors,'t':(178,111,49),'l':(255,236,168),'v':(228,183,84)})
+for level,gem,light in [(2,(123,185,205),(218,249,255)),(3,(155,155,214),(237,232,255)),(4,(201,182,117),(255,252,216))]:
+    write(f'ring_shield_{level}',marked(shield,level),{**colors,'m':gem,'h':light,'v':(235,205,125)})

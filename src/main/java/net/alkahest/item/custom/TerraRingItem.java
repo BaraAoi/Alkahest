@@ -17,16 +17,18 @@ import java.util.List;
 public final class TerraRingItem extends TrinketItem {
     public static final int TICKS_PER_ESSENCE = 2400;
     public static final int MAX_CHARGE = 100;
-    public TerraRingItem(Settings settings) {
+    private final int level;
+    public TerraRingItem(Settings settings, int level) {
         super(settings.maxCount(1).component(ModDataComponents.ESSENCE_CHARGE, 0)
             .component(ModDataComponents.RING_ACTIVE_TICKS, 0));
+        this.level = level;
     }
     @Override public void tick(ItemStack stack, SlotReference slot, LivingEntity entity) {
         if (entity.getWorld().isClient || !(entity instanceof PlayerEntity player) || !player.isAlive() || player.isSpectator()) return;
         int charge = stack.getOrDefault(ModDataComponents.ESSENCE_CHARGE, 0);
         if (charge <= 0) return;
         // A short renewable vanilla effect avoids stripping effects granted by other sources.
-        player.addStatusEffect(new StatusEffectInstance(StatusEffects.HASTE, 5, 0, true, false, true));
+        player.addStatusEffect(new StatusEffectInstance(StatusEffects.HASTE, 5, level - 1, true, false, true));
         int elapsed = stack.getOrDefault(ModDataComponents.RING_ACTIVE_TICKS, 0) + 1;
         if (elapsed >= TICKS_PER_ESSENCE) {
             stack.set(ModDataComponents.ESSENCE_CHARGE, charge - 1);

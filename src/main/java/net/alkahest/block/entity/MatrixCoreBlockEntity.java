@@ -298,6 +298,7 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
     /** Spends the base item and one copy of every part lying on the pedestals. */
     private void consumeItems(MatrixRecipe recipe) {
         ItemStack base = stacks.get(BASE);
+        ItemStack product = recipe.craftOutput(base);
         base.decrement(1);
         if (base.isEmpty()) stacks.set(BASE, ItemStack.EMPTY);
         for (net.minecraft.item.Item component : recipe.components()) {
@@ -309,7 +310,6 @@ public class MatrixCoreBlockEntity extends BlockEntity implements Inventory {
                 break;
             }
         }
-        ItemStack product = recipe.output().copy();
         ItemStack stored = stacks.get(OUTPUT);
         if (stored.isEmpty()) stacks.set(OUTPUT, product);
         else stored.increment(product.getCount());

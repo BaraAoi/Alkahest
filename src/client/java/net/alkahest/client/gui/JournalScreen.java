@@ -48,7 +48,8 @@ public final class JournalScreen extends Screen {
         node(36, 1100, 155), node(37, 1240, 155),
         node(38, 155, -165), node(39, 155, -245), node(40, 155, -325),
         node(41, 1100, 265), node(42, 690, -205), node(43, 1240, -220),
-        node(44, 155, -405), node(45, 1380, -220), node(46, 1380, -140)
+        node(44, 155, -405), node(45, 1380, -220), node(46, 1380, -140), node(47, 1520, -220),
+        node(48, 1520, -140), node(49, 1660, -140), node(50, 1800, -140)
     };
     private final long researchFlags;
     private Node selected;
@@ -194,7 +195,8 @@ public final class JournalScreen extends Screen {
         return lines;
     }
     private int diagramCount(Node node) {
-        if (node.key().equals("amulet") || node.key().equals("stable_material") || node.key().equals("ring_terra") || node.key().equals("ring_shield")) return 2; // ingredients and essence/start on separate illustrated pages
+        if (node.key().equals("amulet") || node.key().equals("stable_material") || node.key().equals("ring_terra") || node.key().equals("ring_shield") || node.key().equals("ring_terra_2")
+            || node.key().equals("ring_shield_2") || node.key().equals("ring_shield_3") || node.key().equals("ring_shield_4")) return 2; // ingredients and essence/start on separate illustrated pages
         int crafts = JournalCraftingRecipes.BY_RESEARCH.getOrDefault(node.key(), List.of()).size();
         if (crafts > 0) return crafts;
         if (node.key().equals("alkahest") || node.key().equals("napalm") || node.key().equals("acid")
@@ -292,7 +294,8 @@ public final class JournalScreen extends Screen {
             if (recipe.count() > 1) c.drawText(textRenderer, Integer.toString(recipe.count()), x + 81, y + 43, 0xFF30251C, false);
             return;
         }
-        if (node.key().equals("amulet") || node.key().equals("stable_material") || node.key().equals("ring_terra") || node.key().equals("ring_shield")) {
+        if (node.key().equals("amulet") || node.key().equals("stable_material") || node.key().equals("ring_terra") || node.key().equals("ring_shield") || node.key().equals("ring_terra_2")
+            || node.key().equals("ring_shield_2") || node.key().equals("ring_shield_3") || node.key().equals("ring_shield_4")) {
             renderMatrixDiagram(c, node, page, pageLeft, y, width, mouseX, mouseY);
             return;
         }

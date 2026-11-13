@@ -25,7 +25,7 @@ public final class ModDataComponents {
     public static final ComponentType<Float> ESSENCE_STABILITY = register("essence_stability", Codec.floatRange(0.0f, 1.0f));
     public static final ComponentType<Integer> SOLVENT_CHARGES = register("solvent_charges", Codec.intRange(0, 32));
     public static final ComponentType<Float> SHIELD_POINTS = register("shield_points", Codec.floatRange(0.0f, 6.0f));
-    public static final ComponentType<Integer> SHIELD_DELAY = register("shield_delay", Codec.intRange(0, 120));
+    public static final ComponentType<Integer> SHIELD_DELAY = register("shield_delay", Codec.intRange(0, 240));
     public static final ComponentType<Integer> SHIELD_REGEN_TICKS = register("shield_regen_ticks", Codec.intRange(0, 9));
     public static final ComponentType<Integer> RING_ACTIVE_TICKS = register("ring_active_ticks", Codec.intRange(0, 2399));
     public static final ComponentType<Integer> AMULET_USES_STEP = register("amulet_uses_step", Codec.intRange(0, 4));

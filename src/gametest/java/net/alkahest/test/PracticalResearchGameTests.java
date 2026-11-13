@@ -405,7 +405,7 @@ public class PracticalResearchGameTests implements FabricGameTest {
         PracticalResearchStorage.observe(player,new ItemStack(ModItems.RING_TERRA));
         long bits=PracticalResearchPlan.RING_BLANK|PracticalResearchPlan.RING_TERRA;
         c.assertTrue((PracticalResearchStorage.observed(player)&bits)==bits && (PracticalResearchStorage.completed(player)&bits)==0,"Early ring observations are remembered");
-        grant(player,"cauldron"); grant(player,"stable_material"); grant(player,"matrix"); PracticalResearchStorage.migrate(player);
+        grant(player,"cauldron"); grant(player,"transmutator"); grant(player,"stable_material"); grant(player,"matrix"); PracticalResearchStorage.migrate(player);
         c.assertTrue((PracticalResearchStorage.completed(player)&bits)==bits,"Parents unlock both obtained items");
         player.getAdvancementTracker().save(); player.getAdvancementTracker().reload(world.getServer().getAdvancementLoader());
         c.assertTrue((PracticalResearchStorage.completed(player)&bits)==bits,"Ring research persists");
@@ -418,7 +418,7 @@ public class PracticalResearchGameTests implements FabricGameTest {
         PracticalResearchStorage.observe(player,new ItemStack(ModItems.RING_SHIELD));
         c.assertTrue((PracticalResearchStorage.observed(player)&PracticalResearchPlan.RING_SHIELD)!=0
             && (PracticalResearchStorage.completed(player)&PracticalResearchPlan.RING_SHIELD)==0,"An early ring is observed but waits for parents");
-        grant(player,"cauldron"); grant(player,"ring_blank"); grant(player,"stable_material"); grant(player,"matrix");
+        grant(player,"cauldron"); grant(player,"ring_blank"); grant(player,"transmutator"); grant(player,"stable_material"); grant(player,"matrix");
         PracticalResearchStorage.migrate(player);
         c.assertTrue((PracticalResearchStorage.completed(player)&PracticalResearchPlan.RING_SHIELD)!=0,"Obtaining the ring completes research after parents");
         player.getAdvancementTracker().save(); player.getAdvancementTracker().reload(c.getWorld().getServer().getAdvancementLoader());
@@ -429,7 +429,7 @@ public class PracticalResearchGameTests implements FabricGameTest {
     @GameTest(templateName = EMPTY_STRUCTURE)
     public void journalPayloadPreservesResearchBitsAboveThirtyOne(TestContext c) {
         long flags = PracticalResearchPlan.CAULDRON | PracticalResearchPlan.FIRE_DUST | PracticalResearchPlan.CAUSTIC_SLIME | PracticalResearchPlan.AER_WAND | PracticalResearchPlan.NECKLACE_BLANK | PracticalResearchPlan.ANKLET_BLANK
-            | PracticalResearchPlan.CLOTH | PracticalResearchPlan.SPIRIT_CLOTH | PracticalResearchPlan.STABILIZING_REAGENT | PracticalResearchPlan.STABLE_MATERIAL | PracticalResearchPlan.RING_BLANK | PracticalResearchPlan.RING_TERRA | PracticalResearchPlan.RING_SHIELD;
+            | PracticalResearchPlan.CLOTH | PracticalResearchPlan.SPIRIT_CLOTH | PracticalResearchPlan.STABILIZING_REAGENT | PracticalResearchPlan.STABLE_MATERIAL | PracticalResearchPlan.RING_BLANK | PracticalResearchPlan.RING_TERRA | PracticalResearchPlan.RING_SHIELD | PracticalResearchPlan.RING_TERRA_2 | PracticalResearchPlan.RING_SHIELD_2 | PracticalResearchPlan.RING_SHIELD_3 | PracticalResearchPlan.RING_SHIELD_4;
         var buf = new net.minecraft.network.RegistryByteBuf(io.netty.buffer.Unpooled.buffer(), c.getWorld().getRegistryManager());
         try {
             net.alkahest.network.OpenJournalPayload.CODEC.encode(buf, new net.alkahest.network.OpenJournalPayload(flags));

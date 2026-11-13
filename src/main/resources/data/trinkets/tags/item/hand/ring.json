@@ -2,6 +2,10 @@
   "replace": false,
   "values": [
     "alkahest:ring_terra",
-    "alkahest:ring_shield"
+    "alkahest:ring_shield",
+    "alkahest:ring_terra_2",
+    "alkahest:ring_shield_2",
+    "alkahest:ring_shield_3",
+    "alkahest:ring_shield_4"
   ]
 }

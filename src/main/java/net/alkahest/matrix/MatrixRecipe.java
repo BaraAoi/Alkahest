@@ -21,11 +21,22 @@ public record MatrixRecipe(Item base, List<Item> components, ItemStack output,
                            Map<EssenceType, Integer> cost) {
     private static final List<MatrixRecipe> ALL = List.of(
         synthesis(ModItems.RING_BLANK, List.of(ModItems.INFUSED_MATERIALS.get(EssenceType.ORDO),
-                ModItems.CRYSTALS.get(EssenceType.ORDO), ModItems.STABLE_MATERIAL, Items.SHIELD),
+                ModItems.CRYSTALS.get(EssenceType.ORDO), Items.SHIELD),
             new ItemStack(ModItems.RING_SHIELD), EssenceType.ORDO, 30, EssenceType.METALLUM, 15),
         synthesis(ModItems.RING_BLANK, List.of(ModItems.INFUSED_MATERIALS.get(EssenceType.TERRA),
-                ModItems.CRYSTALS.get(EssenceType.TERRA), ModItems.STABLE_MATERIAL),
+                ModItems.CRYSTALS.get(EssenceType.TERRA)),
             new ItemStack(ModItems.RING_TERRA), EssenceType.TERRA, 30, EssenceType.ORDO, 10),
+        synthesis(ModItems.RING_TERRA, List.of(ModItems.STABLE_MATERIAL, ModItems.INFUSED_MATERIALS.get(EssenceType.TERRA),
+                ModItems.CRYSTALS.get(EssenceType.TERRA), Items.DIAMOND),
+            new ItemStack(ModItems.RING_TERRA_2), EssenceType.TERRA, 40, EssenceType.ORDO, 20),
+        synthesis(ModItems.RING_SHIELD, List.of(ModItems.STABLE_MATERIAL, ModItems.INFUSED_MATERIALS.get(EssenceType.ORDO), Items.GOLD_INGOT),
+            new ItemStack(ModItems.RING_SHIELD_2), EssenceType.ORDO, 24, EssenceType.METALLUM, 12),
+        synthesis(ModItems.RING_SHIELD_2, List.of(ModItems.STABLE_MATERIAL, ModItems.INFUSED_MATERIALS.get(EssenceType.ORDO),
+                ModItems.CRYSTALS.get(EssenceType.ORDO), Items.DIAMOND),
+            new ItemStack(ModItems.RING_SHIELD_3), EssenceType.ORDO, 32, EssenceType.METALLUM, 16),
+        synthesis(ModItems.RING_SHIELD_3, List.of(ModItems.STABLE_MATERIAL, ModItems.INFUSED_MATERIALS.get(EssenceType.ORDO),
+                ModItems.CRYSTALS.get(EssenceType.ORDO), ModItems.CRYSTALS.get(EssenceType.ORDO), Items.DIAMOND, Items.DIAMOND),
+            new ItemStack(ModItems.RING_SHIELD_4), EssenceType.ORDO, 40, EssenceType.METALLUM, 24),
         synthesis(ModItems.STABILIZING_REAGENT, List.of(
                 ModItems.INFUSED_MATERIALS.get(EssenceType.IGNIS), ModItems.INFUSED_MATERIALS.get(EssenceType.AQUA),
                 ModItems.INFUSED_MATERIALS.get(EssenceType.TERRA), ModItems.INFUSED_MATERIALS.get(EssenceType.AER),
@@ -72,6 +83,18 @@ public record MatrixRecipe(Item base, List<Item> components, ItemStack output,
     }
 
     public static List<MatrixRecipe> all() { return ALL; }
+
+    /** Upgrading a ring preserves its charge, use debt and custom components. */
+    public ItemStack craftOutput(ItemStack input) {
+        if ((input.getItem() instanceof net.alkahest.item.custom.TerraRingItem && output.getItem() instanceof net.alkahest.item.custom.TerraRingItem)
+            || (input.getItem() instanceof net.alkahest.item.custom.ShieldRingItem && output.getItem() instanceof net.alkahest.item.custom.ShieldRingItem)) {
+            ItemStack result = input.copyComponentsToNewStack(output.getItem(), output.getCount());
+            if (input.getItem() instanceof net.alkahest.item.custom.ShieldRingItem)
+                result.set(net.alkahest.registry.ModDataComponents.SHIELD_POINTS, net.alkahest.item.custom.ShieldRingItem.points(input));
+            return result;
+        }
+        return output.copy();
+    }
 
     /** Components are a multiset: order does not matter, duplicates have to be paid for. */
     public List<Item> missingComponents(List<ItemStack> given) {

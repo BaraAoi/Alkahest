@@ -76,16 +76,47 @@ public class MatrixGameTests implements FabricGameTest {
     }
 
     @GameTest(templateName = EMPTY_STRUCTURE)
+    public void upgradedRingsPreserveStackStateInRealMatrix(TestContext c) {
+        var pos=build(c); wake(c); var core=core(c); var player=c.createMockPlayer(net.minecraft.world.GameMode.SURVIVAL);
+        var cases=List.of(ModItems.RING_TERRA,ModItems.RING_SHIELD,ModItems.RING_SHIELD_2,ModItems.RING_SHIELD_3);
+        var outputs=List.of(ModItems.RING_TERRA_2,ModItems.RING_SHIELD_2,ModItems.RING_SHIELD_3,ModItems.RING_SHIELD_4);
+        var coords=List.of(new BlockPos(1,1,3),new BlockPos(5,1,3),new BlockPos(3,1,5),new BlockPos(1,1,1),new BlockPos(5,1,1),new BlockPos(1,1,5));
+        for(int n=0;n<cases.size();n++) {
+            var base=new ItemStack(cases.get(n)); base.set(net.alkahest.registry.ModDataComponents.ESSENCE_CHARGE,73);
+            base.set(net.minecraft.component.DataComponentTypes.CUSTOM_NAME, net.minecraft.text.Text.literal("Kept name"));
+            if(n==0) base.set(net.alkahest.registry.ModDataComponents.RING_ACTIVE_TICKS,1234);
+            else { base.set(net.alkahest.registry.ModDataComponents.SHIELD_POINTS,1.5f); base.set(net.alkahest.registry.ModDataComponents.SHIELD_DELAY,87); }
+            core.setStack(MatrixCoreBlockEntity.BASE,base);
+            var expectedOutput=outputs.get(n);
+            var recipe=net.alkahest.matrix.MatrixRecipe.all().stream().filter(r -> r.output().isOf(expectedOutput)).findFirst().orElseThrow();
+            c.assertTrue(recipe.components().contains(ModItems.STABLE_MATERIAL),"Every upgrade needs Pure Effir");
+            for(int j=0;j<recipe.components().size();j++) { var q=coords.get(j); pedestal(c,q.getX(),q.getY(),q.getZ(),new ItemStack(recipe.components().get(j))); }
+            var prices=new java.util.ArrayList<>(recipe.cost().entrySet());
+            var a=prices.get(0); var b=prices.get(1);
+            jar(c,0,2,3,a.getKey(),a.getValue()); jar(c,6,2,3,b.getKey(),b.getValue());
+            c.assertTrue(core.startWith(new ItemStack(ModItems.ALKAHEST_AMULET),player),"Upgrade starts with all components");
+            run(c.getWorld(),pos,MatrixCoreBlockEntity.DURATION*2+10);
+            var result=core.removeStack(MatrixCoreBlockEntity.OUTPUT);
+            c.assertTrue(result.isOf(outputs.get(n)) && result.get(net.alkahest.registry.ModDataComponents.ESSENCE_CHARGE)==73
+                && result.getName().getString().equals("Kept name"),"Upgrade preserves charge and custom name");
+            if(n==0) c.assertTrue(result.get(net.alkahest.registry.ModDataComponents.RING_ACTIVE_TICKS)==1234,"Terra partial usage persists");
+            else c.assertTrue(result.get(net.alkahest.registry.ModDataComponents.SHIELD_POINTS)==1.5f
+                && result.get(net.alkahest.registry.ModDataComponents.SHIELD_DELAY)==87,"Shield state and damage delay persist");
+            for(var q:coords) { var be=c.getWorld().getBlockEntity(c.getAbsolutePos(q)); if(be instanceof net.alkahest.block.entity.MatrixPedestalBlockEntity ped) c.assertTrue(ped.isEmpty(),"All pedestal ingredients consumed"); }
+        }
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
     public void shieldRingUsesSeparateMatrixRecipe(TestContext c) {
         var pos=build(c); wake(c); var core=core(c); var player=c.createMockPlayer(net.minecraft.world.GameMode.SURVIVAL);
         core.setStack(MatrixCoreBlockEntity.BASE,new ItemStack(ModItems.RING_BLANK));
         pedestal(c,1,1,3,new ItemStack(ModItems.INFUSED_MATERIALS.get(EssenceType.ORDO)));
         pedestal(c,5,1,3,new ItemStack(ModItems.CRYSTALS.get(EssenceType.ORDO)));
-        pedestal(c,3,1,5,new ItemStack(ModItems.STABLE_MATERIAL));
         c.assertFalse(core.startWith(new ItemStack(ModItems.ALKAHEST_AMULET),player),"Shield is required");
         pedestal(c,1,1,1,new ItemStack(Items.SHIELD));
         var recipe=core.recipe();
-        c.assertTrue(recipe!=null && recipe.output().isOf(ModItems.RING_SHIELD) && recipe.components().size()==4
+        c.assertTrue(recipe!=null && recipe.output().isOf(ModItems.RING_SHIELD) && recipe.components().size()==3
             && recipe.cost().size()==2 && recipe.cost().get(EssenceType.ORDO)==30 && recipe.cost().get(EssenceType.METALLUM)==15,"Exact shield recipe and price");
         var ordo=jar(c,0,2,3,EssenceType.ORDO,30); var metal=jar(c,6,2,3,EssenceType.METALLUM,15);
         c.assertTrue(core.startWith(new ItemStack(ModItems.ALKAHEST_AMULET),player),"The shield recipe starts without research gates");
@@ -93,7 +124,7 @@ public class MatrixGameTests implements FabricGameTest {
         var result=core.getStack(MatrixCoreBlockEntity.OUTPUT);
         c.assertTrue(result.isOf(ModItems.RING_SHIELD) && result.getOrDefault(net.alkahest.registry.ModDataComponents.ESSENCE_CHARGE,-1)==0,"Result is an empty shield ring");
         c.assertTrue(core.getStack(MatrixCoreBlockEntity.BASE).isEmpty() && ordo.contents().total()==0 && metal.contents().total()==0,"Base and essences consumed");
-        for(var q:List.of(new BlockPos(1,1,3),new BlockPos(5,1,3),new BlockPos(3,1,5),new BlockPos(1,1,1)))
+        for(var q:List.of(new BlockPos(1,1,3),new BlockPos(5,1,3),new BlockPos(1,1,1)))
             c.assertTrue(((net.alkahest.block.entity.MatrixPedestalBlockEntity)c.getWorld().getBlockEntity(c.getAbsolutePos(q))).isEmpty(),"Each component consumed");
         c.complete();
     }
@@ -104,10 +135,9 @@ public class MatrixGameTests implements FabricGameTest {
         core.setStack(MatrixCoreBlockEntity.BASE,new ItemStack(ModItems.RING_BLANK));
         pedestal(c,1,1,3,new ItemStack(ModItems.INFUSED_MATERIALS.get(EssenceType.TERRA)));
         pedestal(c,5,1,3,new ItemStack(ModItems.CRYSTALS.get(EssenceType.TERRA)));
-        c.assertFalse(core.startWith(new ItemStack(ModItems.ALKAHEST_AMULET),player),"Stable material is required");
-        pedestal(c,3,1,5,new ItemStack(ModItems.STABLE_MATERIAL));
+        c.assertFalse(core.startWith(new ItemStack(ModItems.WANDS.get(EssenceType.ORDO)),player),"A wand cannot start a ring");
         var recipe=core.recipe();
-        c.assertTrue(recipe!=null && recipe.output().isOf(ModItems.RING_TERRA) && recipe.components().size()==3
+        c.assertTrue(recipe!=null && recipe.output().isOf(ModItems.RING_TERRA) && recipe.components().size()==2
             && recipe.cost().size()==2 && recipe.cost().get(EssenceType.TERRA)==30 && recipe.cost().get(EssenceType.ORDO)==10,"Matching recipe has its exact ingredients and cost");
         c.assertFalse(core.startWith(new ItemStack(ModItems.WANDS.get(EssenceType.ORDO)),player),"A wand cannot start a ring");
         var terra=jar(c,0,2,3,EssenceType.TERRA,30); var ordo=jar(c,6,2,3,EssenceType.ORDO,10);
@@ -116,7 +146,7 @@ public class MatrixGameTests implements FabricGameTest {
         var result=core.getStack(MatrixCoreBlockEntity.OUTPUT);
         c.assertTrue(result.isOf(ModItems.RING_TERRA) && result.getOrDefault(net.alkahest.registry.ModDataComponents.ESSENCE_CHARGE,-1)==0,"Synthesized ring starts empty");
         c.assertTrue(core.getStack(MatrixCoreBlockEntity.BASE).isEmpty() && terra.contents().total()==0 && ordo.contents().total()==0,"Base and exact essence consumed");
-        for(var q:List.of(new BlockPos(1,1,3),new BlockPos(5,1,3),new BlockPos(3,1,5)))
+        for(var q:List.of(new BlockPos(1,1,3),new BlockPos(5,1,3)))
             c.assertTrue(((net.alkahest.block.entity.MatrixPedestalBlockEntity)c.getWorld().getBlockEntity(c.getAbsolutePos(q))).isEmpty(),"Each pedestal ingredient consumed");
         c.complete();
     }

@@ -34,8 +34,12 @@ public final class ModItems {
     public static final Item STABILIZING_REAGENT = item("stabilizing_reagent", new Item(new Item.Settings()));
     public static final Item STABLE_MATERIAL = item("stable_material", new Item(new Item.Settings()));
     public static final Item RING_BLANK = item("ring_blank", new Item(new Item.Settings()));
-    public static final Item RING_SHIELD = item("ring_shield", new net.alkahest.item.custom.ShieldRingItem(new Item.Settings()));
-    public static final Item RING_TERRA = item("ring_terra", new net.alkahest.item.custom.TerraRingItem(new Item.Settings()));
+    public static final Item RING_SHIELD = item("ring_shield", new net.alkahest.item.custom.ShieldRingItem(new Item.Settings(), 1));
+    public static final Item RING_TERRA = item("ring_terra", new net.alkahest.item.custom.TerraRingItem(new Item.Settings(), 1));
+    public static final Item RING_TERRA_2 = item("ring_terra_2", new net.alkahest.item.custom.TerraRingItem(new Item.Settings(), 2));
+    public static final Item RING_SHIELD_2 = item("ring_shield_2", new net.alkahest.item.custom.ShieldRingItem(new Item.Settings(), 2));
+    public static final Item RING_SHIELD_3 = item("ring_shield_3", new net.alkahest.item.custom.ShieldRingItem(new Item.Settings(), 3));
+    public static final Item RING_SHIELD_4 = item("ring_shield_4", new net.alkahest.item.custom.ShieldRingItem(new Item.Settings(), 4));
     public static final Item SALT = item("salt", new Item(new Item.Settings()));
     public static final Item PURIFIED_WATER = item("purified_water", new Item(new Item.Settings()));
     public static final Item HERBAL_PASTE = item("herbal_paste", new Item(new Item.Settings()));
@@ -99,7 +103,8 @@ public final class ModItems {
                 entries.add(ANKLET_BLANK);
                 entries.add(CLOTH); entries.add(SPIRIT_CLOTH);
                 entries.add(STABILIZING_REAGENT); entries.add(STABLE_MATERIAL);
-                entries.add(RING_BLANK); entries.add(RING_TERRA); entries.add(RING_SHIELD);
+                entries.add(RING_BLANK); entries.add(RING_TERRA); entries.add(RING_TERRA_2);
+                entries.add(RING_SHIELD); entries.add(RING_SHIELD_2); entries.add(RING_SHIELD_3); entries.add(RING_SHIELD_4);
                 entries.add(PHILOSOPHERS_STONE);
                 entries.add(SALT); entries.add(PURIFIED_WATER); entries.add(HERBAL_PASTE);
                 entries.add(FIRE_DUST); entries.add(CAUSTIC_SLIME); entries.add(NAPALM); entries.add(ACID_BOMB);
