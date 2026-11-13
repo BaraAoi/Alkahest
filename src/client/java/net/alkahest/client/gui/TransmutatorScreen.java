@@ -124,8 +124,8 @@ public final class TransmutatorScreen extends HandledScreen<TransmutatorScreenHa
         c.drawTextWithShadow(textRenderer, fit(chargeText, 76), 51, 94, charge == 0 ? 0xFFFFAB89 : 0xFFE9D5A8);
         c.drawCenteredTextWithShadow(textRenderer, percent() + "%", 75, 63, 0xFFF1D49C);
         if (handler.canSelectRecipe()) {
-            String label = Text.translatable(handler.needsRecipeChoice()
-                ? "screen.alkahest.transmutator.choose_button" : "screen.alkahest.transmutator.change_button").getString();
+            String label = handler.needsRecipeChoice() ? Text.translatable("screen.alkahest.transmutator.choose_button").getString()
+                : "↻ " + handler.selectedOutput().getName().getString();
             c.drawCenteredTextWithShadow(textRenderer, fit(label, TransmutatorScreenHandler.CHOICE_WIDTH - 2),
                 TransmutatorScreenHandler.CHOICE_X + TransmutatorScreenHandler.CHOICE_WIDTH / 2, TransmutatorScreenHandler.CHOICE_Y, 0xFFFFE49A);
         }
@@ -213,8 +213,9 @@ public final class TransmutatorScreen extends HandledScreen<TransmutatorScreenHa
             }
         } else if (handler.canSelectRecipe() && inside(mouseX, mouseY, TransmutatorScreenHandler.CHOICE_X, TransmutatorScreenHandler.CHOICE_Y,
             TransmutatorScreenHandler.CHOICE_WIDTH, TransmutatorScreenHandler.CHOICE_HEIGHT)) {
-            c.drawTooltip(textRenderer, handler.needsRecipeChoice() ? Text.translatable("screen.alkahest.transmutator.pick_hint")
-                : Text.translatable("screen.alkahest.transmutator.recipe_choice_hint"), mouseX, mouseY);
+            if (handler.needsRecipeChoice()) c.drawTooltip(textRenderer, Text.translatable("screen.alkahest.transmutator.pick_hint"), mouseX, mouseY);
+            else c.drawTooltip(textRenderer, List.of(Text.translatable("screen.alkahest.transmutator.recipe_choice", handler.selectedOutput().getName(),
+                handler.selectedRecipeIndex() + 1, handler.recipeCount()), Text.translatable("screen.alkahest.transmutator.recipe_choice_hint")), mouseX, mouseY);
         } else if (inside(mouseX, mouseY, 10, 109, 216, 16)) {
             c.drawTooltip(textRenderer, statusText(), mouseX, mouseY);
         } else if (inside(mouseX, mouseY, 139, 43, 86, 59) && !handler.requirements().isEmpty()) {
