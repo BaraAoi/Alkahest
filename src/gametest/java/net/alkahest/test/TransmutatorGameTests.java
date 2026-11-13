@@ -452,7 +452,7 @@ public class TransmutatorGameTests implements FabricGameTest {
         var recipes = net.alkahest.transmutation.TransmutationRecipe.all();
         int[] oldTotals = {2, 2, 4, 3, 5, 5, 6, 8, 4, 2, 3, 3, 5, 7, 5, 5, 3, 120};
         int[] newTotals = {1, 1, 2, 2, 4, 3, 3, 6, 2, 1, 2, 2, 3, 4, 3, 3, 2, 4};
-        c.assertTrue(recipes.size() == oldTotals.length + 6, "All 18 old recipes and six infusions exist");
+        c.assertTrue(recipes.size() == oldTotals.length + 7, "All 18 old recipes, six primal infusions and Spiritus cloth exist");
         for (int i = 0; i < oldTotals.length; i++) {
             var recipe = recipes.get(i);
             int cost = net.alkahest.transmutation.TransmutationRecipe.cost(recipe.cost());
