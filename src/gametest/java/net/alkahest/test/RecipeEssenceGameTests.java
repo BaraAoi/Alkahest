@@ -33,8 +33,17 @@ public class RecipeEssenceGameTests implements FabricGameTest {
         c.assertTrue(web.size()==2 && web.getOrDefault(EssenceType.MOTUS,0)==2 && web.getOrDefault(EssenceType.ORDO,0)==1,
             "Cobweb yields Motus and Ordo, not Herba");
         var string = CauldronBlockEntity.essencesOf(new ItemStack(Items.STRING), world);
-        c.assertTrue(string.getOrDefault(EssenceType.HERBA,0)==1 && string.getOrDefault(EssenceType.ORDO,0)==1,
-            "String remains a separate material with its existing composition");
+        c.assertTrue(string.size()==2 && string.getOrDefault(EssenceType.MOTUS,0)==1 && string.getOrDefault(EssenceType.ORDO,0)==1,
+            "String contains Motus and Ordo, not Herba");
+        var cloth = CauldronBlockEntity.essencesOf(new ItemStack(ModItems.CLOTH), world);
+        c.assertTrue(cloth.size()==2 && cloth.getOrDefault(EssenceType.MOTUS,0)==4 && cloth.getOrDefault(EssenceType.ORDO,0)==4,
+            "Cloth inherits four strings with Motus instead of Herba");
+        var soul = CauldronBlockEntity.essencesOf(new ItemStack(ModItems.SPIRIT_CLOTH), world);
+        c.assertTrue(soul.size()==3 && soul.getOrDefault(EssenceType.MOTUS,0)==4 && soul.getOrDefault(EssenceType.ORDO,0)==4
+            && soul.getOrDefault(EssenceType.SPIRITUS,0)==3, "Soul cloth retains its Spiritus and the updated cloth composition");
+        for (var item : java.util.List.of(Items.STRING, ModItems.CLOTH, ModItems.SPIRIT_CLOTH))
+            c.assertFalse(Tier2DistilleryBlockEntity.outputs(new ItemStack(item), world.random, false, world)
+                .stream().anyMatch(e -> e.type()==EssenceType.HERBA), "Distillation gives no Herba for " + item);
         c.complete();
     }
 

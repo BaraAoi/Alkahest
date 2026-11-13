@@ -49,8 +49,10 @@ assert spirit_cloth == cloth, 'Spiritweave must not generate free Spiritus on re
 assert by_id['alkahest:stable_material']['status'] == 'manual'
 assert composition(by_id['alkahest:stable_material']) == {kind:8 for kind in ('ignis','aqua','terra','aer','ordo','perditio')}
 assert composition(by_id['minecraft:cobweb']) == {'motus':2,'ordo':1}
-# String is a separate item; its composition was not requested to change.
-assert composition(by_id['minecraft:string']) == {'herba':1,'ordo':1}
+# String and both cloths use Motus instead of Herba. Soul cloth still contains Spiritus.
+assert composition(by_id['minecraft:string']) == {'motus':1,'ordo':1}
+assert composition(by_id['alkahest:cloth']) == {'motus':4,'ordo':4}
+assert composition(by_id['alkahest:spirit_cloth']) == {'motus':4,'ordo':4,'spiritus':3}
 for name in required:
     assert name in by_id and by_id[name]['status'] != 'missing', f'Missing composition for {name}'
 missing = [row for row in rows if row['status'] == 'missing']

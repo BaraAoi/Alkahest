@@ -166,7 +166,8 @@ public final class ItemEssenceMap {
         e(Items.TORCH, s(IGNIS, 1), s(LUX, 1)),
         e(Items.CACTUS, s(HERBA, 2), s(AQUA, 1)),
         e(Items.SLIME_BALL, s(AQUA, 2), s(HERBA, 1)),
-        e(Items.STRING, s(HERBA, 1), s(ORDO, 1)),
+        // Spider silk keeps its ordered structure, but Motus replaces plant Herba.
+        e(Items.STRING, s(MOTUS, 1), s(ORDO, 1)),
         // Spider web is animal silk: motion and ordered structure, not plant essence.
         e(Items.COBWEB, s(MOTUS, 2), s(ORDO, 1)),
         e(Items.FERMENTED_SPIDER_EYE, s(VITIUM, 4), s(MORTUUS, 2)),
