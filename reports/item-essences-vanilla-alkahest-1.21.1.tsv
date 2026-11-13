@@ -84,7 +84,7 @@ alkahest:stabilizer_core	block	recipe	ignis=1,aqua=1,terra=16,aer=1,ordo=19,perd
 alkahest:stabilizer_crest	block	recipe	ordo=10,metallum=4,lux=2
 alkahest:stabilizer_receiver	block	recipe	terra=2,ordo=1,metallum=16,potentia=4
 alkahest:stabilizing_reagent	item	recipe	aqua=1,ordo=10,herba=1,lux=4
-alkahest:stable_material	item	recipe	ignis=18,aqua=14,terra=34,aer=13,ordo=58,perditio=13,herba=1,metallum=13,lux=24,potentia=2
+alkahest:stable_material	item	manual	ignis=8,aqua=8,terra=8,aer=8,ordo=8,perditio=8
 alkahest:transmutator_chamber	block	recipe	aqua=1,terra=2,ordo=11,metallum=9,lux=2,potentia=3
 alkahest:transmutator_core	block	recipe	ordo=13,metallum=16,potentia=12
 alkahest:transmutator_crown	block	recipe	ordo=17,metallum=9,lux=6,potentia=3
@@ -339,7 +339,7 @@ minecraft:cobblestone	block	manual	terra=2,perditio=1
 minecraft:cobblestone_slab	block	recipe	terra=1,perditio=1
 minecraft:cobblestone_stairs	block	recipe	terra=3,perditio=2
 minecraft:cobblestone_wall	block	recipe	terra=2,perditio=1
-minecraft:cobweb	block	manual	herba=2,ordo=1
+minecraft:cobweb	block	manual	motus=2,ordo=1
 minecraft:cocoa_beans	block	manual	herba=2,aqua=1
 minecraft:cod	item	manual	herba=2,aqua=2
 minecraft:cod_bucket	item	manual	metallum=18,terra=6,aqua=3
