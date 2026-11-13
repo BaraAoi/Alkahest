@@ -26,7 +26,9 @@ import java.util.Map;
 public final class ModItems {
     public static final Item ALCHEMICAL_JOURNAL = item("alchemical_journal", new AlchemicalJournalItem(new Item.Settings().maxCount(1)));
     public static final Item ALCHEMISTS_MONOCLE = item("alchemists_monocle", new TrinketItem(new Item.Settings().maxCount(1)));
+    // Keep iron_chain's ID and recipe for old worlds: it is the necklace blank.
     public static final Item IRON_CHAIN = item("iron_chain", new Item(new Item.Settings()));
+    public static final Item ANKLET_BLANK = item("anklet_blank", new Item(new Item.Settings()));
     public static final Item SALT = item("salt", new Item(new Item.Settings()));
     public static final Item PURIFIED_WATER = item("purified_water", new Item(new Item.Settings()));
     public static final Item HERBAL_PASTE = item("herbal_paste", new Item(new Item.Settings()));
@@ -87,6 +89,7 @@ public final class ModItems {
                 entries.add(ALKAHEST_VIAL);
                 entries.add(ALKAHEST_AMULET);
                 entries.add(IRON_CHAIN);
+                entries.add(ANKLET_BLANK);
                 entries.add(PHILOSOPHERS_STONE);
                 entries.add(SALT); entries.add(PURIFIED_WATER); entries.add(HERBAL_PASTE);
                 entries.add(FIRE_DUST); entries.add(CAUSTIC_SLIME); entries.add(NAPALM); entries.add(ACID_BOMB);

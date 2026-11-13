@@ -77,6 +77,28 @@ public class PracticalResearchGameTests implements FabricGameTest {
     }
 
     @GameTest(templateName = EMPTY_STRUCTURE)
+    public void ankletBlankCraftsSeparatelyFromNecklace(TestContext c) {
+        var world=c.getWorld(); var manager=world.getServer().getRecipeManager();
+        ItemStack chain=new ItemStack(net.minecraft.item.Items.CHAIN);
+        ItemStack nugget=new ItemStack(net.minecraft.item.Items.IRON_NUGGET);
+        for (var items : java.util.List.of(java.util.List.of(chain,nugget,nugget,ItemStack.EMPTY),
+                                           java.util.List.of(nugget,ItemStack.EMPTY,chain,nugget))) {
+            var input=net.minecraft.recipe.input.CraftingRecipeInput.create(2,2,items);
+            var result=manager.getFirstMatch(net.minecraft.recipe.RecipeType.CRAFTING,input,world);
+            c.assertTrue(result.isPresent() && result.get().value().craft(input,world.getRegistryManager()).isOf(ModItems.ANKLET_BLANK),
+                "Chain and two nuggets craft the anklet in any arrangement");
+            c.assertTrue(result.get().value().craft(input,world.getRegistryManager()).getCount()==1, "One blank per craft");
+        }
+        var wrong=net.minecraft.recipe.input.CraftingRecipeInput.create(2,1,java.util.List.of(chain,nugget));
+        var result=manager.getFirstMatch(net.minecraft.recipe.RecipeType.CRAFTING,wrong,world);
+        c.assertFalse(result.isPresent() && result.get().value().craft(wrong,world.getRegistryManager()).isOf(ModItems.ANKLET_BLANK),
+            "One nugget is not enough");
+        c.assertTrue(ModItems.IRON_CHAIN != ModItems.ANKLET_BLANK, "Necklace and anklet are separate persistent items");
+        c.assertFalse(net.alkahest.essence.ItemEssenceMap.get(new ItemStack(ModItems.ANKLET_BLANK),world).isEmpty(), "Anklet has a calculated composition");
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
     public void earlyGoldAndDiamondAreRememberedAcrossReload(TestContext c) {
         var player = c.createMockCreativeServerPlayerInWorld();
         for (var step : PracticalResearchPlan.STEPS) for (String kind : new String[]{"observed", "completed"}) {

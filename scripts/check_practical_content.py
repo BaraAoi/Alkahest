@@ -154,7 +154,7 @@ for kind, base in material_inputs.items():
     assert sum(1 for x,y,a in pixels if a >= 200) >= 20, f'{kind} needs broad vein highlights'
     assert all((a == 255) == (mask[y][x] == 'X') for x,y,a in pixels), f'{kind} must fully use essence colours while preserving the source shape'
 
-# The plain necklace is a shapeless workbench material, not a replacement amulet.
+# Both blanks are crafting materials, not replacements for the wearable amulet.
 chain_recipe=json.loads((data/'recipe/iron_chain.json').read_text())
 assert chain_recipe == {'type':'minecraft:crafting_shapeless', 'ingredients':[{'item':'minecraft:iron_ingot'}, {'item':'minecraft:chain'}], 'result':{'id':'alkahest:iron_chain','count':1}}
 chain_texture=assets/'textures/item/iron_chain.png'
@@ -162,7 +162,7 @@ original=chain_texture.read_bytes()
 assert original[:8] == b'\x89PNG\r\n\x1a\n' and struct.unpack('>IIBB',original[16:26]) == (32,32,8,6)
 subprocess.run(['python3','scripts/make_iron_chain.py'],check=True)
 assert original == chain_texture.read_bytes()
-# The centre remains open and the necklace has distinct steel shades and open link holes.
+# The socket is truly transparent and the cord is subtle; preserve the 32-pixel proportions.
 pos, packed = 8, bytearray()
 while pos < len(original):
     n=struct.unpack_from('>I',original,pos)[0]
@@ -173,7 +173,8 @@ while pos < len(original):
 raw=zlib.decompress(packed)
 assert len(raw)==32*(1+32*4)
 def rgba(x,y): return tuple(raw[y*129+1+x*4:y*129+1+x*4+4])
-assert rgba(16,16)[3] == 0, 'necklace must have a transparent centre'
+assert all(rgba(x,y)[3] == 0 for y in range(21,26) for x in range(14,19)), 'socket must be empty'
+assert 0 < rgba(5,6)[3] < 200, 'the cord should be faint'
 assert len({rgba(x,y) for y in range(32) for x in range(32) if rgba(x,y)[3]}) >= 4
 assert sum(rgba(x,y)[3] > 0 for y in range(32) for x in range(32)) < 500
 assert json.loads((assets/'models/item/iron_chain.json').read_text())['textures']['layer0']=='alkahest:item/iron_chain'
@@ -182,3 +183,14 @@ for lang in ('ru_ru','en_us'):
     assert translation.get('item.alkahest.iron_chain')
     assert translation['tooltip.alkahest.infused_material'].count('%s') == 2
 assert 'INFUSION_COST = 8' in source
+
+anklet_recipe=json.loads((data/'recipe/anklet_blank.json').read_text())
+assert anklet_recipe == {'type':'minecraft:crafting_shapeless', 'ingredients':[{'item':'minecraft:chain'}, {'item':'minecraft:iron_nugget'}, {'item':'minecraft:iron_nugget'}], 'result':{'id':'alkahest:anklet_blank','count':1}}
+anklet=assets/'textures/item/anklet_blank.png'
+old=anklet.read_bytes()
+assert struct.unpack('>IIBB', old[16:26]) == (32,32,8,6)
+subprocess.run(['python3','scripts/make_anklet_blank.py'],check=True)
+assert old == anklet.read_bytes()
+assert json.loads((assets/'models/item/anklet_blank.json').read_text())['textures']['layer0']=='alkahest:item/anklet_blank'
+for lang in ('ru_ru','en_us'):
+    assert json.loads((assets/f'lang/{lang}.json').read_text()).get('item.alkahest.anklet_blank')
