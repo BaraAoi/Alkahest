@@ -79,7 +79,7 @@ alkahest:purified_water	item	recipe	ignis=2,aqua=1,terra=2,ordo=1
 alkahest:purifying_flask	item	recipe	ignis=2,aqua=5,terra=2,ordo=2,herba=2
 alkahest:salt	item	manual	ordo=2,terra=1,aqua=1
 alkahest:salt_ore	block	manual	terra=3,ordo=2,aqua=1
-alkahest:spirit_cloth	item	manual	ordo=4,motus=4,spiritus=3
+alkahest:spirit_cloth	item	manual	motus=2,ordo=2,spiritus=5
 alkahest:stabilizer_core	block	recipe	ignis=1,aqua=1,terra=16,aer=1,ordo=19,perditio=3,herba=3,metallum=28,lux=10,motus=6,potentia=7,vitium=2,spiritus=6
 alkahest:stabilizer_crest	block	recipe	ordo=10,metallum=4,lux=2
 alkahest:stabilizer_receiver	block	recipe	terra=2,ordo=1,metallum=16,potentia=4
