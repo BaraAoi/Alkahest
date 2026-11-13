@@ -427,6 +427,23 @@ public class PracticalResearchGameTests implements FabricGameTest {
     }
 
     @GameTest(templateName = EMPTY_STRUCTURE)
+    public void ringTierResearchUsesBranchingParents(TestContext c) {
+        var player=c.createMockCreativeServerPlayerInWorld(); clearResearch(player);
+        PracticalResearchStorage.observe(player,new ItemStack(ModItems.RING_TERRA_2));
+        PracticalResearchStorage.observe(player,new ItemStack(ModItems.RING_SHIELD_3));
+        c.assertTrue((PracticalResearchStorage.completed(player)&(PracticalResearchPlan.RING_TERRA_2|PracticalResearchPlan.RING_SHIELD_3))==0,"Early upgrades wait for prior research");
+        grant(player,"ring_terra"); grant(player,"stable_material"); grant(player,"ring_shield_2");
+        PracticalResearchStorage.migrate(player);
+        c.assertTrue((PracticalResearchStorage.completed(player)&PracticalResearchPlan.RING_TERRA_2)!=0
+            && (PracticalResearchStorage.completed(player)&PracticalResearchPlan.RING_SHIELD_3)!=0,"Earlier observations complete on their own branches");
+        PracticalResearchStorage.observe(player,new ItemStack(ModItems.RING_SHIELD_4));
+        c.assertTrue((PracticalResearchStorage.completed(player)&PracticalResearchPlan.RING_SHIELD_4)!=0,"Shield IV follows shield III");
+        player.getAdvancementTracker().save(); player.getAdvancementTracker().reload(c.getWorld().getServer().getAdvancementLoader());
+        c.assertTrue((PracticalResearchStorage.completed(player)&PracticalResearchPlan.RING_SHIELD_4)!=0,"Tier research survives reload");
+        clearResearch(player); c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
     public void journalPayloadPreservesResearchBitsAboveThirtyOne(TestContext c) {
         long flags = PracticalResearchPlan.CAULDRON | PracticalResearchPlan.FIRE_DUST | PracticalResearchPlan.CAUSTIC_SLIME | PracticalResearchPlan.AER_WAND | PracticalResearchPlan.NECKLACE_BLANK | PracticalResearchPlan.ANKLET_BLANK
             | PracticalResearchPlan.CLOTH | PracticalResearchPlan.SPIRIT_CLOTH | PracticalResearchPlan.STABILIZING_REAGENT | PracticalResearchPlan.STABLE_MATERIAL | PracticalResearchPlan.RING_BLANK | PracticalResearchPlan.RING_TERRA | PracticalResearchPlan.RING_SHIELD | PracticalResearchPlan.RING_TERRA_2 | PracticalResearchPlan.RING_SHIELD_2 | PracticalResearchPlan.RING_SHIELD_3 | PracticalResearchPlan.RING_SHIELD_4;

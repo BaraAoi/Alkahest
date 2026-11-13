@@ -152,4 +152,27 @@ public class ShieldRingGameTests implements FabricGameTest {
         c.complete();
     }
 
+    @GameTest(templateName=EMPTY_STRUCTURE)
+    public void upgradedRingsChargeAndCannotStackShields(TestContext c) {
+        var player=c.createMockPlayer(GameMode.SURVIVAL);
+        var inv=TrinketsApi.getTrinketComponent(player).orElseThrow().getInventory().get("hand").get("ring");
+        c.setBlockState(3,3,3,ModBlocks.JAR);
+        var jar=(JarBlockEntity)c.getWorld().getBlockEntity(c.getAbsolutePos(new BlockPos(3,3,3)));
+        var variants=List.of(ModItems.RING_SHIELD,ModItems.RING_SHIELD_2,ModItems.RING_SHIELD_3,ModItems.RING_SHIELD_4);
+        for (var item:variants) {
+            var stack=new ItemStack(item); inv.setStack(0,stack);
+            jar.setContents(new JarContentsComponent(List.of(new EssenceStack(EssenceType.ORDO,1,.5f))));
+            c.assertTrue(EssenceChargerBlockEntity.chargeFirst(jar,player)==EssenceType.ORDO && stack.get(ModDataComponents.ESSENCE_CHARGE)==1,
+                "Every shield tier can be recharged while equipped");
+            if(inv.size()>1) c.assertFalse(dev.emi.trinkets.TrinketSlot.canInsert(new ItemStack(ModItems.RING_SHIELD_2),new SlotReference(inv,1),player),
+                "Shield rings of different tiers cannot be stacked");
+            inv.setStack(0,ItemStack.EMPTY);
+        }
+        var terra=new ItemStack(ModItems.RING_TERRA_2); inv.setStack(0,terra);
+        jar.setContents(new JarContentsComponent(List.of(new EssenceStack(EssenceType.TERRA,1,.5f))));
+        c.assertTrue(EssenceChargerBlockEntity.chargeFirst(jar,player)==EssenceType.TERRA && terra.get(ModDataComponents.ESSENCE_CHARGE)==1,
+            "Upgraded Terra ring charges from Terra while worn");
+        c.complete();
+    }
+
 }
