@@ -47,7 +47,7 @@ import java.util.Map;
  * coloured sparks instead of travelling through pipes.
  */
 public class TransmutatorCoreBlockEntity extends BlockEntity implements SidedInventory, NamedScreenHandlerFactory {
-    public static final int DURATION = 100;
+    public static final int DURATION = TransmutationRecipe.DEFAULT_DURATION;
     public static final int INPUT = 0, AMULET = 1, OUTPUT = 2;
     private static final int[] INPUT_SLOTS = {INPUT}, OUTPUT_SLOTS = {OUTPUT};
 
@@ -57,6 +57,7 @@ public class TransmutatorCoreBlockEntity extends BlockEntity implements SidedInv
     private final DefaultedList<ItemStack> stacks = DefaultedList.ofSize(3, ItemStack.EMPTY);
     private int progress;
     private boolean awake;
+    private boolean ironDiamond;
     // Client-only visual interpolation timestamp. It is not saved and never changes real progress.
     private long clientProgressSyncTick = Long.MIN_VALUE;
 
@@ -64,13 +65,14 @@ public class TransmutatorCoreBlockEntity extends BlockEntity implements SidedInv
         @Override public int get(int index) {
             return switch (index) {
                 case 0 -> progress;
-                case 1 -> DURATION;
+                case 1 -> duration();
                 case 2 -> status();
+                case 3 -> ironDiamond ? 1 : 0;
                 default -> 0;
             };
         }
         @Override public void set(int index, int value) { if (index == 0) progress = value; }
-        @Override public int size() { return 3; }
+        @Override public int size() { return 4; }
     };
 
     public TransmutatorCoreBlockEntity(BlockPos pos, BlockState state) {
@@ -81,9 +83,21 @@ public class TransmutatorCoreBlockEntity extends BlockEntity implements SidedInv
     public float visualProgress(float tickDelta, boolean working) {
         float elapsed = world == null || !world.isClient || clientProgressSyncTick == Long.MIN_VALUE
             ? 0 : Math.max(0, world.getTime() - clientProgressSyncTick + tickDelta);
-        return TransmutatorAnimation.estimateProgress(progress, elapsed, working, DURATION);
+        return TransmutatorAnimation.estimateProgress(progress, elapsed, working, duration());
     }
-    public TransmutationRecipe recipe() { return TransmutationRecipe.find(stacks.get(INPUT)); }
+    public TransmutationRecipe recipe() { return TransmutationRecipe.find(stacks.get(INPUT), ironDiamond); }
+    public int duration() { TransmutationRecipe recipe = recipe(); return recipe == null ? DURATION : recipe.duration(); }
+    public boolean ironDiamond() { return ironDiamond; }
+
+    /** Switches only for iron, without paying or clearing stored output and pillar buffers. */
+    public boolean toggleIronRecipe() {
+        if (world == null || world.isClient || !stacks.get(INPUT).isOf(net.minecraft.item.Items.IRON_INGOT)) return false;
+        ironDiamond = !ironDiamond;
+        progress = 0;
+        markDirty();
+        syncAnimationProgress();
+        return true;
+    }
 
     public int status() {
         if (!formed()) return STATUS_UNFORMED;
@@ -92,7 +106,7 @@ public class TransmutatorCoreBlockEntity extends BlockEntity implements SidedInv
         if (recipe == null) return STATUS_IDLE;
         if (!hasAmulet()) return STATUS_NO_AMULET;
         if (!canStoreOutput(recipe.output())) return STATUS_BLOCKED;
-        if (progress >= DURATION) return STATUS_NO_ESSENCE;
+        if (progress >= recipe.duration()) return STATUS_NO_ESSENCE;
         return STATUS_WORKING;
     }
 
@@ -203,9 +217,9 @@ public class TransmutatorCoreBlockEntity extends BlockEntity implements SidedInv
             setWorking(world, pos, false);
             return;
         }
-        if (self.progress < DURATION) {
+        if (self.progress < recipe.duration()) {
             int before = self.progress;
-            self.progress = Math.min(DURATION, before + MidasTouchEffect.progressStep(
+            self.progress = Math.min(recipe.duration(), before + MidasTouchEffect.progressStep(
                 MidasTouchEffect.nearby(world, pos), world.getTime()));
             // A boosted step can cross a multiple of ten without landing on it.
             if (!self.verticalFormed() && before / 10 != self.progress / 10) self.prefill(world, recipe.cost());
@@ -233,7 +247,7 @@ public class TransmutatorCoreBlockEntity extends BlockEntity implements SidedInv
     /** Network may pay only a fully ready, awakened compact machine. */
     public Map<EssenceType, Integer> pipeCost() {
         TransmutationRecipe recipe = recipe();
-        if (!verticalFormed() || !awake || progress < DURATION || recipe == null || !hasAmulet() || !canStoreOutput(recipe.output()))
+        if (!verticalFormed() || !awake || recipe == null || progress < recipe.duration() || !hasAmulet() || !canStoreOutput(recipe.output()))
             return Map.of();
         return recipe.cost();
     }
@@ -421,6 +435,7 @@ public class TransmutatorCoreBlockEntity extends BlockEntity implements SidedInv
         stacks.set(slot, stack);
         markDirty();
         if (slot == AMULET) syncAmulet();
+        else if (slot == INPUT) syncAnimationProgress();
     }
     @Override public void clear() { stacks.clear(); progress = 0; markDirty(); syncAmulet(); }
 
@@ -471,6 +486,7 @@ public class TransmutatorCoreBlockEntity extends BlockEntity implements SidedInv
         Inventories.writeNbt(nbt, stacks, registries);
         nbt.putInt("Progress", progress);
         nbt.putBoolean("VerticalAwake", awake);
+        if (ironDiamond) nbt.putBoolean("IronDiamond", true);
     }
 
     @Override protected void readNbt(NbtCompound nbt, RegistryWrapper.WrapperLookup registries) {
@@ -479,6 +495,7 @@ public class TransmutatorCoreBlockEntity extends BlockEntity implements SidedInv
         Inventories.readNbt(nbt, stacks, registries);
         progress = nbt.getInt("Progress");
         awake = nbt.getBoolean("VerticalAwake");
+        ironDiamond = nbt.getBoolean("IronDiamond");
         if (world != null && world.isClient) clientProgressSyncTick = world.getTime();
     }
 
@@ -495,8 +512,9 @@ public class TransmutatorCoreBlockEntity extends BlockEntity implements SidedInv
     }
 
     /** Only used by the screen to show what the current input needs. */
-    public static List<EssenceStack> requirements(ItemStack input) {
-        TransmutationRecipe recipe = TransmutationRecipe.find(input);
+    public static List<EssenceStack> requirements(ItemStack input) { return requirements(input, false); }
+    public static List<EssenceStack> requirements(ItemStack input, boolean ironDiamond) {
+        TransmutationRecipe recipe = TransmutationRecipe.find(input, ironDiamond);
         if (recipe == null) return List.of();
         List<EssenceStack> list = new ArrayList<>();
         for (Map.Entry<EssenceType, Integer> entry : recipe.cost().entrySet()) {

@@ -48,6 +48,7 @@ reserved={
     'amulet bar':rect(51,104,76,2),
     'progress track':rect(53,49,45,9),
     'progress percent':rect(54,63,43,9),
+    'recipe selector':rect(value('CHOICE_X'),value('CHOICE_Y'),value('CHOICE_WIDTH'),value('CHOICE_HEIGHT')),
     'cost heading':rect(146,32,76,9),
     'status':rect(18,113,200,9),
     'inventory label':rect(13,130,206,9),
@@ -66,7 +67,7 @@ assert 'amuletCharge()' in screen and 'ESSENCE_CHARGE' in screen and 'AlkahestAm
 assert 'for (EssenceStack e : handler.requirements())' in screen, 'full cost tooltip must remain available'
 for locale in ('ru_ru','en_us'):
     translations=json.loads(Path(f'src/main/resources/assets/alkahest/lang/{locale}.json').read_text())
-    for field in ('input','output','amulet','cost','progress','amulet_hint','amulet_charge','no_recipe','ready','working','no_essence','blocked','unformed','no_amulet','dormant'):
+    for field in ('input','output','amulet','cost','progress','amulet_hint','amulet_charge','no_recipe','iron_choice','iron_choice_hint','ready','working','no_essence','blocked','unformed','no_amulet','dormant'):
         assert translations.get('screen.alkahest.transmutator.'+field), f'{locale} missing {field}'
     assert '%s' in translations['screen.alkahest.transmutator.progress']
     assert translations['screen.alkahest.transmutator.amulet_charge'].count('%s') == 2

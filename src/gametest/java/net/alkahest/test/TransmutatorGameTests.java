@@ -72,6 +72,86 @@ public class TransmutatorGameTests implements FabricGameTest {
         for (int i = 0; i < ticks; i++) TransmutatorCoreBlockEntity.tick(world, corePos, core);
     }
 
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void ironRecipeChoiceIsValidatedSavedAndResetsProgress(TestContext c) {
+        BlockPos pos=tower(c,CY+32); var world=c.getWorld();
+        var core=(TransmutatorCoreBlockEntity)world.getBlockEntity(pos); core.wake();
+        var player=c.createMockPlayer(net.minecraft.world.GameMode.SURVIVAL);
+        player.setPosition(pos.getX()+.5,pos.getY()+.5,pos.getZ()+.5);
+        var h=(net.alkahest.screen.TransmutatorScreenHandler)core.createMenu(1,player.getInventory(),player);
+        c.assertFalse(h.onButtonClick(player,0),"No input cannot change the iron recipe");
+        core.setStack(0,new ItemStack(Items.IRON_INGOT,2));
+        core.setStack(1,new ItemStack(ModItems.ALKAHEST_AMULET));
+        c.assertTrue(core.recipe().output().isOf(Items.GOLD_INGOT) && core.duration()==100,"Old worlds default to iron to gold");
+        run(world,pos,40); c.assertTrue(core.progress()==40,"Old recipe makes progress");
+        c.assertFalse(h.onButtonClick(player,17),"Unknown button IDs are rejected");
+        var spectator=c.createMockPlayer(net.minecraft.world.GameMode.SPECTATOR);
+        spectator.setPosition(pos.getX()+.5,pos.getY()+.5,pos.getZ()+.5);
+        c.assertFalse(h.onButtonClick(spectator,0),"Spectators cannot change the recipe");
+        c.assertTrue(h.onButtonClick(player,0) && core.progress()==0,"Changing the recipe resets progress");
+        c.assertTrue(core.ironDiamond() && core.recipe().output().isOf(Items.DIAMOND) && core.duration()==2400,"Alternate recipe is selected");
+        c.assertTrue(h.maxProgress()==2400 && h.ironDiamond() && h.selectedOutput().isOf(Items.DIAMOND)
+            && h.requirements().size()==4,"GUI properties and cost match the selected recipe");
+        var restored=new TransmutatorCoreBlockEntity(pos,core.getCachedState());
+        restored.readComponentlessNbt(core.createNbt(world.getRegistryManager()),world.getRegistryManager());
+        c.assertTrue(restored.ironDiamond() && restored.recipe().output().isOf(Items.DIAMOND),"Choice and input survive save/load");
+        core.setStack(2,new ItemStack(Items.GOLD_INGOT));
+        c.assertTrue(core.status()==TransmutatorCoreBlockEntity.STATUS_BLOCKED,"Existing gold blocks diamond output without loss");
+        c.assertTrue(h.onButtonClick(player,0) && core.getStack(2).isOf(Items.GOLD_INGOT),"Switching back preserves the output");
+        c.assertTrue(core.recipe().output().isOf(Items.GOLD_INGOT) && core.duration()==100,"Original gold recipe remains available");
+        core.setStack(0,new ItemStack(Items.COPPER_INGOT));
+        c.assertFalse(h.onButtonClick(player,0),"Other inputs cannot toggle this choice");
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void diamondTowerWaitsForFullPriceThenPaysExactlyOnce(TestContext c) {
+        int y=CY+80; BlockPos pos=tower(c,y); var world=c.getWorld();
+        var core=(TransmutatorCoreBlockEntity)world.getBlockEntity(pos); core.wake();
+        core.setStack(0,new ItemStack(Items.IRON_INGOT,2));
+        ItemStack amulet=new ItemStack(ModItems.ALKAHEST_AMULET); amulet.set(ModDataComponents.ESSENCE_CHARGE,4);
+        core.setStack(1,amulet); c.assertTrue(core.toggleIronRecipe(),"Select diamond");
+        c.setBlockState(CX+1,y,CZ,ModBlocks.ALCHEMY_PIPE); c.setBlockState(CX+2,y,CZ,ModBlocks.ALCHEMY_PIPE);
+        BlockPos pipe=c.getAbsolutePos(new BlockPos(CX+1,y,CZ));
+        var terra=jar(c,CX+1,y,CZ-1,EssenceType.TERRA,50);
+        var lux=jar(c,CX+1,y,CZ+1,EssenceType.LUX,30);
+        var ordo=jar(c,CX+2,y,CZ-1,EssenceType.ORDO,25);
+        var metal=jar(c,CX+2,y,CZ+1,EssenceType.METALLUM,14);
+        run(world,pos,101);
+        c.assertTrue(core.progress()==101 && core.pipeCost().isEmpty(),"Diamond is not ready at the old 100-tick duration");
+        var saved=core.createNbt(world.getRegistryManager()); saved.putInt("Progress",2399);
+        core.readComponentlessNbt(saved,world.getRegistryManager()); run(world,pos,1);
+        net.alkahest.block.entity.AlchemyPipeBlockEntity.pulse(world,pipe);
+        c.assertTrue(core.progress()==2400 && terra.contents().total()==50 && lux.contents().total()==30
+            && ordo.contents().total()==25 && metal.contents().total()==14,"Missing one unit prevents any partial payment");
+        c.assertTrue(core.getStack(0).getCount()==2 && core.getStack(2).isEmpty()
+            && core.getStack(1).get(ModDataComponents.ESSENCE_CHARGE)==4,"Waiting preserves inputs, output and charge");
+        metal.setContents(of(EssenceType.METALLUM,15));
+        net.alkahest.block.entity.AlchemyPipeBlockEntity.pulse(world,pipe);
+        c.assertTrue(terra.contents().total()==0 && lux.contents().total()==0 && ordo.contents().total()==0 && metal.contents().total()==0,
+            "All four full costs are consumed atomically");
+        c.assertTrue(core.getStack(2).isOf(Items.DIAMOND) && core.getStack(2).getCount()==1
+            && core.getStack(0).getCount()==1 && core.getStack(1).get(ModDataComponents.ESSENCE_CHARGE)==3 && core.progress()==0,
+            "One iron and one charge produce exactly one diamond");
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void legacyPlatformCanPayDiamondRecipe(TestContext c) {
+        int y=CY+128; var pos=isolatedPlatform(c,y); var world=c.getWorld();
+        var core=(TransmutatorCoreBlockEntity)world.getBlockEntity(pos);
+        core.setStack(0,new ItemStack(Items.IRON_INGOT)); core.setStack(1,new ItemStack(ModItems.ALKAHEST_AMULET));
+        c.assertTrue(core.toggleIronRecipe(),"Select diamond");
+        var terra=jar(c,1,y,1,EssenceType.TERRA,50); var lux=jar(c,5,y,1,EssenceType.LUX,30);
+        var ordo=jar(c,1,y,5,EssenceType.ORDO,25); var metal=jar(c,5,y,5,EssenceType.METALLUM,15);
+        var saved=core.createNbt(world.getRegistryManager()); saved.putInt("Progress",2400);
+        core.readComponentlessNbt(saved,world.getRegistryManager()); run(world,pos,1);
+        c.assertTrue(core.getStack(2).isOf(Items.DIAMOND),"Old platform can pay the full 120-unit recipe");
+        c.assertTrue(terra.contents().total()+lux.contents().total()+ordo.contents().total()+metal.contents().total()==0,
+            "Exact price was consumed from the jars");
+        c.complete();
+    }
+
     @GameTest(templateName = EMPTY_STRUCTURE, tickLimit = 80)
     public void actualHoppersFeedInputAndTakeOnlyOutput(TestContext c) {
         c.setBlockState(CX, CY, CZ, ModBlocks.TRANSMUTATOR_CORE);
@@ -379,7 +459,7 @@ public class TransmutatorGameTests implements FabricGameTest {
         var core = (TransmutatorCoreBlockEntity)c.getWorld().getBlockEntity(pos);
         var player = c.createMockPlayer(net.minecraft.world.GameMode.SURVIVAL);
         var h = new net.alkahest.screen.TransmutatorScreenHandler(1, player.getInventory(), core,
-            new net.minecraft.screen.ArrayPropertyDelegate(3));
+            new net.minecraft.screen.ArrayPropertyDelegate(4));
         c.assertTrue(h.getSlot(0).x == 26 && h.getSlot(0).y == 45 && h.getSlot(1).x == 26 && h.getSlot(1).y == 78,
             "Input and amulet hitboxes align with their new frames");
         c.assertTrue(h.getSlot(2).x == 102 && h.getSlot(2).y == 45 && h.getSlot(3).x == 37 && h.getSlot(3).y == 143 && h.getSlot(30).y == 201,

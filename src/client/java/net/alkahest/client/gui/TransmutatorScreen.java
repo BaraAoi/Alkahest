@@ -82,6 +82,13 @@ public final class TransmutatorScreen extends HandledScreen<TransmutatorScreenHa
             c.fill(bx + 1, by + 1, bx + 1 + fill, by + TRACK_HEIGHT - 1, 0xFFB6843F);
             c.fill(bx + 1, by + 1, bx + 1 + fill, by + 3, 0xFFFFD68A);
         }
+        if (handler.canSelectIronRecipe()) {
+            int sx = x + TransmutatorScreenHandler.CHOICE_X, sy = y + TransmutatorScreenHandler.CHOICE_Y;
+            boolean hovered = inside(mouseX, mouseY, TransmutatorScreenHandler.CHOICE_X, TransmutatorScreenHandler.CHOICE_Y,
+                TransmutatorScreenHandler.CHOICE_WIDTH, TransmutatorScreenHandler.CHOICE_HEIGHT);
+            c.fill(sx, sy, sx + TransmutatorScreenHandler.CHOICE_WIDTH, sy + TransmutatorScreenHandler.CHOICE_HEIGHT,
+                hovered ? 0xFF5A4930 : 0xFF24312D);
+        }
         // Separate from the operation progress: the installed amulet's actual Ordo charge.
         c.fill(x + 51, y + 104, x + 127, y + 106, 0xFF35413C);
         int charge = amuletCharge();
@@ -101,6 +108,11 @@ public final class TransmutatorScreen extends HandledScreen<TransmutatorScreenHa
         String chargeText = charge < 0 ? "—" : charge + " / " + AlkahestAmuletItem.MAX_CHARGE;
         c.drawTextWithShadow(textRenderer, fit(chargeText, 76), 51, 94, charge == 0 ? 0xFFFFAB89 : 0xFFE9D5A8);
         c.drawCenteredTextWithShadow(textRenderer, percent() + "%", 75, 63, 0xFFF1D49C);
+        if (handler.canSelectIronRecipe()) {
+            String choice = "↻ " + handler.selectedOutput().getName().getString();
+            c.drawTextWithShadow(textRenderer, fit(choice, TransmutatorScreenHandler.CHOICE_WIDTH - 2),
+                TransmutatorScreenHandler.CHOICE_X + 1, TransmutatorScreenHandler.CHOICE_Y, 0xFFF1D49C);
+        }
         c.drawTextWithShadow(textRenderer, fit(Text.translatable("screen.alkahest.transmutator.cost").getString(), 76), COST_X, 32, 0xFFF2D5A0);
         int statusColor = switch (handler.status()) {
             case 1 -> 0xFF94DFCC;
@@ -128,12 +140,27 @@ public final class TransmutatorScreen extends HandledScreen<TransmutatorScreenHa
         return mouseX >= x + sx && mouseX < x + sx + width && mouseY >= y + sy && mouseY < y + sy + height;
     }
 
+    @Override public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (button == 0 && handler.canSelectIronRecipe()
+            && mouseX >= x + TransmutatorScreenHandler.CHOICE_X && mouseX < x + TransmutatorScreenHandler.CHOICE_X + TransmutatorScreenHandler.CHOICE_WIDTH
+            && mouseY >= y + TransmutatorScreenHandler.CHOICE_Y && mouseY < y + TransmutatorScreenHandler.CHOICE_Y + TransmutatorScreenHandler.CHOICE_HEIGHT
+            && client != null && client.interactionManager != null) {
+            client.interactionManager.clickButton(handler.syncId, 0);
+            return true;
+        }
+        return super.mouseClicked(mouseX, mouseY, button);
+    }
+
     @Override public void render(DrawContext c, int mouseX, int mouseY, float delta) {
         renderBackground(c, mouseX, mouseY, delta);
         super.render(c, mouseX, mouseY, delta);
         drawMouseoverTooltip(c, mouseX, mouseY);
         if (inside(mouseX, mouseY, TRACK_X, TRACK_Y, TRACK_WIDTH, TRACK_HEIGHT)) {
             c.drawTooltip(textRenderer, Text.translatable("screen.alkahest.transmutator.progress", percent()), mouseX, mouseY);
+        } else if (handler.canSelectIronRecipe() && inside(mouseX, mouseY, TransmutatorScreenHandler.CHOICE_X, TransmutatorScreenHandler.CHOICE_Y,
+            TransmutatorScreenHandler.CHOICE_WIDTH, TransmutatorScreenHandler.CHOICE_HEIGHT)) {
+            c.drawTooltip(textRenderer, List.of(Text.translatable("screen.alkahest.transmutator.iron_choice", handler.selectedOutput().getName()),
+                Text.translatable("screen.alkahest.transmutator.iron_choice_hint")), mouseX, mouseY);
         } else if (inside(mouseX, mouseY, 10, 109, 216, 16)) {
             c.drawTooltip(textRenderer, statusText(), mouseX, mouseY);
         } else if (inside(mouseX, mouseY, 139, 43, 86, 59) && !handler.requirements().isEmpty()) {

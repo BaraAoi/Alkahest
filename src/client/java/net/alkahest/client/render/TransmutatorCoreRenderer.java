@@ -47,7 +47,7 @@ public final class TransmutatorCoreRenderer implements BlockEntityRenderer<Trans
         boolean working = awakened && core.getCachedState().get(TransmutatorCoreBlock.WORKING);
         var animation = motion.computeIfAbsent(core, ignored -> new TransmutatorAnimation.Motion());
         animation.update(world.getTime() + (double)tickDelta, core.visualProgress(tickDelta, working),
-            TransmutatorCoreBlockEntity.DURATION, working);
+            core.duration(), working);
         if (awakened) {
             // Request the consumer once and do not switch render layers while writing its quads.
             VertexConsumer buffer = vertices.getBuffer(RenderLayer.getEntitySolid(METAL));

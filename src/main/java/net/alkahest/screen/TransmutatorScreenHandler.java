@@ -24,18 +24,19 @@ public class TransmutatorScreenHandler extends ScreenHandler {
     public static final int AMULET_X = 26, AMULET_Y = 78;
     public static final int OUTPUT_X = 102, OUTPUT_Y = 45;
     public static final int PLAYER_X = 37, PLAYER_Y = 143, HOTBAR_Y = 201;
+    public static final int CHOICE_X = 54, CHOICE_Y = 72, CHOICE_WIDTH = 74, CHOICE_HEIGHT = 9;
 
     private final Inventory inventory;
     private final PropertyDelegate properties;
 
     public TransmutatorScreenHandler(int syncId, PlayerInventory playerInventory) {
-        this(syncId, playerInventory, new SimpleInventory(3), new ArrayPropertyDelegate(3));
+        this(syncId, playerInventory, new SimpleInventory(3), new ArrayPropertyDelegate(4));
     }
 
     public TransmutatorScreenHandler(int syncId, PlayerInventory playerInventory, Inventory inventory, PropertyDelegate properties) {
         super(ModScreenHandlers.TRANSMUTATOR, syncId);
         checkSize(inventory, 3);
-        checkDataCount(properties, 3);
+        checkDataCount(properties, 4);
         this.inventory = inventory;
         this.properties = properties;
         inventory.onOpen(playerInventory.player);
@@ -60,10 +61,21 @@ public class TransmutatorScreenHandler extends ScreenHandler {
     public int progress() { return properties.get(0); }
     public int maxProgress() { return Math.max(1, properties.get(1)); }
     public int status() { return properties.get(2); }
+    public boolean ironDiamond() { return properties.get(3) != 0; }
+    public boolean canSelectIronRecipe() { return inventory.getStack(TransmutatorCoreBlockEntity.INPUT).isOf(net.minecraft.item.Items.IRON_INGOT); }
+    public ItemStack selectedOutput() {
+        var recipe = TransmutationRecipe.find(inventory.getStack(TransmutatorCoreBlockEntity.INPUT), ironDiamond());
+        return recipe == null ? ItemStack.EMPTY : recipe.output();
+    }
+
+    @Override public boolean onButtonClick(PlayerEntity player, int id) {
+        if (id != 0 || player.isSpectator() || !canUse(player) || !(inventory instanceof TransmutatorCoreBlockEntity core)) return false;
+        return core.toggleIronRecipe();
+    }
 
     /** The cost of the current input, computed on both sides from the recipe table. */
     public java.util.List<net.alkahest.essence.EssenceStack> requirements() {
-        return TransmutatorCoreBlockEntity.requirements(inventory.getStack(TransmutatorCoreBlockEntity.INPUT));
+        return TransmutatorCoreBlockEntity.requirements(inventory.getStack(TransmutatorCoreBlockEntity.INPUT), ironDiamond());
     }
 
     @Override public boolean canUse(PlayerEntity player) { return inventory.canPlayerUse(player); }
