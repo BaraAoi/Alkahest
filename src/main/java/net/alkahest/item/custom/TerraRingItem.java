@@ -39,6 +39,5 @@ public final class TerraRingItem extends TrinketItem {
     }
     @Override public boolean isItemBarVisible(ItemStack stack) { return stack.getOrDefault(ModDataComponents.ESSENCE_CHARGE, 0) < MAX_CHARGE; }
     @Override public int getItemBarStep(ItemStack stack) { return Math.round(stack.getOrDefault(ModDataComponents.ESSENCE_CHARGE, 0) * 13f / MAX_CHARGE); }
-    @Override public int getItemBarColor(ItemStack stack) { return EssenceColors.TERRA; }
-    private static final class EssenceColors { private static final int TERRA = 0x8B5A2B; }
+    @Override public int getItemBarColor(ItemStack stack) { return net.alkahest.essence.EssenceType.TERRA.color(); }
 }

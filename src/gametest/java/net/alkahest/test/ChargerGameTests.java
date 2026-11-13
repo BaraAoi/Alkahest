@@ -257,7 +257,8 @@ public class ChargerGameTests implements FabricGameTest {
 
     @GameTest(templateName=EMPTY_STRUCTURE)
     public void equippedRingSlotAndCharger(TestContext c) {
-        var player=c.createMockCreativeServerPlayerInWorld();
+        var player=c.createMockPlayer(GameMode.SURVIVAL);
+        player.setPosition(c.getAbsolutePos(new BlockPos(3,4,3)).getX()+.5, c.getAbsolutePos(new BlockPos(3,4,3)).getY(), c.getAbsolutePos(new BlockPos(3,4,3)).getZ()+.5);
         var component=dev.emi.trinkets.api.TrinketsApi.getTrinketComponent(player).orElseThrow();
         var ringInventory=component.getInventory().get("hand").get("ring");
         c.assertTrue(ringInventory.size()>=1,"Trinkets exposes the ring slot");
@@ -270,11 +271,11 @@ public class ChargerGameTests implements FabricGameTest {
         var jar=(JarBlockEntity)c.getWorld().getBlockEntity(c.getAbsolutePos(new BlockPos(3,3,3)));
         jar.setContents(new JarContentsComponent(List.of(new EssenceStack(EssenceType.TERRA,2,.5f))));
         c.assertTrue(EssenceChargerBlockEntity.chargeFirst(jar,player)==EssenceType.TERRA && ring.get(ModDataComponents.ESSENCE_CHARGE)==1,"Equipped ring is charged");
-        // Mock players are not network-ticked: playerTick invokes the living-entity tick path.
-        player.playerTick();
+        // The mock is not world-scheduled, so tick its living-entity path directly.
+        player.tick();
         c.assertTrue(player.hasStatusEffect(net.minecraft.entity.effect.StatusEffects.HASTE) && ring.getOrDefault(ModDataComponents.RING_ACTIVE_TICKS,0)>0,"Trinkets ticks the equipped ring: effect="+player.hasStatusEffect(net.minecraft.entity.effect.StatusEffects.HASTE)+" active="+ring.getOrDefault(ModDataComponents.RING_ACTIVE_TICKS,0)+" alive="+player.isAlive()+" removed="+player.isRemoved()+" spectator="+player.isSpectator()+" registered="+dev.emi.trinkets.api.TrinketsApi.getTrinket(ring.getItem()).getClass().getName());
         ringInventory.setStack(0,ItemStack.EMPTY);
-        for (int i=0;i<8;i++) player.playerTick();
+        for (int i=0;i<8;i++) player.tick();
         c.assertFalse(player.hasStatusEffect(net.minecraft.entity.effect.StatusEffects.HASTE),"Effect expires after removing the ring");
         c.complete();
     }
