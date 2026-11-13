@@ -42,7 +42,8 @@ public final class JournalScreen extends Screen {
         node(19, 560, -220), node(20, 430, -145), node(21, 430, -80),
         node(22, 290, -15), node(23, 290, -270), node(24, 430, -270), node(25, 430, -220),
         node(26, 300, 280), node(29, 430, 280), node(30, 295, 80),
-        node(31, 290, -210), node(32, 290, -145), node(33, 290, -80), node(35, 560, 125)
+        node(31, 290, -210), node(32, 290, -145), node(33, 290, -80), node(35, 560, 125),
+        node(36, 1100, 155), node(37, 1240, 155)
     };
     private final long researchFlags;
     private Node selected;
@@ -181,7 +182,8 @@ public final class JournalScreen extends Screen {
     private int diagramCount(Node node) {
         int crafts = JournalCraftingRecipes.BY_RESEARCH.getOrDefault(node.key(), List.of()).size();
         if (crafts > 0) return crafts;
-        if (node.key().equals("alkahest") || node.key().equals("napalm") || node.key().equals("acid")) return 1;
+        if (node.key().equals("alkahest") || node.key().equals("napalm") || node.key().equals("acid")
+            || node.key().equals("transmutation_gold") || node.key().equals("transmutation_diamond")) return 1;
         return (int)net.alkahest.recipe.CauldronEssenceRecipes.all().stream().filter(r -> r.result() == node.icon().getItem()).count();
     }
     private void renderDetails(DrawContext c, Node node, int mouseX, int mouseY) {
@@ -259,6 +261,23 @@ public final class JournalScreen extends Screen {
             return;
         }
         if (page != 0) return;
+        if (node.key().equals("transmutation_gold") || node.key().equals("transmutation_diamond")) {
+            boolean diamond = node.key().equals("transmutation_diamond");
+            var recipe = TransmutationRecipe.find(new ItemStack(Items.IRON_INGOT), diamond);
+            diagramHeader(c, Text.translatable("screen.alkahest.journal.transmutations"), center, y, width);
+            diagramItem(c, mouseX, mouseY, recipe.input(), x + 5, y + 17);
+            c.drawText(textRenderer, "→", x + 29, y + 21, 0xFF594633, false);
+            diagramItem(c, mouseX, mouseY, recipe.output(), x + 48, y + 17);
+            int yy = y + 39;
+            for (var entry : recipe.cost().entrySet()) {
+                String line = entry.getKey().displayName() + " × " + entry.getValue();
+                c.drawText(textRenderer, textRenderer.trimToWidth(line, Math.max(20, width)), pageLeft, yy, 0xFF594633, false);
+                yy += 10;
+            }
+            wrapped(c, Text.translatable("screen.alkahest.journal.transmutation_time", recipe.duration() / 20),
+                pageLeft, yy + 2, Math.max(20, width), 0xFF594633);
+            return;
+        }
         if (node.key().equals("napalm") || node.key().equals("acid")) {
             diagramHeader(c, Text.translatable("screen.alkahest.journal.inventory_mix"), center, y, width);
             diagramItem(c, mouseX, mouseY, new ItemStack(node.key().equals("napalm") ? ModItems.FIRE_DUST : ModItems.CAUSTIC_SLIME), x, y + 18);
@@ -407,7 +426,8 @@ public final class JournalScreen extends Screen {
                 c.drawTooltip(textRenderer, List.of(
                     Text.translatable("screen.alkahest.journal.transmutation_input", recipe.input().getName()),
                     Text.translatable("screen.alkahest.journal.transmutation_output", recipe.output().getName()),
-                    Text.translatable("screen.alkahest.matrix.index_cost").copy().append(": " + MatrixRecipe.price(recipe.cost()))
+                    Text.translatable("screen.alkahest.matrix.index_cost").copy().append(": " + MatrixRecipe.price(recipe.cost())),
+                    Text.translatable("screen.alkahest.journal.transmutation_time", recipe.duration() / 20)
                 ), mouseX, mouseY); return;
             }
         }

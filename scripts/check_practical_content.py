@@ -11,8 +11,8 @@ assets = root / 'src/main/resources/assets/alkahest'
 data = root / 'src/main/resources/data/alkahest'
 java = root / 'src/main/java/net/alkahest'
 plan = (java / 'research/PracticalResearchPlan.java').read_text()
-steps = re.findall(r'new Step\("([a-z0-9_]+)", "alkahest:([a-z0-9_]+)",', plan)
-assert len(steps) == 36 and len(set(steps)) == len(steps), 'all 36 steps must exist and be unique'
+steps = re.findall(r'new Step\("([a-z0-9_]+)", "([a-z0-9_]+:[a-z0-9_]+)",', plan)
+assert len(steps) == 38 and len(set(steps)) == len(steps), 'all 38 steps must exist and be unique'
 # Every visible node must exist exactly once and have its own clickable area.
 journal = (root / 'src/client/java/net/alkahest/client/gui/JournalScreen.java').read_text()
 nodes = [(int(i), int(x), int(y)) for i, x, y in re.findall(r'node\((\d+),\s*(-?\d+),\s*(-?\d+)\)', journal)]
@@ -94,3 +94,10 @@ render = journal.split('    @Override public void render(', 1)[1].split('    pri
 assert 'context.drawTexture(BACKGROUND, 0, 0, width, height' in render
 assert 'context.drawTexture(BOOK, 0, 0, width, height' not in render
 assert render.index('renderMap(') < render.index('context.getMatrices().translate(0, 0, 300)') < render.index('context.drawTexture(BOOK, book.x()') < render.index('renderDetails(') < render.index('context.getMatrices().pop()')
+
+# Transmutation branch uses the actual recipe registry rather than duplicated diagram prices.
+assert 'node(36, 1100, 155)' in journal and 'node(37, 1240, 155)' in journal
+assert 'TransmutationRecipe.find(new ItemStack(Items.IRON_INGOT), diamond)' in journal
+assert 'entry.getKey().displayName()' in journal and 'recipe.duration() / 20' in journal
+for name in ('transmutation_gold', 'transmutation_diamond'):
+    assert f'"{name}"' in plan

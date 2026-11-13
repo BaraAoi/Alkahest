@@ -29,7 +29,8 @@ public final class PracticalResearchPlan {
     public static final long HERBAL_PASTE = 1L << 31, FIRE_DUST = 1L << 32, CAUSTIC_SLIME = 1L << 33;
     public static final long AER_WAND = 1L << 34;
     public static final long WATER_FAUCET = 1L << 35;
-    public static final long ALL = (1L << 36) - 1;
+    public static final long TRANSMUTATION_GOLD = 1L << 36, TRANSMUTATION_DIAMOND = 1L << 37;
+    public static final long ALL = (1L << 38) - 1;
     public static final long ASSEMBLIES = STABILIZER | TIER2 | TRANSMUTATOR | MATRIX;
     // Keep obsolete flags for saves, but group the component entries into their machine.
     public static final long HIDDEN_COMPONENTS = BELLOWS | CHAMBER | CROWN | PEDESTAL | STABILIZER_RECEIVER | STABILIZER_CREST | AER_WAND;
@@ -71,7 +72,9 @@ public final class PracticalResearchPlan {
         new Step("fire_dust", "alkahest:fire_dust", FIRE_DUST, WATER, 0),
         new Step("caustic_slime", "alkahest:caustic_slime", CAUSTIC_SLIME, WATER, 0),
         new Step("aer_wand", "alkahest:crystal_wand_aer", AER_WAND, MONOCLE, 0),
-        new Step("water_faucet", "alkahest:water_faucet", WATER_FAUCET, WATER | DISTILLERY, 0)
+        new Step("water_faucet", "alkahest:water_faucet", WATER_FAUCET, WATER | DISTILLERY, 0),
+        new Step("transmutation_gold", "minecraft:gold_ingot", TRANSMUTATION_GOLD, TRANSMUTATOR, 0),
+        new Step("transmutation_diamond", "minecraft:diamond", TRANSMUTATION_DIAMOND, TRANSMUTATION_GOLD, 0)
     );
 
     public static Step forItem(String itemId) {

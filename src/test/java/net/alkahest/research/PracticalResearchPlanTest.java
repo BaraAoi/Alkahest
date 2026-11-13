@@ -81,6 +81,19 @@ class PracticalResearchPlanTest {
         assertEquals(WATER | DISTILLERY, forItem("alkahest:water_faucet").parents());
     }
 
+    @Test void transmutationResearchRemembersEarlyVanillaItemsAndKeepsOldProgress() {
+        assertEquals(TRANSMUTATION_GOLD, forItem("minecraft:gold_ingot").bit());
+        assertEquals(TRANSMUTATION_DIAMOND, forItem("minecraft:diamond").bit());
+        assertEquals(TRANSMUTATOR, forItem("minecraft:gold_ingot").parents());
+        assertEquals(TRANSMUTATION_GOLD, forItem("minecraft:diamond").parents());
+        long observations = TRANSMUTATION_GOLD | TRANSMUTATION_DIAMOND;
+        assertEquals(0, resolve(0, observations, 0));
+        assertEquals(TRANSMUTATOR | observations, resolve(TRANSMUTATOR, observations, 0));
+        long old = (1L << 36) - 1;
+        assertEquals(old, resolve(old, 0, 0));
+        assertEquals(TRANSMUTATION_DIAMOND, resolve(TRANSMUTATION_DIAMOND, 0, 0));
+    }
+
     @Test void graphIsAcyclicAndIdsAreUnique() {
         var ids = new HashSet<String>();
         var items = new HashSet<String>();

@@ -40,6 +40,35 @@ public class PracticalResearchGameTests implements FabricGameTest {
     }
 
     @GameTest(templateName = EMPTY_STRUCTURE)
+    public void earlyGoldAndDiamondAreRememberedAcrossReload(TestContext c) {
+        var player = c.createMockCreativeServerPlayerInWorld();
+        for (var step : PracticalResearchPlan.STEPS) for (String kind : new String[]{"observed", "completed"}) {
+            var entry = player.getServer().getAdvancementLoader().get(Alkahest.id("practice/" + kind + "_" + step.id()));
+            c.assertTrue(entry != null, "Every research flag exists");
+            player.getAdvancementTracker().revokeCriterion(entry, "done");
+        }
+        var gold = new ItemStack(net.minecraft.item.Items.GOLD_INGOT);
+        var diamond = new ItemStack(net.minecraft.item.Items.DIAMOND);
+        PracticalResearchStorage.observe(player, diamond);
+        PracticalResearchStorage.observe(player, gold);
+        long both = PracticalResearchPlan.TRANSMUTATION_GOLD | PracticalResearchPlan.TRANSMUTATION_DIAMOND;
+        c.assertTrue((PracticalResearchStorage.observed(player) & both) == both, "Both early observations are saved");
+        c.assertTrue((PracticalResearchStorage.completed(player) & both) == 0, "Neither child completes without the machine");
+        player.getAdvancementTracker().save();
+        player.getAdvancementTracker().reload(c.getWorld().getServer().getAdvancementLoader());
+        c.assertTrue((PracticalResearchStorage.observed(player) & both) == both, "Observations survive reload");
+        var parent = player.getServer().getAdvancementLoader().get(Alkahest.id("practice/completed_transmutator"));
+        player.getAdvancementTracker().grantCriterion(parent, "done");
+        PracticalResearchStorage.migrate(player);
+        c.assertTrue((PracticalResearchStorage.completed(player) & both) == both, "Both branches settle when parent is ready");
+        c.assertTrue(gold.getCount() == 1 && diamond.getCount() == 1, "Observation does not consume items");
+        player.getAdvancementTracker().save();
+        player.getAdvancementTracker().reload(c.getWorld().getServer().getAdvancementLoader());
+        c.assertTrue((PracticalResearchStorage.completed(player) & both) == both, "Completions survive reload");
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
     public void completedLegacyResearchMigratesWithoutDeletingOldState(TestContext c) {
         var player = c.createMockCreativeServerPlayerInWorld();
         for (String name : new String[]{"stabilizer", "tier2", "transmutator", "matrix"})
