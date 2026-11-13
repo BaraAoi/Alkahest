@@ -413,6 +413,20 @@ public class PracticalResearchGameTests implements FabricGameTest {
     }
 
     @GameTest(templateName = EMPTY_STRUCTURE)
+    public void shieldResearchRecordsEarlyItems(TestContext c) {
+        var player=c.createMockCreativeServerPlayerInWorld(); clearResearch(player);
+        PracticalResearchStorage.observe(player,new ItemStack(ModItems.RING_SHIELD));
+        c.assertTrue((PracticalResearchStorage.observed(player)&PracticalResearchPlan.RING_SHIELD)!=0
+            && (PracticalResearchStorage.completed(player)&PracticalResearchPlan.RING_SHIELD)==0,"An early ring is observed but waits for parents");
+        grant(player,"cauldron"); grant(player,"ring_blank"); grant(player,"stable_material"); grant(player,"matrix");
+        PracticalResearchStorage.migrate(player);
+        c.assertTrue((PracticalResearchStorage.completed(player)&PracticalResearchPlan.RING_SHIELD)!=0,"Obtaining the ring completes research after parents");
+        player.getAdvancementTracker().save(); player.getAdvancementTracker().reload(c.getWorld().getServer().getAdvancementLoader());
+        c.assertTrue((PracticalResearchStorage.completed(player)&PracticalResearchPlan.RING_SHIELD)!=0,"Research survives reload");
+        clearResearch(player); c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
     public void journalPayloadPreservesResearchBitsAboveThirtyOne(TestContext c) {
         long flags = PracticalResearchPlan.CAULDRON | PracticalResearchPlan.FIRE_DUST | PracticalResearchPlan.CAUSTIC_SLIME | PracticalResearchPlan.AER_WAND | PracticalResearchPlan.NECKLACE_BLANK | PracticalResearchPlan.ANKLET_BLANK
             | PracticalResearchPlan.CLOTH | PracticalResearchPlan.SPIRIT_CLOTH | PracticalResearchPlan.STABILIZING_REAGENT | PracticalResearchPlan.STABLE_MATERIAL | PracticalResearchPlan.RING_BLANK | PracticalResearchPlan.RING_TERRA | PracticalResearchPlan.RING_SHIELD;

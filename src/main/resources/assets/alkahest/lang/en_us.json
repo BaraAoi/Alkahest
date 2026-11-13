@@ -315,7 +315,7 @@
   "screen.alkahest.practice.stabilizing_reagent.title": "Stabilizing Reagent",
   "screen.alkahest.practice.stabilizing_reagent.recipe": "Combine binding salt, an Ordo crystal, an amethyst shard and a gold nugget in any arrangement. The reagent holds the six essences together and acts as the Matrix base for Pure Effir.",
   "screen.alkahest.practice.stable_material.title": "Pure Effir",
-  "screen.alkahest.practice.stable_material.recipe": "Place a stabilizing reagent in the Matrix. On six separate pedestals put one infused material each: Ignis, Aqua, Terra, Aer, Ordo and Perditio. Nearby jars must contain 8 of each primal essence: Ignis, Aqua, Terra, Aer, Ordo and Perditio. Start with the amulet. All materials and the reagent are consumed. Soul Cloth is not used; the result is a material for future recipes.",
+  "screen.alkahest.practice.stable_material.recipe": "Place a stabilizing reagent in the Matrix. On six separate pedestals put one infused material each: Ignis, Aqua, Terra, Aer, Ordo and Perditio. Nearby jars must contain 8 of each primal essence: Ignis, Aqua, Terra, Aer, Ordo and Perditio. Start with the amulet. All materials and the reagent are consumed. Soul Cloth is not used; Pure Effir is used to craft rings.",
   "screen.alkahest.journal.matrix_focus_hint": "Start with an amulet.",
   "item.alkahest.ring_blank": "Ring Blank",
   "item.alkahest.ring_terra": "Terra Ring",

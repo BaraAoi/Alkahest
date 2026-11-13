@@ -87,4 +87,30 @@ public class ShieldRingGameTests implements FabricGameTest {
             "Ring absorbs six, then vanilla absorption absorbs the rest without resetting it");
         c.complete();
     }
+    @GameTest(templateName=EMPTY_STRUCTURE)
+    public void armorMitigationPrecedesShieldAndAdminKillBypassesIt(TestContext c) {
+        var player=c.createMockPlayer(GameMode.SURVIVAL);
+        var inv=TrinketsApi.getTrinketComponent(player).orElseThrow().getInventory().get("hand").get("ring");
+        var ring=new ItemStack(ModItems.RING_SHIELD); inv.setStack(0,ring); ring.set(ModDataComponents.SHIELD_POINTS,6f);
+        player.equipStack(net.minecraft.entity.EquipmentSlot.CHEST,new ItemStack(net.minecraft.item.Items.IRON_CHESTPLATE));
+        player.addStatusEffect(new StatusEffectInstance(StatusEffects.RESISTANCE,600,0));
+        c.assertTrue(player.damage(c.getWorld().getDamageSources().generic(),4f),"A real mitigated hit lands");
+        c.assertTrue(ShieldRingItem.points(ring)>2f && ShieldRingItem.points(ring)<6f && player.getHealth()==player.getMaxHealth(),
+            "Armor and resistance reduce the hit before it reaches the shield");
+        float old=ShieldRingItem.points(ring);
+        player.damage(c.getWorld().getDamageSources().genericKill(),1000f);
+        c.assertTrue(ShieldRingItem.points(ring)==old,"Administrative/void-style bypass damage cannot be blocked by the ring");
+        c.complete();
+    }
+    @GameTest(templateName=EMPTY_STRUCTURE)
+    public void shieldPayloadPreservesFractionAndCharge(TestContext c) {
+        var buf=new net.minecraft.network.RegistryByteBuf(io.netty.buffer.Unpooled.buffer(),c.getWorld().getRegistryManager());
+        try {
+            net.alkahest.network.ShieldPayload.CODEC.encode(buf,new net.alkahest.network.ShieldPayload(2.75f,42));
+            var decoded=net.alkahest.network.ShieldPayload.CODEC.decode(buf);
+            c.assertTrue(decoded.points()==2.75f && decoded.charge()==42,"HUD payload preserves shield and charge");
+        } finally { buf.release(); }
+        c.complete();
+    }
+
 }
