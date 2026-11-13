@@ -1,6 +1,7 @@
 package net.alkahest.transmutation;
 
 import net.alkahest.essence.EssenceType;
+import net.alkahest.registry.ModItems;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 
@@ -36,7 +37,14 @@ public record TransmutationRecipe(String id, ItemStack input, ItemStack output, 
         recipe("netherrack_to_nether_brick", Items.NETHERRACK, Items.NETHER_BRICK, EssenceType.IGNIS, 2, EssenceType.TERRA, 1),
         recipe("soul_sand_to_soul_soil", Items.SOUL_SAND, Items.SOUL_SOIL, EssenceType.MORTUUS, 2, EssenceType.PERDITIO, 1),
         recipe("iron_nugget_to_gold_nugget", Items.IRON_NUGGET, Items.GOLD_NUGGET, EssenceType.METALLUM, 1, EssenceType.ORDO, 1),
-        IRON_DIAMOND
+        IRON_DIAMOND,
+        // Infusion retains the material and binds three units of one primal essence.
+        recipe("blaze_powder_to_infused_ignis", Items.BLAZE_POWDER, ModItems.INFUSED_MATERIALS.get(EssenceType.IGNIS), EssenceType.IGNIS, 3),
+        recipe("lapis_lazuli_to_infused_aqua", Items.LAPIS_LAZULI, ModItems.INFUSED_MATERIALS.get(EssenceType.AQUA), EssenceType.AQUA, 3),
+        recipe("iron_ingot_to_infused_terra", Items.IRON_INGOT, ModItems.INFUSED_MATERIALS.get(EssenceType.TERRA), EssenceType.TERRA, 3),
+        recipe("diamond_to_infused_aer", Items.DIAMOND, ModItems.INFUSED_MATERIALS.get(EssenceType.AER), EssenceType.AER, 3),
+        recipe("gold_ingot_to_infused_ordo", Items.GOLD_INGOT, ModItems.INFUSED_MATERIALS.get(EssenceType.ORDO), EssenceType.ORDO, 3),
+        recipe("amethyst_shard_to_infused_perditio", Items.AMETHYST_SHARD, ModItems.INFUSED_MATERIALS.get(EssenceType.PERDITIO), EssenceType.PERDITIO, 3)
     );
 
     static {

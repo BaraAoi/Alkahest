@@ -114,3 +114,21 @@ for lang in ('ru_ru', 'en_us'):
     strings = json.loads((assets / f'lang/{lang}.json').read_text())
     for key in ('search', 'search_hint', 'search_hint_more', 'search_empty'):
         assert strings.get(f'screen.alkahest.journal.{key}')
+
+# Six elemental materials retain vanilla silhouettes and have reproducible runic overlays.
+material_inputs = {'ignis':'blaze_powder','aqua':'lapis_lazuli','terra':'iron_ingot',
+                   'aer':'diamond','ordo':'gold_ingot','perditio':'amethyst_shard'}
+overlays = {}
+for kind, base in material_inputs.items():
+    texture = assets / f'textures/item/infused_{kind}.png'
+    overlays[kind] = texture.read_bytes()
+    assert overlays[kind][:8] == b'\x89PNG\r\n\x1a\n'
+    assert struct.unpack('>IIBB', overlays[kind][16:26]) == (16,16,8,6)
+    model = json.loads((assets / f'models/item/infused_{kind}.json').read_text())
+    assert model['textures'] == {'layer0':f'minecraft:item/{base}', 'layer1':f'alkahest:item/infused_{kind}'}
+    for lang in ('ru_ru','en_us'):
+        assert json.loads((assets / f'lang/{lang}.json').read_text()).get(f'item.alkahest.infused_{kind}')
+    assert f'{base}_to_infused_{kind}' in source
+subprocess.run(['python3', 'scripts/make_infused_materials.py'], check=True)
+assert all((assets / f'textures/item/infused_{k}.png').read_bytes() == v for k,v in overlays.items())
+assert len(set(overlays.values())) == 6

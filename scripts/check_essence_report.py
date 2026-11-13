@@ -29,6 +29,16 @@ required = ['minecraft:blast_furnace', 'alkahest:distillery_tier2', 'minecraft:c
     'minecraft:brown_dye', 'minecraft:brown_wool', 'minecraft:black_concrete', 'minecraft:shulker_box',
     'minecraft:exposed_copper', 'minecraft:weathered_copper', 'minecraft:oxidized_copper',
     'minecraft:waxed_oxidized_copper', 'minecraft:netherite_ingot', 'alkahest:purifying_flask']
+# Infused materials must preserve the exact source and their paid three primal units.
+for kind, source in {'ignis':'blaze_powder', 'aqua':'lapis_lazuli', 'terra':'iron_ingot',
+                     'aer':'diamond', 'ordo':'gold_ingot', 'perditio':'amethyst_shard'}.items():
+    output = by_id['alkahest:infused_' + kind]
+    assert output['status'] == 'manual'
+    def composition(row):
+        return {k: int(v) for k,v in (entry.split('=') for entry in row['essences'].split(','))}
+    expected = composition(by_id['minecraft:' + source])
+    expected[kind] = expected.get(kind, 0) + 3
+    assert composition(output) == expected, f'Infusion composition mismatch: {kind}'
 for name in required:
     assert name in by_id and by_id[name]['status'] != 'missing', f'Missing composition for {name}'
 missing = [row for row in rows if row['status'] == 'missing']

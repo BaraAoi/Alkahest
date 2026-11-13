@@ -248,7 +248,7 @@ public class TransmutatorGameTests implements FabricGameTest {
             public void onPropertyUpdate(net.minecraft.screen.ScreenHandler handler,int id,int value) { client.setProperty(id,value); }
         });
         server.sendContentUpdates();
-        c.assertTrue(client.recipeCount()==2 && client.needsRecipeChoice() && client.selectedOutput().isEmpty() && client.requirements().isEmpty(), "Unselected state syncs to client");
+        c.assertTrue(client.recipeCount()==3 && client.needsRecipeChoice() && client.selectedOutput().isEmpty() && client.requirements().isEmpty(), "Unselected state syncs to client");
         c.assertTrue(server.onButtonClick(player,2), "Player selects diamond directly"); server.sendContentUpdates();
         c.assertTrue(client.selectedRecipeIndex()==1 && client.selectedOutput().isOf(Items.DIAMOND) && client.requirements().size()==4, "Choice and price sync to open screen");
         c.assertTrue(server.onButtonClick(player,0), "Player requests another choice"); server.sendContentUpdates();
@@ -350,12 +350,69 @@ public class TransmutatorGameTests implements FabricGameTest {
     }
 
     @GameTest(templateName = EMPTY_STRUCTURE)
+    public void allPrimalInfusionsWorkAndConserveEssences(TestContext c) {
+        int y=CY+80; BlockPos pos=tower(c,y); var world=c.getWorld();
+        var core=(TransmutatorCoreBlockEntity)world.getBlockEntity(pos); core.wake();
+        ItemStack amulet=new ItemStack(ModItems.ALKAHEST_AMULET); amulet.set(ModDataComponents.ESSENCE_CHARGE,10);
+        core.setStack(1,amulet);
+        c.setBlockState(CX+1,y,CZ,ModBlocks.ALCHEMY_PIPE);
+        BlockPos pipe=c.getAbsolutePos(new BlockPos(CX+1,y,CZ));
+        var types = List.of(EssenceType.IGNIS, EssenceType.AQUA, EssenceType.TERRA, EssenceType.AER, EssenceType.ORDO, EssenceType.PERDITIO);
+        var sources = List.of(Items.BLAZE_POWDER, Items.LAPIS_LAZULI, Items.IRON_INGOT, Items.DIAMOND, Items.GOLD_INGOT, Items.AMETHYST_SHARD);
+        var supply=jar(c,CX+1,y,CZ-1,EssenceType.IGNIS,3);
+        for (int i=0; i<types.size(); i++) {
+            var type=types.get(i); var source=sources.get(i); var output=ModItems.INFUSED_MATERIALS.get(type);
+            c.assertTrue(output != null && output != source, "Every primal type has a distinct registered output: " + type);
+            core.setStack(0,new ItemStack(source));
+            var choices=net.alkahest.transmutation.TransmutationRecipe.choices(core.getStack(0));
+            int index=-1;
+            for (int j=0; j<choices.size(); j++) if (choices.get(j).output().isOf(output)) index=j;
+            c.assertTrue(index>=0, "Infusion is in the normal transmutator catalogue: " + type);
+            if (choices.size()>1) {
+                c.assertTrue(core.recipe()==null && core.selectRecipe(index), "Ambiguous source needs direct selection: " + type);
+            }
+            c.assertTrue(core.recipe().cost().equals(java.util.Map.of(type,3)) && core.recipe().duration()==100, "Infusion costs exactly three matching essence and five seconds: " + type);
+            var expected=new java.util.EnumMap<EssenceType,Integer>(EssenceType.class);
+            for (var e : net.alkahest.essence.ItemEssenceMap.base(new ItemStack(source))) expected.put(e.type(),e.amount());
+            expected.merge(type,3,Integer::sum);
+            var actual=new java.util.EnumMap<EssenceType,Integer>(EssenceType.class);
+            for (var e : net.alkahest.essence.ItemEssenceMap.get(new ItemStack(output),world)) actual.put(e.type(),e.amount());
+            c.assertTrue(actual.equals(expected), "Dissolving returns source plus paid essence, no extra recipe depth bonus: " + type);
+            supply.setContents(of(type,2)); run(world,pos,100);
+            net.alkahest.block.entity.AlchemyPipeBlockEntity.pulse(world,pipe);
+            c.assertTrue(core.getStack(2).isEmpty() && core.getStack(0).isOf(source) && supply.contents().total()==2
+                && core.getStack(1).get(ModDataComponents.ESSENCE_CHARGE)==10-i, "Insufficient essence never charges or consumes input: " + type);
+            supply.setContents(of(type,3)); net.alkahest.block.entity.AlchemyPipeBlockEntity.pulse(world,pipe);
+            c.assertTrue(core.getStack(2).isOf(output) && core.getStack(0).isEmpty() && supply.contents().total()==0
+                && core.getStack(1).get(ModDataComponents.ESSENCE_CHARGE)==9-i, "A real pipe pulse consumes exactly one item, charge and cost: " + type);
+            core.removeStack(2);
+        }
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void ironThirdChoiceAppearsAndCanBeSelected(TestContext c) {
+        BlockPos pos=tower(c,CY+32); var world=c.getWorld();
+        var core=(TransmutatorCoreBlockEntity)world.getBlockEntity(pos); core.wake();
+        var player=c.createMockPlayer(net.minecraft.world.GameMode.SURVIVAL);
+        player.setPosition(pos.getX()+.5,pos.getY()+.5,pos.getZ()+.5);
+        var h=(net.alkahest.screen.TransmutatorScreenHandler)core.createMenu(1,player.getInventory(),player);
+        core.setStack(0,new ItemStack(Items.IRON_INGOT));
+        c.assertTrue(h.recipeCount()==3 && h.needsRecipeChoice(), "Three iron results are exposed immediately");
+        c.assertTrue(h.onButtonClick(player,3) && h.selectedOutput().isOf(ModItems.INFUSED_MATERIALS.get(EssenceType.TERRA)), "Third visible choice selects Terra-infused iron on the server");
+        c.assertTrue(h.requirements().size()==1 && h.requirements().getFirst().amount()==3, "Selected cost is displayed");
+        var saved=core.createNbt(world.getRegistryManager()); core.readComponentlessNbt(saved,world.getRegistryManager());
+        c.assertTrue(core.recipe().output().isOf(ModItems.INFUSED_MATERIALS.get(EssenceType.TERRA)), "Infused choice survives reload with loaded stack");
+        c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
     public void diamondPricesAreBalancedAndAllRecipesGotCheaper(TestContext c) {
         var recipes = net.alkahest.transmutation.TransmutationRecipe.all();
         int[] oldTotals = {2, 2, 4, 3, 5, 5, 6, 8, 4, 2, 3, 3, 5, 7, 5, 5, 3, 120};
         int[] newTotals = {1, 1, 2, 2, 4, 3, 3, 6, 2, 1, 2, 2, 3, 4, 3, 3, 2, 4};
-        c.assertTrue(recipes.size() == oldTotals.length, "All 18 recipes still exist");
-        for (int i = 0; i < recipes.size(); i++) {
+        c.assertTrue(recipes.size() == oldTotals.length + 6, "All 18 old recipes and six infusions exist");
+        for (int i = 0; i < oldTotals.length; i++) {
             var recipe = recipes.get(i);
             int cost = net.alkahest.transmutation.TransmutationRecipe.cost(recipe.cost());
             c.assertTrue(cost == newTotals[i] && cost < oldTotals[i], "Each old cost was reduced to the intended price: " + i);

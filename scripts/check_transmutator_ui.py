@@ -81,3 +81,8 @@ for locale in ('ru_ru', 'en_us'):
 
 assert 'handler.needsRecipeChoice()' in screen and 'CHOICES_PER_PAGE' in screen
 assert 'clickButton(handler.syncId, index + 1)' in screen
+
+# The third iron recipe is reachable via the second page, with no overlap with slots.
+assert 'CHOICES_PER_PAGE = 2' in screen and 'pages() > 1' in screen and 'Math.floorMod(page()' in screen
+for r in (rect(146,45,74,18), rect(146,65,74,18), rect(146,87,74,10)):
+    assert inside(r,canvas) and all(not overlap(r,slot) for slot in slots)

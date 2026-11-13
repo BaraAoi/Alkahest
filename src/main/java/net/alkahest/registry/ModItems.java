@@ -45,6 +45,7 @@ public final class ModItems {
     // Temporary creative-only focus: soul charging and the late-game forge are not implemented yet.
     public static final Item PHILOSOPHERS_STONE = item("philosophers_stone", new Item(new Item.Settings().maxCount(1)));
     public static final Item ASH = item("ash", new Item(new Item.Settings()));
+    public static final Map<EssenceType, Item> INFUSED_MATERIALS = infusedMaterials();
     public static final Map<EssenceType, Item> CRYSTALS = crystals();
     public static final Map<EssenceType, Item> WANDS = wands();
     public static final Map<EssenceType, Item> ELEMENTAL_SPAWN_EGGS = elementalSpawnEggs();
@@ -95,6 +96,10 @@ public final class ModItems {
                 }
                 entries.add(CRYSTALLIZATION_POWDER); entries.add(ASH);
                 for (EssenceType type : EssenceType.values()) {
+                    Item infused = INFUSED_MATERIALS.get(type);
+                    if (infused != null) entries.add(infused);
+                }
+                for (EssenceType type : EssenceType.values()) {
                     Item item = CRYSTALS.get(type);
                     if (item != null) entries.add(item);
                     Item wand = WANDS.get(type);
@@ -106,6 +111,15 @@ public final class ModItems {
                 }
                 entries.add(DISSOLVED_SPAWN_EGG);
             }).build());
+
+    private static Map<EssenceType, Item> infusedMaterials() {
+        Map<EssenceType, Item> result = new EnumMap<>(EssenceType.class);
+        for (EssenceType type : EssenceType.values()) {
+            if (type.tier() == EssenceType.Tier.PRIMA)
+                result.put(type, item("infused_" + type.asString(), new Item(new Item.Settings())));
+        }
+        return Map.copyOf(result);
+    }
 
     private static Map<EssenceType, Item> chargedBindingSalts() {
         Map<EssenceType, Item> result = new EnumMap<>(EssenceType.class);

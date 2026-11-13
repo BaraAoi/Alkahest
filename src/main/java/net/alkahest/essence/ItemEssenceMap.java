@@ -205,6 +205,26 @@ public final class ItemEssenceMap {
         for (var entry : net.alkahest.registry.ModItems.CRYSTALS.entrySet()) {
             if (entry.getKey() != VACUUM && stack.isOf(entry.getValue())) return List.of(s(entry.getKey(), 1));
         }
+        // Infused materials preserve the source composition plus exactly the paid essence.
+        // Explicit values avoid the recipe-depth bonus creating essence from a reversible process.
+        for (var entry : net.alkahest.registry.ModItems.INFUSED_MATERIALS.entrySet()) {
+            if (!stack.isOf(entry.getValue())) continue;
+            Item source = switch (entry.getKey()) {
+                case IGNIS -> Items.BLAZE_POWDER;
+                case AQUA -> Items.LAPIS_LAZULI;
+                case TERRA -> Items.IRON_INGOT;
+                case AER -> Items.DIAMOND;
+                case ORDO -> Items.GOLD_INGOT;
+                case PERDITIO -> Items.AMETHYST_SHARD;
+                default -> throw new IllegalStateException("Unexpected infused material: " + entry.getKey());
+            };
+            java.util.EnumMap<EssenceType, Integer> values = new java.util.EnumMap<>(EssenceType.class);
+            for (EssenceStack value : VALUES.get(source)) values.put(value.type(), value.amount());
+            values.merge(entry.getKey(), 3, Integer::sum);
+            List<EssenceStack> result = new java.util.ArrayList<>();
+            values.forEach((type, amount) -> result.add(s(type, amount)));
+            return List.copyOf(result);
+        }
         Identifier itemId = Registries.ITEM.getId(stack.getItem());
         if (itemId.equals(Identifier.of("alkahest", "ash"))) return List.of(s(PERDITIO, 1));
         if (itemId.equals(Identifier.of("alkahest", "philosophers_stone"))) return List.of(s(ORDO, 10), s(SPIRITUS, 10));
