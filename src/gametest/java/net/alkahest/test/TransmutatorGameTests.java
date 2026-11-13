@@ -92,6 +92,16 @@ public class TransmutatorGameTests implements FabricGameTest {
         c.assertTrue(core.ironDiamond() && core.recipe().output().isOf(Items.DIAMOND) && core.duration()==2400,"Alternate recipe is selected");
         c.assertTrue(h.maxProgress()==2400 && h.ironDiamond() && h.selectedOutput().isOf(Items.DIAMOND)
             && h.requirements().size()==4,"GUI properties and cost match the selected recipe");
+        var clientInventory=new net.minecraft.inventory.SimpleInventory(3);
+        clientInventory.setStack(0,new ItemStack(Items.IRON_INGOT));
+        var clientProperties=new net.minecraft.screen.ArrayPropertyDelegate(4);
+        clientProperties.set(1,2400); clientProperties.set(3,1);
+        var clientScreen=new net.alkahest.screen.TransmutatorScreenHandler(2,player.getInventory(),clientInventory,clientProperties);
+        c.assertTrue(clientScreen.selectedOutput().isOf(Items.DIAMOND) && clientScreen.requirements().size()==4
+            && clientScreen.maxProgress()==2400,"Client mirror displays the selected result, price and duration");
+        var rendered=new TransmutatorCoreBlockEntity(pos,core.getCachedState());
+        rendered.readComponentlessNbt(core.toUpdatePacket().getNbt(),world.getRegistryManager());
+        c.assertTrue(rendered.ironDiamond() && rendered.duration()==2400,"Block update sync carries recipe to the renderer");
         var restored=new TransmutatorCoreBlockEntity(pos,core.getCachedState());
         restored.readComponentlessNbt(core.createNbt(world.getRegistryManager()),world.getRegistryManager());
         c.assertTrue(restored.ironDiamond() && restored.recipe().output().isOf(Items.DIAMOND),"Choice and input survive save/load");
