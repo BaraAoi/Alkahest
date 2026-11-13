@@ -150,5 +150,6 @@ for kind, base in material_inputs.items():
     pixels = [(x,y,raw[y*65+1+x*4+3]) for y in range(16) for x in range(16)]
     mask = generator['masks'][base]
     assert all(not a or mask[y][x] == 'X' for x,y,a in pixels), kind
-    assert sum(1 for x,y,a in pixels if a >= 160) >= 12, f'{kind} needs visible veins'
+    assert sum(1 for x,y,a in pixels if a >= 235) >= 15, f'{kind} needs opaque contrasting veins'
+    assert sum(1 for x,y,a in pixels if a >= 200) >= 20, f'{kind} needs broad vein highlights'
     assert sum(1 for x,y,a in pixels if 0 < a < 160) >= 15, f'{kind} needs a blended tint'

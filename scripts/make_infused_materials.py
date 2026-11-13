@@ -23,15 +23,15 @@ masks = {
 }
 # Base texture, translucent tint, vein shadow, vein colour and branching, non-symmetric paths.
 materials = {
-    'ignis': ('blaze_powder', (218,48,5), (151,25,4), (255,95,20), [
+    'ignis': ('blaze_powder', (226,40,4), (128,13,2), (255,63,8), [
         [(2,10),(3,9),(4,10),(5,9),(6,9),(7,8),(8,7)], [(5,9),(6,10),(7,11),(8,11),(9,12),(10,12)], [(9,10),(10,9),(11,9),(12,10)]]),
     'aqua': ('lapis_lazuli', (12,169,207), (8,94,142), (143,246,255), [
         [(8,3),(8,4),(7,5),(7,6),(6,7),(6,8),(5,9),(5,10),(4,11)], [(7,6),(8,7),(9,7),(10,8),(11,8)], [(6,8),(7,9),(7,10),(8,11),(8,12)]]),
     'terra': ('iron_ingot', (145,90,43), (94,55,26), (203,154,82), [
         [(3,6),(4,6),(5,7),(6,7),(7,8),(8,8),(9,7),(10,7),(11,6),(12,6)], [(6,7),(5,8),(4,9),(3,9),(2,10)], [(8,8),(7,9),(7,10),(6,11),(5,11)]]),
-    'aer': ('diamond', (159,224,240), (80,158,188), (244,255,255), [
+    'aer': ('diamond', (118,191,234), (8,90,151), (168,226,255), [
         [(6,4),(7,5),(8,5),(9,6),(9,7),(10,8),(10,9),(11,10)], [(8,5),(8,6),(7,7),(6,7),(5,8),(5,9)], [(10,9),(9,10),(8,10),(7,11),(6,12)]]),
-    'ordo': ('gold_ingot', (255,226,102), (177,109,16), (255,255,206), [
+    'ordo': ('gold_ingot', (255,215,92), (122,62,7), (255,160,20), [
         [(3,6),(4,7),(5,7),(6,8),(7,8),(8,7),(9,7),(10,6),(11,6),(12,5)], [(5,7),(5,8),(4,9),(3,10)], [(8,7),(8,8),(9,9),(10,9),(11,10)]]),
     'perditio': ('amethyst_shard', (86,12,138), (45,1,77), (190,74,234), [
         [(12,3),(11,4),(10,5),(10,6),(9,7),(8,7),(8,8),(7,9),(6,9),(5,10),(4,11)], [(10,6),(11,6),(11,7),(10,8)], [(8,8),(8,9),(7,10),(7,11),(6,12)]]),
@@ -46,18 +46,26 @@ def png(rows):
 for name, (base, tint, shadow, light, paths) in materials.items():
     mask = {(x,y) for y,line in enumerate(masks[base]) for x,value in enumerate(line) if value == 'X'}
     rows = [[(0,0,0,0) for _ in range(16)] for _ in range(16)]
-    # A thin coloured wash ties the fissures to the material. Do not paint over its outline.
+    # A saturated coloured wash ties the fissures to the material. Preserve its outline.
     for x,y in mask:
         if all((x+dx,y+dy) in mask for dx,dy in ((-1,0),(1,0),(0,-1),(0,1))):
-            rows[y][x] = (*tint, 30 + ((x*7+y*11) % 4)*5)
+            rows[y][x] = (*tint, 65 + ((x*7+y*11) % 4)*10)
     vein = {point for path in paths for point in path if point in mask}
     for x,y in vein:
+        # Dark irregular edging makes the coloured vein stand out on bright materials.
         for dx,dy in ((-1,0),(1,0),(0,-1),(0,1)):
             xx,yy = x+dx,y+dy
             if (xx,yy) in mask and (xx,yy) not in vein and rows[yy][xx][3]:
-                rows[yy][xx] = (*shadow, 74)
+                rows[yy][xx] = (*shadow, 135)
+    # Thicken selected sides of the branches; leave plenty of the original material visible.
+    midpoint = tuple((2*highlight + shade)//3 for highlight, shade in zip(light, shadow))
     for x,y in vein:
-        rows[y][x] = (*light, 160 + ((x*3+y*5) % 3)*30)
+        if (x+y) % 3 == 0:
+            xx,yy = x+1,y
+            if (xx,yy) in mask and (xx,yy) not in vein and rows[yy][xx][3]:
+                rows[yy][xx] = (*midpoint, 205)
+    for x,y in vein:
+        rows[y][x] = (*light, 235 + ((x*3+y*5) % 3)*10)
     (assets / 'textures/item' / f'infused_{name}.png').write_bytes(png(rows))
     model = {'parent':'minecraft:item/generated', 'textures': {'layer0':f'minecraft:item/{base}', 'layer1':f'alkahest:item/infused_{name}'}}
     (assets / 'models/item' / f'infused_{name}.json').write_text(json.dumps(model, indent=2)+'\n')
