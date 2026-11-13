@@ -43,6 +43,8 @@ public final class AlkahestClient implements ClientModInitializer {
         net.minecraft.client.render.block.entity.BlockEntityRendererFactories.register(
             net.alkahest.registry.ModBlockEntities.TRANSMUTATOR_CORE, net.alkahest.client.render.TransmutatorCoreRenderer::new);
         net.alkahest.client.gui.AtmosphereHud.register();
+        net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents.AFTER_ENTITIES.register(net.alkahest.client.render.ShieldVisuals::render);
+        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(net.alkahest.client.render.ShieldVisuals::tick);
         net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(
             net.alkahest.client.gui.AtmosphereHud::tick);
         net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback.EVENT.register((context, tickCounter) -> {
@@ -58,12 +60,15 @@ public final class AlkahestClient implements ClientModInitializer {
             context.client().execute(() -> net.alkahest.client.assembly.AssemblyPreview.open(payload.pos())));
         ClientPlayNetworking.registerGlobalReceiver(net.alkahest.network.ShieldPayload.ID, (payload, context) ->
             context.client().execute(() -> net.alkahest.client.gui.ShieldHud.receive(payload.points(), payload.max(), payload.charge())));
+        ClientPlayNetworking.registerGlobalReceiver(net.alkahest.network.ShieldVisualPayload.ID, (payload, context) ->
+            context.client().execute(() -> net.alkahest.client.render.ShieldVisuals.receive(payload.entityId(),payload.points(),payload.max())));
         ClientPlayNetworking.registerGlobalReceiver(OpenJournalPayload.ID, (payload, context) ->
             context.client().execute(() -> context.client().setScreen(new JournalScreen(payload.flags()))));
         ClientPlayNetworking.registerGlobalReceiver(net.alkahest.network.EssenceMapPayload.ID, (payload, context) ->
             context.client().execute(() -> net.alkahest.essence.RecipeEssenceService.receive(payload.chunk())));
         net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
             net.alkahest.client.gui.ShieldHud.receive(-1, 0, 0);
+            net.alkahest.client.render.ShieldVisuals.clear();
             net.alkahest.essence.RecipeEssenceService.clearClient();
             net.alkahest.client.gui.AtmosphereHud.clear();
             net.alkahest.client.assembly.AssemblyPreview.clear();

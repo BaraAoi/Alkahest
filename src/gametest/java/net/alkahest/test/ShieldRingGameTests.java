@@ -175,4 +175,31 @@ public class ShieldRingGameTests implements FabricGameTest {
         c.complete();
     }
 
+    @GameTest(templateName=EMPTY_STRUCTURE)
+    public void fallingAndStalagmiteHurtPlayerButNotShield(TestContext c) {
+        for (var source : List.of(c.getWorld().getDamageSources().fall(), c.getWorld().getDamageSources().stalagmite())) {
+            var player=c.createMockPlayer(GameMode.SURVIVAL);
+            var inv=TrinketsApi.getTrinketComponent(player).orElseThrow().getInventory().get("hand").get("ring");
+            var ring=new ItemStack(ModItems.RING_SHIELD_4); inv.setStack(0,ring);
+            ring.set(ModDataComponents.SHIELD_POINTS,6f); ring.set(ModDataComponents.SHIELD_DELAY,120);
+            ring.set(ModDataComponents.SHIELD_REGEN_TICKS,5);
+            float hp=player.getHealth();
+            c.assertTrue(player.damage(source,4f),"A real fall-type damage event reaches the player");
+            c.assertTrue(player.getHealth()==hp-4f && ShieldRingItem.points(ring)==6f,"Falling damages normal HP without consuming the barrier");
+            c.assertTrue(ring.get(ModDataComponents.SHIELD_DELAY)==0 && ring.get(ModDataComponents.SHIELD_REGEN_TICKS)==0,
+                "Fall damage still resets the normal post-damage regeneration delay");
+        }
+        c.complete();
+    }
+    @GameTest(templateName=EMPTY_STRUCTURE)
+    public void shieldVisualPayloadPreservesTrackingIdentity(TestContext c) {
+        var buf=new net.minecraft.network.RegistryByteBuf(io.netty.buffer.Unpooled.buffer(),c.getWorld().getRegistryManager());
+        try {
+            net.alkahest.network.ShieldVisualPayload.CODEC.encode(buf,new net.alkahest.network.ShieldVisualPayload(981,2.5f,4));
+            var p=net.alkahest.network.ShieldVisualPayload.CODEC.decode(buf);
+            c.assertTrue(p.entityId()==981 && p.points()==2.5f && p.max()==4,"Visual updates retain entity and shield strength");
+        } finally { buf.release(); }
+        c.complete();
+    }
+
 }

@@ -5,9 +5,11 @@ import dev.emi.trinkets.api.TrinketItem;
 import dev.emi.trinkets.api.TrinketsApi;
 import net.alkahest.essence.EssenceType;
 import net.alkahest.network.ShieldPayload;
+import net.alkahest.network.ShieldVisualPayload;
 import net.alkahest.registry.ModDataComponents;
 import net.alkahest.registry.ModItems;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
@@ -72,21 +74,30 @@ public final class ShieldRingItem extends TrinketItem {
         return Math.max(0, Math.min(max, stack.getOrDefault(ModDataComponents.SHIELD_POINTS, 0f)));
     }
     /** Called after armor/resistance, before vanilla absorption; no effect on other absorption sources. */
-    public static float absorb(PlayerEntity player, float amount) {
+    public static float absorb(PlayerEntity player, float amount) { return absorb(player, amount, true); }
+    public static float absorb(PlayerEntity player, float amount, boolean mayAbsorb) {
         if (player.getWorld().isClient || player.isSpectator() || amount <= 0) return amount;
         var equipped = TrinketsApi.getTrinketComponent(player).map(c -> c.getEquipped(s -> s.getItem() instanceof ShieldRingItem)).orElse(List.of());
         if (equipped.isEmpty()) return amount;
         ItemStack stack = equipped.getFirst().getRight();
         stack.set(ModDataComponents.SHIELD_DELAY, 0);
         stack.set(ModDataComponents.SHIELD_REGEN_TICKS, 0);
-        float absorbed = Math.min(amount, points(stack));
+        // Fall damage bypasses the barrier, but actual damage still restarts its cooldown.
+        float absorbed = mayAbsorb ? Math.min(amount, points(stack)) : 0;
         stack.set(ModDataComponents.SHIELD_POINTS, points(stack) - absorbed);
         send(player, points(stack), (int)((ShieldRingItem)stack.getItem()).maxShield(), stack.getOrDefault(ModDataComponents.ESSENCE_CHARGE, 0));
         return amount - absorbed;
     }
     private static void send(LivingEntity entity, float points, int max, int charge) {
-        if (entity instanceof ServerPlayerEntity player && ServerPlayNetworking.canSend(player, ShieldPayload.ID))
+        if (!(entity instanceof ServerPlayerEntity player)) return;
+        if (ServerPlayNetworking.canSend(player, ShieldPayload.ID))
             ServerPlayNetworking.send(player, new ShieldPayload(points, max, charge));
+        // The barrier is visible to observers as well as its wearer. Tracking clients receive
+        // only the visual state, not the item's charge; periodic updates handle late tracking.
+        var visual = new ShieldVisualPayload(player.getId(), points, max);
+        for (ServerPlayerEntity viewer : PlayerLookup.tracking(player))
+            if (ServerPlayNetworking.canSend(viewer, ShieldVisualPayload.ID)) ServerPlayNetworking.send(viewer, visual);
+        if (ServerPlayNetworking.canSend(player, ShieldVisualPayload.ID)) ServerPlayNetworking.send(player, visual);
     }
     @Override public void appendTooltip(ItemStack stack, TooltipContext context, List<Text> tooltip, TooltipType type) {
         tooltip.add(Text.translatable("tooltip.alkahest.ring_shield", stack.getOrDefault(ModDataComponents.ESSENCE_CHARGE, 0), MAX_CHARGE, (int)maxShield()).formatted(Formatting.GRAY));
