@@ -270,11 +270,11 @@ public class ChargerGameTests implements FabricGameTest {
         var jar=(JarBlockEntity)c.getWorld().getBlockEntity(c.getAbsolutePos(new BlockPos(3,3,3)));
         jar.setContents(new JarContentsComponent(List.of(new EssenceStack(EssenceType.TERRA,2,.5f))));
         c.assertTrue(EssenceChargerBlockEntity.chargeFirst(jar,player)==EssenceType.TERRA && ring.get(ModDataComponents.ESSENCE_CHARGE)==1,"Equipped ring is charged");
-        // Mock server players are not scheduled like connected clients; explicitly tick the entity.
-        player.tick();
+        // Mock players are not network-ticked: playerTick invokes the living-entity tick path.
+        player.playerTick();
         c.assertTrue(player.hasStatusEffect(net.minecraft.entity.effect.StatusEffects.HASTE) && ring.getOrDefault(ModDataComponents.RING_ACTIVE_TICKS,0)>0,"Trinkets ticks the equipped ring");
         ringInventory.setStack(0,ItemStack.EMPTY);
-        for (int i=0;i<8;i++) player.tick();
+        for (int i=0;i<8;i++) player.playerTick();
         c.assertFalse(player.hasStatusEffect(net.minecraft.entity.effect.StatusEffects.HASTE),"Effect expires after removing the ring");
         c.complete();
     }
