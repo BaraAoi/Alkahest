@@ -280,4 +280,20 @@ public class ChargerGameTests implements FabricGameTest {
         c.complete();
     }
 
+    @GameTest(templateName=EMPTY_STRUCTURE)
+    public void monocleUsesTheSameJarPriorityAsCharging(TestContext c) {
+        c.setBlockState(3,3,3,ModBlocks.ESSENCE_CHARGER);
+        var pos=c.getAbsolutePos(new BlockPos(3,3,3));
+        c.assertTrue(EssenceChargerBlockEntity.findJar(c.getWorld(),pos)==null,"Without a jar the charger has no source");
+        c.setBlockState(3,4,3,ModBlocks.JAR);
+        var upper=(JarBlockEntity)c.getWorld().getBlockEntity(pos.up());
+        c.assertTrue(EssenceChargerBlockEntity.findJar(c.getWorld(),pos)==upper,"Legacy jar above is shown when there is no jar below");
+        c.setBlockState(3,2,3,ModBlocks.JAR);
+        var lower=(JarBlockEntity)c.getWorld().getBlockEntity(pos.down());
+        c.assertTrue(EssenceChargerBlockEntity.findJar(c.getWorld(),pos)==lower,"The actual jar below wins even when empty");
+        c.setBlockState(3,2,3,net.minecraft.block.Blocks.AIR);
+        c.assertTrue(EssenceChargerBlockEntity.findJar(c.getWorld(),pos)==upper,"Upper jar is selected again after removal of lower jar");
+        c.complete();
+    }
+
 }

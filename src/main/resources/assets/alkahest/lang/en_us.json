@@ -620,5 +620,13 @@
   "screen.alkahest.practice.ring_shield_3.title": "Shield Ring III",
   "screen.alkahest.practice.ring_shield_3.recipe": "Upgrade Shield Ring II with Pure Effir, Ordo-infused gold, an Ordo crystal and a diamond on separate pedestals; jars supply 32 Ordo and 16 Metallum. Shields 6 HP and regenerates after 9 seconds without damage. Charge and shield state are preserved.",
   "screen.alkahest.practice.ring_shield_4.title": "Shield Ring IV",
-  "screen.alkahest.practice.ring_shield_4.recipe": "Upgrade Shield Ring III with Pure Effir, Ordo-infused gold, two Ordo crystals and two diamonds on six separate pedestals; jars supply 40 Ordo and 24 Metallum. Shields 6 HP and regenerates after 6 seconds without damage. Charge and shield state are preserved."
+  "screen.alkahest.practice.ring_shield_4.recipe": "Upgrade Shield Ring III with Pure Effir, Ordo-infused gold, two Ordo crystals and two diamonds on six separate pedestals; jars supply 40 Ordo and 24 Metallum. Shields 6 HP and regenerates after 6 seconds without damage. Charge and shield state are preserved.",
+  "screen.alkahest.monocle.stabilizer_title": "Stabilizer",
+  "screen.alkahest.monocle.stabilizer_on": "Tower is on",
+  "screen.alkahest.monocle.stabilizer_off": "Tower is off",
+  "screen.alkahest.monocle.charger": "Essence charger",
+  "screen.alkahest.monocle.charger_no_jar": "No jar below or above the charger",
+  "screen.alkahest.monocle.charger_below": "Source: jar below",
+  "screen.alkahest.monocle.charger_above": "Source: jar above",
+  "screen.alkahest.monocle.charger_invalid": "Jar contents cannot be used for charging"
 }

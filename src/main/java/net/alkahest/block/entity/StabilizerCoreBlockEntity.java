@@ -80,14 +80,6 @@ public class StabilizerCoreBlockEntity extends BlockEntity {
         if (!formed) activated = false;
         BlockState updated = state.with(StabilizerCoreBlock.FORMED, formed).with(StabilizerCoreBlock.ACTIVE, activated);
         if (updated != state) world.setBlockState(pos, updated, net.minecraft.block.Block.NOTIFY_ALL);
-        // Also repairs crest states loaded from older worlds without changing inventories.
-        BlockPos crestPos = pos.up();
-        BlockState crest = world.getBlockState(crestPos);
-        if (crest.isOf(ModBlocks.STABILIZER_CREST)) {
-            boolean rotating = formed && activated;
-            if (crest.get(net.alkahest.block.custom.StabilizerCrestBlock.ROTATING) != rotating)
-                world.setBlockState(crestPos, crest.with(net.alkahest.block.custom.StabilizerCrestBlock.ROTATING, rotating), net.minecraft.block.Block.NOTIFY_ALL);
-        }
     }
 
     public static void tick(World world, BlockPos pos, StabilizerCoreBlockEntity be) {

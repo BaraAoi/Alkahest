@@ -42,8 +42,6 @@ public final class AlkahestClient implements ClientModInitializer {
             net.alkahest.client.gui.TransmutatorScreen::new);
         net.minecraft.client.render.block.entity.BlockEntityRendererFactories.register(
             net.alkahest.registry.ModBlockEntities.TRANSMUTATOR_CORE, net.alkahest.client.render.TransmutatorCoreRenderer::new);
-        net.minecraft.client.render.block.entity.BlockEntityRendererFactories.register(
-            net.alkahest.registry.ModBlockEntities.STABILIZER_CORE, net.alkahest.client.render.StabilizerCoreRenderer::new);
         net.alkahest.client.gui.AtmosphereHud.register();
         net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents.AFTER_ENTITIES.register(net.alkahest.client.render.ShieldVisuals::render);
         net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(net.alkahest.client.render.ShieldVisuals::tick);

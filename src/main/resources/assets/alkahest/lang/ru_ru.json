@@ -620,5 +620,13 @@
   "screen.alkahest.practice.ring_shield_3.title": "Кольцо щита III",
   "screen.alkahest.practice.ring_shield_3.recipe": "Улучши кольцо щита II в Матрице: на пьедесталах Чистый Эффир, Ордолото, кристалл Ordo и алмаз; 32 Ordo и 16 Metallum из банок. Щит 6 HP, восстановление через 9 секунд без урона. Заряд и состояние сохраняются.",
   "screen.alkahest.practice.ring_shield_4.title": "Кольцо щита IV",
-  "screen.alkahest.practice.ring_shield_4.recipe": "Улучши кольцо щита III в Матрице: на шести отдельных пьедесталах Чистый Эффир, Ордолото, два кристалла Ordo и два алмаза; 40 Ordo и 24 Metallum из банок. Щит 6 HP, восстановление через 6 секунд без урона. Заряд и состояние сохраняются."
+  "screen.alkahest.practice.ring_shield_4.recipe": "Улучши кольцо щита III в Матрице: на шести отдельных пьедесталах Чистый Эффир, Ордолото, два кристалла Ordo и два алмаза; 40 Ordo и 24 Metallum из банок. Щит 6 HP, восстановление через 6 секунд без урона. Заряд и состояние сохраняются.",
+  "screen.alkahest.monocle.stabilizer_title": "Стабилизатор",
+  "screen.alkahest.monocle.stabilizer_on": "Башня включена",
+  "screen.alkahest.monocle.stabilizer_off": "Башня выключена",
+  "screen.alkahest.monocle.charger": "Эссенц-зарядник",
+  "screen.alkahest.monocle.charger_no_jar": "Нет банки под или над зарядником",
+  "screen.alkahest.monocle.charger_below": "Источник: банка снизу",
+  "screen.alkahest.monocle.charger_above": "Источник: банка сверху",
+  "screen.alkahest.monocle.charger_invalid": "Содержимое банки не подходит для зарядки"
 }

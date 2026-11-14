@@ -13,6 +13,8 @@ import net.alkahest.block.entity.CauldronBlockEntity;
 import net.alkahest.block.entity.DistilleryBellowsBlockEntity;
 import net.alkahest.block.entity.Tier2DistilleryBlockEntity;
 import net.alkahest.block.entity.StabilizerReceiverBlockEntity;
+import net.alkahest.block.entity.EssenceChargerBlockEntity;
+import net.alkahest.inspection.StabilizerInspection;
 import net.alkahest.essence.EssenceStack;
 import net.alkahest.essence.EssenceType;
 import net.alkahest.item.custom.JarItem;
@@ -118,25 +120,58 @@ public final class MonocleHud {
             }
             if (distillery.pending().size() > 4)
                 lines.add(Text.translatable("screen.alkahest.monocle.more", distillery.pending().size() - 4));
-        } else if (blockEntity instanceof StabilizerReceiverBlockEntity receiver) {
-            var contents = receiver.contents();
-            lines.add(Text.translatable("screen.alkahest.monocle.stabilizer", contents.total(), JarItem.CAPACITY));
-            if (contents.total() == 0) {
-                lines.add(Text.translatable("screen.alkahest.monocle.empty"));
+        } else if (targetedBlock == net.alkahest.registry.ModBlocks.STABILIZER_RECEIVER
+                || targetedBlock == net.alkahest.registry.ModBlocks.STABILIZER_CORE
+                || targetedBlock == net.alkahest.registry.ModBlocks.STABILIZER_CREST) {
+            var view = StabilizerInspection.inspect(client.world, hit.getBlockPos());
+            var receiver = view.receiver();
+            if (receiver == null) {
+                lines.add(Text.translatable("screen.alkahest.monocle.stabilizer_title"));
+                lines.add(Text.translatable("message.alkahest.stabilizer_not_formed"));
             } else {
-                int limit = Math.min(contents.contents().size(), 4);
-                for (int i = 0; i < limit; i++) {
-                    var essence = contents.contents().get(i);
-                    lines.add(Text.literal("◆ " + essence.type().displayName() + ": " + essence.amount()
-                        + " · " + Math.round(essence.stability() * 100) + "%")
-                        .styled(style -> style.withColor(essence.type().color())));
+                var contents = receiver.contents();
+                lines.add(Text.translatable("screen.alkahest.monocle.stabilizer", contents.total(), JarItem.CAPACITY));
+                if (contents.total() == 0) {
+                    lines.add(Text.translatable("screen.alkahest.monocle.empty"));
+                } else {
+                    int limit = Math.min(contents.contents().size(), 4);
+                    for (int i = 0; i < limit; i++) {
+                        var essence = contents.contents().get(i);
+                        lines.add(Text.literal("◆ " + essence.type().displayName() + ": " + essence.amount()
+                            + " · " + Math.round(essence.stability() * 100) + "%")
+                            .styled(style -> style.withColor(essence.type().color())));
+                    }
+                    if (contents.contents().size() > limit)
+                        lines.add(Text.translatable("screen.alkahest.monocle.more", contents.contents().size() - limit));
                 }
-                if (contents.contents().size() > limit)
-                    lines.add(Text.translatable("screen.alkahest.monocle.more", contents.contents().size() - limit));
+                if (!view.formed()) lines.add(Text.translatable("message.alkahest.stabilizer_not_formed"));
+                else lines.add(Text.translatable(view.active() ? "screen.alkahest.monocle.stabilizer_on" : "screen.alkahest.monocle.stabilizer_off"));
+                lines.add(Text.translatable("screen.alkahest.monocle.progress",
+                    receiver.progress() * 100 / StabilizerReceiverBlockEntity.TICKS_PER_TYPE));
+                if (view.active() && receiver.waitingForOutput()) lines.add(Text.translatable("message.alkahest.stabilizer_waiting_output"));
             }
-            lines.add(Text.translatable("screen.alkahest.monocle.progress",
-                receiver.progress() * 100 / StabilizerReceiverBlockEntity.TICKS_PER_TYPE));
-            if (receiver.waitingForOutput()) lines.add(Text.translatable("message.alkahest.stabilizer_waiting_output"));
+        } else if (blockEntity instanceof EssenceChargerBlockEntity charger) {
+            lines.add(Text.translatable("screen.alkahest.monocle.charger"));
+            var jar = EssenceChargerBlockEntity.findJar(client.world, charger.getPos());
+            if (jar == null) lines.add(Text.translatable("screen.alkahest.monocle.charger_no_jar"));
+            else {
+                lines.add(Text.translatable(jar.getPos().equals(charger.getPos().down())
+                    ? "screen.alkahest.monocle.charger_below" : "screen.alkahest.monocle.charger_above"));
+                var contents = jar.contents();
+                lines.add(Text.translatable("screen.alkahest.monocle.jar", contents.total(), JarItem.CAPACITY));
+                if (!JarItem.allowed(contents)) lines.add(Text.translatable("screen.alkahest.monocle.charger_invalid"));
+                else if (contents.total() == 0) lines.add(Text.translatable("screen.alkahest.monocle.empty"));
+                else {
+                    int limit=Math.min(contents.contents().size(),4);
+                    for (int i=0;i<limit;i++) {
+                        var essence=contents.contents().get(i);
+                        lines.add(Text.literal("◆ " + essence.type().displayName() + ": " + essence.amount()
+                            + " · " + Math.round(essence.stability()*100) + "%")
+                            .styled(style -> style.withColor(essence.type().color())));
+                    }
+                    if (contents.contents().size()>limit) lines.add(Text.translatable("screen.alkahest.monocle.more",contents.contents().size()-limit));
+                }
+            }
         } else if (blockEntity instanceof AlchemyPipeBlockEntity pipe && client.world.getBlockState(hit.getBlockPos()).getBlock() instanceof AlchemyPipeBlock) {
             lines.add(Text.translatable("screen.alkahest.monocle.pipe"));
             lines.add(Text.translatable("screen.alkahest.monocle.pipe_auto", pipe.active()
