@@ -78,7 +78,8 @@ public final class WindGustEntity extends ThrownEntity {
                 if (!candidates.isEmpty()) { target=candidates.getFirst(); targetId=target.getUuid(); }
                 else targetId=null;
             }
-            if (target==null && child()) { discard(); return; }
+            // Unassigned fragments briefly fan out for a visible split, then dissipate.
+            if (target==null && child() && life>6) { discard(); return; }
             if (target!=null) {
                 Vec3d velocity=getVelocity();
                 Vec3d desired=target.getBoundingBox().getCenter().subtract(getPos()).normalize();
@@ -113,17 +114,18 @@ public final class WindGustEntity extends ThrownEntity {
         if (damaged && !child()) {
             exclude(victim);
             var targets=nearbyTargets(10,false);
-            if (!targets.isEmpty() && getOwner() instanceof LivingEntity owner) {
+            if (getOwner() instanceof LivingEntity owner) {
                 Vec3d velocity=getVelocity();
                 Vec3d side=velocity.crossProduct(new Vec3d(0,1,0));
                 if (side.lengthSquared()<.001) side=new Vec3d(1,0,0);
                 side=side.normalize();
                 for (int i=0;i<2;i++) {
-                    var other=targets.get(Math.min(i,targets.size()-1));
+                    var other=targets.isEmpty() ? null : targets.get(Math.min(i,targets.size()-1));
                     var fragment=new WindGustEntity(server,owner,true);
                     fragment.refreshPositionAndAngles(getX(),getY(),getZ(),getYaw(),getPitch());
                     fragment.exclude(victim); fragment.target(other);
-                    Vec3d direction=other.getBoundingBox().getCenter().subtract(getPos()).normalize().add(side.multiply(i==0?.35:-.35)).normalize();
+                    Vec3d direction=(other==null ? velocity.normalize() : other.getBoundingBox().getCenter().subtract(getPos()).normalize())
+                        .add(side.multiply(i==0?.35:-.35)).normalize();
                     fragment.setVelocity(direction.multiply(1.1));
                     server.spawnEntity(fragment);
                 }

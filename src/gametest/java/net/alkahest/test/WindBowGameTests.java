@@ -107,7 +107,11 @@ public class WindBowGameTests implements FabricGameTest {
         var gust=new WindGustEntity(world,shooter,false); gust.setPosition(p.add(0,1,0)); gust.setVelocity(0,0,1.1); world.spawnEntity(gust);
         for(int i=0;i<10 && !gust.isRemoved();i++) gust.tick();
         c.assertTrue(gust.isRemoved() && first.getHealth()<first.getMaxHealth(),"Main gust hits its target");
-        c.assertTrue(world.getEntitiesByClass(WindGustEntity.class,Box.of(p,20,20,20),WindGustEntity::child).isEmpty(),"No other enemy: fragments dissipate without attacking the original target");
+        var fragments=world.getEntitiesByClass(WindGustEntity.class,Box.of(p,20,20,20),WindGustEntity::child);
+        c.assertTrue(fragments.size()==2 && fragments.stream().allMatch(e -> e.targetId()==null),"No other enemy: two untargeted fragments fan out visibly");
+        float health=first.getHealth();
+        for (var child:fragments) for(int i=0;i<8 && !child.isRemoved();i++) child.tick();
+        c.assertTrue(fragments.stream().allMatch(WindGustEntity::isRemoved) && first.getHealth()==health,"Untargeted fragments dissipate without hitting the original victim");
         first.discard(); c.complete();
     }
     @GameTest(templateName=EMPTY_STRUCTURE)
