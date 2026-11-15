@@ -27,7 +27,7 @@ public class WindBowGameTests implements FabricGameTest {
     @GameTest(templateName=EMPTY_STRUCTURE)
     public void firesWithoutArrowsAndConsumesOneAerPerTwoShots(TestContext c) {
         var world=c.getWorld(); var player=c.createMockPlayer(GameMode.SURVIVAL);
-        var p=c.getAbsolutePos(new BlockPos(3,8,3)); player.setPosition(p.getX()+.5,p.getY(),p.getZ()+.5);
+        var p=c.getAbsolutePos(new BlockPos(3,128,3)); player.setPosition(p.getX()+.5,p.getY(),p.getZ()+.5);
         var stack=new ItemStack(ModItems.BOW_AER); player.setStackInHand(Hand.MAIN_HAND,stack);
         var bow=(WindBowItem)stack.getItem(); stack.set(ModDataComponents.ESSENCE_CHARGE,1);
         c.assertTrue(bow.use(world,player,Hand.MAIN_HAND).getResult().isAccepted(),"Charged bow starts drawing without arrows");
@@ -68,7 +68,7 @@ public class WindBowGameTests implements FabricGameTest {
     }
     @GameTest(templateName=EMPTY_STRUCTURE)
     public void impactSplitsOnceAndTargetsOtherHostiles(TestContext c) {
-        var world=c.getWorld(); var p=Vec3d.ofBottomCenter(c.getAbsolutePos(new BlockPos(3,8,2)));
+        var world=c.getWorld(); var p=Vec3d.ofBottomCenter(c.getAbsolutePos(new BlockPos(3,148,2)));
         var shooter=c.createMockPlayer(GameMode.SURVIVAL); shooter.setPosition(p);
         var first=zombie(c,p.add(0,0,3)); var left=zombie(c,p.add(-3,0,5)); var right=zombie(c,p.add(3,0,5));
         var gust=new WindGustEntity(world,shooter,false); gust.setPosition(p.add(0,1,0)); gust.setVelocity(0,0,1.1); world.spawnEntity(gust);
@@ -85,18 +85,42 @@ public class WindBowGameTests implements FabricGameTest {
     }
     @GameTest(templateName=EMPTY_STRUCTURE)
     public void homingRespectsWallsAndIgnoresOriginalVictim(TestContext c) {
-        var p=Vec3d.ofBottomCenter(c.getAbsolutePos(new BlockPos(3,8,2)));
+        var p=Vec3d.ofBottomCenter(c.getAbsolutePos(new BlockPos(3,168,2)));
         var shooter=c.createMockPlayer(GameMode.SURVIVAL); shooter.setPosition(p);
         var victim=zombie(c,p.add(0,0,3)); var hidden=zombie(c,p.add(0,0,6));
         var gust=new WindGustEntity(c.getWorld(),shooter,false); gust.setPosition(p.add(0,1,0)); gust.setVelocity(0,0,1);
-        c.setBlockState(3,9,6,net.minecraft.block.Blocks.STONE);
+        c.setBlockState(3,169,6,net.minecraft.block.Blocks.STONE);
         gust.exclude(victim);
         c.assertTrue(gust.nearbyTargets(10,false).isEmpty(),"Original target and enemies behind a wall are not selected");
-        c.setBlockState(3,9,6,net.minecraft.block.Blocks.AIR);
+        c.setBlockState(3,169,6,net.minecraft.block.Blocks.AIR);
         c.assertTrue(gust.nearbyTargets(10,false).contains(hidden),"Visible alternative is selectable");
         var tag=gust.writeNbt(new net.minecraft.nbt.NbtCompound());
         var copy=new WindGustEntity(c.getWorld(),shooter,true); copy.readNbt(tag);
         c.assertTrue(copy.nearbyTargets(10,false).stream().noneMatch(t -> t==victim),"Excluded victim survives saving");
         victim.discard();hidden.discard();c.complete();
     }
+    @GameTest(templateName=EMPTY_STRUCTURE)
+    public void noOtherEnemyMeansNoSeekingChildren(TestContext c) {
+        var world=c.getWorld(); var p=Vec3d.ofBottomCenter(c.getAbsolutePos(new BlockPos(3,188,2)));
+        var shooter=c.createMockPlayer(GameMode.SURVIVAL); shooter.setPosition(p);
+        var first=zombie(c,p.add(0,0,3));
+        var gust=new WindGustEntity(world,shooter,false); gust.setPosition(p.add(0,1,0)); gust.setVelocity(0,0,1.1); world.spawnEntity(gust);
+        for(int i=0;i<10 && !gust.isRemoved();i++) gust.tick();
+        c.assertTrue(gust.isRemoved() && first.getHealth()<first.getMaxHealth(),"Main gust hits its target");
+        c.assertTrue(world.getEntitiesByClass(WindGustEntity.class,Box.of(p,20,20,20),WindGustEntity::child).isEmpty(),"No other enemy: fragments dissipate without attacking the original target");
+        first.discard(); c.complete();
+    }
+    @GameTest(templateName=EMPTY_STRUCTURE)
+    public void aWallStopsTheRealGust(TestContext c) {
+        var world=c.getWorld(); var p=Vec3d.ofBottomCenter(c.getAbsolutePos(new BlockPos(3,208,2)));
+        var shooter=c.createMockPlayer(GameMode.SURVIVAL); shooter.setPosition(p);
+        c.setBlockState(3,209,4,net.minecraft.block.Blocks.STONE);
+        var target=zombie(c,p.add(0,0,6));
+        var gust=new WindGustEntity(world,shooter,false); gust.setPosition(p.add(0,1,0)); gust.setVelocity(0,0,1.1); world.spawnEntity(gust);
+        for(int i=0;i<10 && !gust.isRemoved();i++) gust.tick();
+        c.assertTrue(gust.isRemoved() && target.getHealth()==target.getMaxHealth(),"A wall stops the gust and protects the target behind it");
+        c.assertTrue(world.getEntitiesByClass(WindGustEntity.class,Box.of(p,20,20,20),WindGustEntity::child).isEmpty(),"A block collision does not create fragments");
+        target.discard(); c.complete();
+    }
+
 }
