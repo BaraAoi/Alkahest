@@ -12,7 +12,7 @@ data = root / 'src/main/resources/data/alkahest'
 java = root / 'src/main/java/net/alkahest'
 plan = (java / 'research/PracticalResearchPlan.java').read_text()
 steps = re.findall(r'new Step\("([a-z0-9_]+)", "([a-z0-9_]+:[a-z0-9_]+)",', plan)
-assert len(steps) == 51 and len(set(steps)) == len(steps), 'all 51 steps must exist and be unique'
+assert len(steps) == 52 and len(set(steps)) == len(steps), 'all 52 steps must exist and be unique'
 # Every visible node must exist exactly once and have its own clickable area.
 journal = (root / 'src/client/java/net/alkahest/client/gui/JournalScreen.java').read_text()
 nodes = [(int(i), int(x), int(y)) for i, x, y in re.findall(r'node\((\d+),\s*(-?\d+),\s*(-?\d+)\)', journal)]

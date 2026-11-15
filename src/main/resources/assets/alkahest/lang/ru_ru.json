@@ -628,5 +628,9 @@
   "screen.alkahest.monocle.charger_no_jar": "Нет банки под или над зарядником",
   "screen.alkahest.monocle.charger_below": "Источник: банка снизу",
   "screen.alkahest.monocle.charger_above": "Источник: банка сверху",
-  "screen.alkahest.monocle.charger_invalid": "Содержимое банки не подходит для зарядки"
+  "screen.alkahest.monocle.charger_invalid": "Содержимое банки не подходит для зарядки",
+  "item.alkahest.bow_aer": "Лук ветра",
+  "tooltip.alkahest.bow_aer": "Aer: %s / %s · 1 заряд за 2 выстрела",
+  "screen.alkahest.practice.bow_aer.title": "Лук ветра",
+  "screen.alkahest.practice.bow_aer.recipe": "Синтезируй обычный лук в Матрице: на отдельных пьедесталах Аэромаз, Чистый Эффир, Душевная ткань и кристалл Aer; 30 Aer и 15 Motus из банок. Лук заряжается Aer и стреляет без стрел. Порыв наводится на врагов; после попадания два меньших порыва ищут других врагов."
 }

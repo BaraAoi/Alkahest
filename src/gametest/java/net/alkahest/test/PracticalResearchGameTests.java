@@ -444,9 +444,20 @@ public class PracticalResearchGameTests implements FabricGameTest {
     }
 
     @GameTest(templateName = EMPTY_STRUCTURE)
+    public void windBowResearchWaitsForBothBranches(TestContext c) {
+        var player=c.createMockCreativeServerPlayerInWorld(); clearResearch(player);
+        PracticalResearchStorage.observe(player,new ItemStack(ModItems.BOW_AER));
+        c.assertTrue((PracticalResearchStorage.completed(player)&PracticalResearchPlan.BOW_AER)==0,"Early wind bow is remembered but waits for parents");
+        grant(player,"stable_material"); grant(player,"spirit_cloth"); grant(player,"matrix");
+        PracticalResearchStorage.migrate(player);
+        c.assertTrue((PracticalResearchStorage.completed(player)&PracticalResearchPlan.BOW_AER)!=0,"Wind bow opens after its branches");
+        clearResearch(player); c.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
     public void journalPayloadPreservesResearchBitsAboveThirtyOne(TestContext c) {
         long flags = PracticalResearchPlan.CAULDRON | PracticalResearchPlan.FIRE_DUST | PracticalResearchPlan.CAUSTIC_SLIME | PracticalResearchPlan.AER_WAND | PracticalResearchPlan.NECKLACE_BLANK | PracticalResearchPlan.ANKLET_BLANK
-            | PracticalResearchPlan.CLOTH | PracticalResearchPlan.SPIRIT_CLOTH | PracticalResearchPlan.STABILIZING_REAGENT | PracticalResearchPlan.STABLE_MATERIAL | PracticalResearchPlan.RING_BLANK | PracticalResearchPlan.RING_TERRA | PracticalResearchPlan.RING_SHIELD | PracticalResearchPlan.RING_TERRA_2 | PracticalResearchPlan.RING_SHIELD_2 | PracticalResearchPlan.RING_SHIELD_3 | PracticalResearchPlan.RING_SHIELD_4;
+            | PracticalResearchPlan.CLOTH | PracticalResearchPlan.SPIRIT_CLOTH | PracticalResearchPlan.STABILIZING_REAGENT | PracticalResearchPlan.STABLE_MATERIAL | PracticalResearchPlan.RING_BLANK | PracticalResearchPlan.RING_TERRA | PracticalResearchPlan.RING_SHIELD | PracticalResearchPlan.RING_TERRA_2 | PracticalResearchPlan.RING_SHIELD_2 | PracticalResearchPlan.RING_SHIELD_3 | PracticalResearchPlan.RING_SHIELD_4 | PracticalResearchPlan.BOW_AER;
         var buf = new net.minecraft.network.RegistryByteBuf(io.netty.buffer.Unpooled.buffer(), c.getWorld().getRegistryManager());
         try {
             net.alkahest.network.OpenJournalPayload.CODEC.encode(buf, new net.alkahest.network.OpenJournalPayload(flags));

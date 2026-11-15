@@ -28,6 +28,7 @@ public final class ModDataComponents {
     public static final ComponentType<Integer> SHIELD_DELAY = register("shield_delay", Codec.intRange(0, 240));
     public static final ComponentType<Integer> SHIELD_REGEN_TICKS = register("shield_regen_ticks", Codec.intRange(0, 9));
     public static final ComponentType<Integer> RING_ACTIVE_TICKS = register("ring_active_ticks", Codec.intRange(0, 2399));
+    public static final ComponentType<Integer> WIND_BOW_SHOT_STEP = register("wind_bow_shot_step", Codec.intRange(0, 1));
     public static final ComponentType<Integer> AMULET_USES_STEP = register("amulet_uses_step", Codec.intRange(0, 4));
 
     private static <T> ComponentType<T> register(String name, Codec<T> codec) {

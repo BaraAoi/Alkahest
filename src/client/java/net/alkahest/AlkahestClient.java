@@ -32,6 +32,12 @@ import org.slf4j.LoggerFactory;
 public final class AlkahestClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
+        EntityRendererRegistry.register(net.alkahest.registry.ModEntities.WIND_GUST, net.alkahest.client.render.WindGustRenderer::new);
+        net.minecraft.client.item.ModelPredicateProviderRegistry.register(ModItems.BOW_AER, net.minecraft.util.Identifier.ofVanilla("pulling"),
+            (stack, world, entity, seed) -> entity != null && entity.isUsingItem() && entity.getActiveItem() == stack ? 1f : 0f);
+        net.minecraft.client.item.ModelPredicateProviderRegistry.register(ModItems.BOW_AER, net.minecraft.util.Identifier.ofVanilla("pull"),
+            (stack, world, entity, seed) -> entity == null || entity.getActiveItem() != stack ? 0f :
+                (stack.getMaxUseTime(entity) - entity.getItemUseTimeLeft()) / 20f);
         dev.emi.trinkets.api.client.TrinketRendererRegistry.registerRenderer(
             ModItems.ALKAHEST_AMULET, new net.alkahest.client.render.AmuletTrinketRenderer());
         net.minecraft.client.gui.screen.ingame.HandledScreens.register(net.alkahest.registry.ModScreenHandlers.DISTILLERY,

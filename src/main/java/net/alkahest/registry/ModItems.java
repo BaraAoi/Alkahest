@@ -33,6 +33,7 @@ public final class ModItems {
     public static final Item SPIRIT_CLOTH = item("spirit_cloth", new Item(new Item.Settings()));
     public static final Item STABILIZING_REAGENT = item("stabilizing_reagent", new Item(new Item.Settings()));
     public static final Item STABLE_MATERIAL = item("stable_material", new Item(new Item.Settings()));
+    public static final Item BOW_AER = item("bow_aer", new net.alkahest.item.custom.WindBowItem(new Item.Settings()));
     public static final Item RING_BLANK = item("ring_blank", new Item(new Item.Settings()));
     public static final Item RING_SHIELD = item("ring_shield", new net.alkahest.item.custom.ShieldRingItem(new Item.Settings(), 1));
     public static final Item RING_TERRA = item("ring_terra", new net.alkahest.item.custom.TerraRingItem(new Item.Settings(), 1));
@@ -103,7 +104,7 @@ public final class ModItems {
                 entries.add(ANKLET_BLANK);
                 entries.add(CLOTH); entries.add(SPIRIT_CLOTH);
                 entries.add(STABILIZING_REAGENT); entries.add(STABLE_MATERIAL);
-                entries.add(RING_BLANK); entries.add(RING_TERRA); entries.add(RING_TERRA_2);
+                entries.add(BOW_AER); entries.add(RING_BLANK); entries.add(RING_TERRA); entries.add(RING_TERRA_2);
                 entries.add(RING_SHIELD); entries.add(RING_SHIELD_2); entries.add(RING_SHIELD_3); entries.add(RING_SHIELD_4);
                 entries.add(PHILOSOPHERS_STONE);
                 entries.add(SALT); entries.add(PURIFIED_WATER); entries.add(HERBAL_PASTE);
