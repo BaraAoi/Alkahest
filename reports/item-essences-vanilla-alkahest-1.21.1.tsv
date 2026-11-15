@@ -19,6 +19,7 @@ alkahest:binding_salt_ignis	item	recipe	ignis=1,aqua=1,ordo=2,motus=1
 alkahest:binding_salt_ordo	item	recipe	aqua=1,ordo=3,motus=1
 alkahest:binding_salt_perditio	item	recipe	aqua=1,ordo=2,perditio=1,motus=1
 alkahest:binding_salt_terra	item	recipe	aqua=1,terra=1,ordo=2,motus=1
+alkahest:bow_aer	item	recipe	ignis=10,aqua=10,terra=31,aer=50,ordo=34,perditio=10,herba=7,lux=12,motus=24,spiritus=6
 alkahest:caustic_slime	item	manual	vitium=2,herba=1
 alkahest:cloth	item	recipe	ordo=4,motus=4
 alkahest:crystal_aer	item	manual	aer=1
