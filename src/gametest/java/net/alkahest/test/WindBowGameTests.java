@@ -94,8 +94,8 @@ public class WindBowGameTests implements FabricGameTest {
         c.assertTrue(gust.nearbyTargets(10,false).isEmpty(),"Original target and enemies behind a wall are not selected");
         c.setBlockState(3,9,6,net.minecraft.block.Blocks.AIR);
         c.assertTrue(gust.nearbyTargets(10,false).contains(hidden),"Visible alternative is selectable");
-        var tag=gust.createNbt(c.getWorld().getRegistryManager());
-        var copy=new WindGustEntity(c.getWorld(),shooter,true); copy.readNbt(tag,c.getWorld().getRegistryManager());
+        var tag=gust.writeNbt(new net.minecraft.nbt.NbtCompound());
+        var copy=new WindGustEntity(c.getWorld(),shooter,true); copy.readNbt(tag);
         c.assertTrue(copy.nearbyTargets(10,false).stream().noneMatch(t -> t==victim),"Excluded victim survives saving");
         victim.discard();hidden.discard();c.complete();
     }
