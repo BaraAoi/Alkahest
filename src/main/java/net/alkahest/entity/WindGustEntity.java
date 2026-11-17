@@ -8,6 +8,9 @@ import net.minecraft.entity.data.DataTracker;
 import net.minecraft.entity.data.TrackedData;
 import net.minecraft.entity.data.TrackedDataHandlerRegistry;
 import net.minecraft.entity.mob.HostileEntity;
+import net.minecraft.entity.boss.dragon.EnderDragonEntity;
+import net.minecraft.entity.boss.dragon.EnderDragonPart;
+import net.minecraft.entity.decoration.EndCrystalEntity;
 import net.minecraft.entity.projectile.thrown.ThrownEntity;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.particle.ParticleTypes;
@@ -21,13 +24,16 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.RaycastContext;
 import net.minecraft.world.World;
 import java.util.Comparator;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
 /** Server-authoritative homing gust. Only the primary impact may create two child gusts. */
 public final class WindGustEntity extends ThrownEntity {
     private static final TrackedData<Boolean> CHILD=DataTracker.registerData(WindGustEntity.class,TrackedDataHandlerRegistry.BOOLEAN);
-    public static final int LIFETIME=80, CHILD_LIFETIME=35;
+    public static final int LIFETIME=100, CHILD_LIFETIME=35;
+    public static final double MAIN_RANGE=64, CHILD_RANGE=10;
+    public static final float MAIN_DAMAGE=16f, CHILD_DAMAGE=8f;
     private UUID targetId, excludedId;
     private int life;
     public WindGustEntity(EntityType<? extends WindGustEntity> type, World world) { super(type,world); setNoGravity(true); }
@@ -37,52 +43,84 @@ public final class WindGustEntity extends ThrownEntity {
     @Override protected void initDataTracker(DataTracker.Builder builder) { builder.add(CHILD,false); }
     public boolean child() { return dataTracker.get(CHILD); }
     public UUID targetId() { return targetId; }
-    public void target(LivingEntity target) { targetId=target==null ? null : target.getUuid(); }
-    public void exclude(Entity entity) { excludedId=entity==null ? null : entity.getUuid(); }
-    private boolean validTarget(LivingEntity target) {
-        Entity owner=getOwner();
-        return target instanceof HostileEntity && target.isAlive() && !target.isSpectator() && target!=owner
+    public void target(Entity target) { targetId=target==null ? null : target.getUuid(); }
+    public void exclude(Entity entity) { excludedId=entity==null ? null : root(entity).getUuid(); }
+    /** Dragon hitboxes are independent entities, but one dragon is one target. */
+    private static Entity root(Entity entity) { return entity instanceof EnderDragonPart part ? part.owner : entity; }
+    private boolean validTarget(Entity entity) {
+        Entity target=root(entity), owner=getOwner();
+        return (target instanceof HostileEntity || target instanceof EnderDragonEntity || target instanceof EndCrystalEntity)
+            && target.isAlive() && !target.isSpectator() && target!=owner
             && (excludedId==null || !excludedId.equals(target.getUuid()))
             && (owner==null || !owner.isTeammate(target));
     }
-    private boolean clearPath(LivingEntity target) {
-        var end=target.getBoundingBox().getCenter();
+    private boolean visible(Vec3d end) {
         return getWorld().raycast(new RaycastContext(getPos(),end,RaycastContext.ShapeType.COLLIDER,
             RaycastContext.FluidHandling.NONE,this)).getType()==HitResult.Type.MISS;
     }
-    public List<HostileEntity> nearbyTargets(double radius, boolean forwardOnly) {
-        Vec3d direction=getVelocity().normalize();
+    private boolean inFront(Vec3d point) {
+        Vec3d delta=point.subtract(getPos()), direction=getVelocity().normalize();
+        return delta.lengthSquared()>.001 && direction.dotProduct(delta.normalize())>.65;
+    }
+    /** Target an actual visible dragon hitbox rather than its unhittable parent entity. */
+    private Vec3d aimPoint(Entity target, boolean forwardOnly) {
+        if (target instanceof EnderDragonEntity dragon) {
+            Vec3d best=null; double nearest=Double.POSITIVE_INFINITY;
+            for (var part : dragon.getBodyParts()) {
+                Vec3d point=part.getBoundingBox().getCenter(); double distance=point.squaredDistanceTo(getPos());
+                if (distance<nearest && (!forwardOnly || inFront(point)) && visible(point)) { best=point; nearest=distance; }
+            }
+            return best;
+        }
+        Vec3d point=target.getBoundingBox().getCenter();
+        return (!forwardOnly || inFront(point)) && visible(point) ? point : null;
+    }
+    public List<Entity> nearbyTargets(double radius, boolean forwardOnly) {
         Box box=getBoundingBox().expand(radius);
-        return getWorld().getEntitiesByClass(HostileEntity.class,box,t -> {
-            Vec3d delta=t.getBoundingBox().getCenter().subtract(getPos());
-            return validTarget(t) && delta.lengthSquared() <= radius*radius && clearPath(t)
-                && (!forwardOnly || delta.lengthSquared()>.001 && direction.dotProduct(delta.normalize())>.65);
-        }).stream().sorted(Comparator.comparingDouble((HostileEntity e)->e.squaredDistanceTo(this)).thenComparingInt(Entity::getId)).toList();
+        List<Entity> found=new ArrayList<>();
+        found.addAll(getWorld().getEntitiesByClass(HostileEntity.class,box,this::validTarget));
+        found.addAll(getWorld().getEntitiesByClass(EnderDragonEntity.class,box,this::validTarget));
+        found.addAll(getWorld().getEntitiesByClass(EndCrystalEntity.class,box,this::validTarget));
+        // Cache the chosen visible point once per candidate, not once per comparator invocation.
+        var points=new java.util.HashMap<Entity,Vec3d>();
+        for (var entity:found) { var point=aimPoint(entity,forwardOnly); if (point!=null && point.squaredDistanceTo(getPos())<=radius*radius) points.put(entity,point); }
+        found.removeIf(e -> !points.containsKey(e));
+        found.sort(Comparator.comparingDouble((Entity e)->points.get(e).squaredDistanceTo(getPos())).thenComparingInt(Entity::getId));
+        return found;
     }
     @Override protected boolean canHit(Entity entity) {
-        if (!(entity instanceof LivingEntity living) || !living.isAlive() || entity==getOwner()
-            || (excludedId!=null && excludedId.equals(entity.getUuid()))
-            || (getOwner()!=null && getOwner().isTeammate(entity))) return false;
-        if (child() && !validTarget(living)) return false;
+        Entity victim=root(entity);
+        if (!victim.isAlive() || victim==getOwner() || (excludedId!=null && excludedId.equals(victim.getUuid()))
+            || (getOwner()!=null && getOwner().isTeammate(victim))) return false;
+        if (child() && !validTarget(victim)) return false;
+        if (!(entity instanceof LivingEntity) && !(entity instanceof EndCrystalEntity) && !(entity instanceof EnderDragonPart)) return false;
         return super.canHit(entity);
     }
     @Override public void tick() {
         if (!getWorld().isClient && getWorld() instanceof ServerWorld server) {
             life++;
             if (life>(child()?CHILD_LIFETIME:LIFETIME)) { discard(); return; }
-            LivingEntity target=null;
-            if (targetId!=null && server.getEntity(targetId) instanceof LivingEntity entity && validTarget(entity)
-                && squaredDistanceTo(entity)<=24*24 && clearPath(entity)) target=entity;
+            Entity target=null; Vec3d destination=null;
+            if (targetId!=null) {
+                var entity=server.getEntity(targetId);
+                if (entity!=null && validTarget(entity)) {
+                    var point=aimPoint(entity,false);
+                    if (point!=null && point.squaredDistanceTo(getPos())<=MAIN_RANGE*MAIN_RANGE) { target=entity; destination=point; }
+                }
+            }
             if (target==null && !child()) {
-                var candidates=nearbyTargets(20,true);
-                if (!candidates.isEmpty()) { target=candidates.getFirst(); targetId=target.getUuid(); }
-                else targetId=null;
+                targetId=null;
+                // Avoid a 64-block search on every tick when nothing is ahead.
+                if (life%4==1) {
+                    var candidates=nearbyTargets(MAIN_RANGE,true);
+                    if (!candidates.isEmpty()) { target=candidates.getFirst(); targetId=target.getUuid(); destination=aimPoint(target,true); }
+                }
             }
             // Unassigned fragments briefly fan out for a visible split, then dissipate.
             if (target==null && child() && life>6) { discard(); return; }
             if (target!=null) {
                 Vec3d velocity=getVelocity();
-                Vec3d desired=target.getBoundingBox().getCenter().subtract(getPos()).normalize();
+                Vec3d desired=destination.subtract(getPos()).normalize();
                 double speed=Math.max(1.05,Math.min(1.65,velocity.length()));
                 Vec3d current=velocity.lengthSquared()<.001?desired:velocity.normalize();
                 Vec3d blended=current.multiply(child()?.68:.82).add(desired.multiply(child()?.32:.18));
@@ -109,11 +147,12 @@ public final class WindGustEntity extends ThrownEntity {
     }
     @Override protected void onEntityHit(EntityHitResult hit) {
         super.onEntityHit(hit);
-        if (!(getWorld() instanceof ServerWorld server) || !(hit.getEntity() instanceof LivingEntity victim)) return;
-        boolean damaged=victim.damage(server.getDamageSources().thrown(this,getOwner()),child()?3f:6f);
+        if (!(getWorld() instanceof ServerWorld server)) return;
+        Entity struck=hit.getEntity(); Entity victim=root(struck);
+        boolean damaged=struck.damage(server.getDamageSources().thrown(this,getOwner()),child()?CHILD_DAMAGE:MAIN_DAMAGE);
         if (damaged && !child()) {
             exclude(victim);
-            var targets=nearbyTargets(10,false);
+            var targets=nearbyTargets(CHILD_RANGE,false);
             if (getOwner() instanceof LivingEntity owner) {
                 Vec3d velocity=getVelocity();
                 Vec3d side=velocity.crossProduct(new Vec3d(0,1,0));
@@ -124,7 +163,8 @@ public final class WindGustEntity extends ThrownEntity {
                     var fragment=new WindGustEntity(server,owner,true);
                     fragment.refreshPositionAndAngles(getX(),getY(),getZ(),getYaw(),getPitch());
                     fragment.exclude(victim); fragment.target(other);
-                    Vec3d direction=(other==null ? velocity.normalize() : other.getBoundingBox().getCenter().subtract(getPos()).normalize())
+                    Vec3d point=other==null ? null : aimPoint(other,false);
+                    Vec3d direction=(point==null ? velocity.normalize() : point.subtract(getPos()).normalize())
                         .add(side.multiply(i==0?.35:-.35)).normalize();
                     fragment.setVelocity(direction.multiply(1.1));
                     server.spawnEntity(fragment);

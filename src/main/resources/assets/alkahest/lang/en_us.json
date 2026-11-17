@@ -632,5 +632,5 @@
   "item.alkahest.bow_aer": "Wind Bow",
   "tooltip.alkahest.bow_aer": "Aer: %s / %s · 1 charge per 2 shots",
   "screen.alkahest.practice.bow_aer.title": "Wind Bow",
-  "screen.alkahest.practice.bow_aer.recipe": "Infuse a bow in the Matrix with Aeromaz, Pure Effir, Soul Cloth and an Aer crystal on separate pedestals; 30 Aer and 15 Motus from jars. It recharges with Aer and fires without arrows. The gust homes in on enemies and splits into two smaller gusts seeking other foes."
+  "screen.alkahest.practice.bow_aer.recipe": "Infuse a bow in the Matrix with two Aeromaz, two Pure Effir, Soul Cloth and a netherite ingot on six separate pedestals; 30 Aer and 15 Motus from jars. The Aer-powered bow fires without arrows. Its gust homes on enemies, the Ender Dragon and End Crystals, then splits in two."
 }

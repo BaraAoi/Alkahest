@@ -58,7 +58,9 @@ public class WindBowGameTests implements FabricGameTest {
         jar.setContents(new JarContentsComponent(List.of(new EssenceStack(EssenceType.AER,3,.5f))));
         c.assertTrue(EssenceChargerBlockEntity.chargeFirst(jar,player)==EssenceType.AER && stack.get(ModDataComponents.ESSENCE_CHARGE)==1 && jar.contents().total()==2,"One Aer grants one bow charge");
         var recipe=net.alkahest.matrix.MatrixRecipe.all().stream().filter(r->r.output().isOf(ModItems.BOW_AER)).findFirst().orElseThrow();
-        c.assertTrue(recipe.base()==net.minecraft.item.Items.BOW && recipe.components().size()==4 && recipe.cost().get(EssenceType.AER)==30 && recipe.cost().get(EssenceType.MOTUS)==15,"Bow has the complete Matrix recipe");
+        c.assertTrue(recipe.base()==net.minecraft.item.Items.BOW && recipe.components().size()==6 && recipe.components().stream().filter(i->i==ModItems.STABLE_MATERIAL).count()==2
+            && recipe.components().stream().filter(i->i==ModItems.INFUSED_MATERIALS.get(EssenceType.AER)).count()==2
+            && recipe.components().contains(net.minecraft.item.Items.NETHERITE_INGOT) && recipe.cost().get(EssenceType.AER)==30 && recipe.cost().get(EssenceType.MOTUS)==15,"Bow has the complete Matrix recipe");
         c.complete();
     }
     private static ZombieEntity zombie(TestContext c, Vec3d p) {
@@ -73,13 +75,13 @@ public class WindBowGameTests implements FabricGameTest {
         var first=zombie(c,p.add(0,0,3)); var left=zombie(c,p.add(-3,0,5)); var right=zombie(c,p.add(3,0,5));
         var gust=new WindGustEntity(world,shooter,false); gust.setPosition(p.add(0,1,0)); gust.setVelocity(0,0,1.1); world.spawnEntity(gust);
         for (int i=0;i<10 && !gust.isRemoved();i++) gust.tick();
-        c.assertTrue(gust.isRemoved() && first.getHealth()<first.getMaxHealth(),"A real primary collision damages the first target");
+        c.assertTrue(gust.isRemoved() && first.getHealth()<8f,"A real primary collision deals substantially increased damage");
         var children=world.getEntitiesByClass(WindGustEntity.class,Box.of(p.add(0,1,3),20,20,20),WindGustEntity::child);
         c.assertTrue(children.size()==2,"Exactly two child gusts spawn");
         c.assertTrue(children.stream().noneMatch(e -> first.getUuid().equals(e.targetId())),"Children never target the original victim");
         c.assertTrue(children.stream().anyMatch(e -> left.getUuid().equals(e.targetId())) && children.stream().anyMatch(e -> right.getUuid().equals(e.targetId())),"Children choose distinct nearby enemies when possible");
         for (var child:children) for(int i=0;i<20 && !child.isRemoved();i++) child.tick();
-        c.assertTrue(left.getHealth()<left.getMaxHealth() && right.getHealth()<right.getMaxHealth(),"Both child gusts hit their own other targets");
+        c.assertTrue(left.getHealth()<14f && right.getHealth()<14f,"Both child gusts deal increased damage to their own other targets");
         c.assertTrue(world.getEntitiesByClass(WindGustEntity.class,Box.of(p,20,20,20),e->!e.isRemoved()).isEmpty(),"Child impacts cannot split again");
         first.discard();left.discard();right.discard();c.complete();
     }
@@ -125,6 +127,70 @@ public class WindBowGameTests implements FabricGameTest {
         c.assertTrue(gust.isRemoved() && target.getHealth()==target.getMaxHealth(),"A wall stops the gust and protects the target behind it");
         c.assertTrue(world.getEntitiesByClass(WindGustEntity.class,Box.of(p,20,20,20),WindGustEntity::child).isEmpty(),"A block collision does not create fragments");
         target.discard(); c.complete();
+    }
+
+    @GameTest(templateName=EMPTY_STRUCTURE)
+    public void gustHomesOnAndDestroysEndCrystal(TestContext c) {
+        var world=c.getWorld(); var p=Vec3d.ofBottomCenter(c.getAbsolutePos(new BlockPos(3,228,2)));
+        var shooter=c.createMockPlayer(GameMode.SURVIVAL); shooter.setPosition(p);
+        var crystal=net.minecraft.entity.EntityType.END_CRYSTAL.create(world);
+        if (crystal==null) throw new IllegalStateException("crystal unavailable");
+        crystal.setPosition(p.add(2,0,12)); world.spawnEntity(crystal);
+        var gust=new WindGustEntity(world,shooter,false); gust.setPosition(p.add(0,1,0)); gust.setVelocity(0,0,1.1); world.spawnEntity(gust);
+        gust.tick();
+        c.assertTrue(crystal.getUuid().equals(gust.targetId()),"Crystal is an actual homing target despite not being a living entity");
+        for(int i=0;i<30 && !gust.isRemoved();i++) gust.tick();
+        c.assertTrue(gust.isRemoved() && crystal.isRemoved(),"A real gust hit destroys the crystal through vanilla damage");
+        world.getEntitiesByClass(WindGustEntity.class,Box.of(p,20,20,32),WindGustEntity::child).forEach(WindGustEntity::discard);
+        c.complete();
+    }
+    @GameTest(templateName=EMPTY_STRUCTURE)
+    public void gustHomesOnDragonAndDamagesItsRealBodyPart(TestContext c) {
+        var world=c.getWorld(); var p=Vec3d.ofBottomCenter(c.getAbsolutePos(new BlockPos(3,248,2)));
+        var shooter=c.createMockPlayer(GameMode.SURVIVAL); shooter.setPosition(p);
+        var dragon=net.minecraft.entity.EntityType.ENDER_DRAGON.create(world);
+        if (dragon==null) throw new IllegalStateException("dragon unavailable");
+        dragon.setPosition(p.add(0,0,8)); world.spawnEntity(dragon);
+        var parts=dragon.getBodyParts();
+        for (int i=0;i<parts.length;i++) parts[i].setPosition(p.add(i==0?0:10,0,i==0?8:18));
+        var gust=new WindGustEntity(world,shooter,false); gust.setPosition(p.add(0,.5,0)); gust.setVelocity(0,0,1.1); world.spawnEntity(gust);
+        gust.tick();
+        c.assertTrue(dragon.getUuid().equals(gust.targetId()),"Dragon parent is acquired even though its collision uses parts");
+        for(int i=0;i<25 && !gust.isRemoved();i++) gust.tick();
+        c.assertTrue(gust.isRemoved() && dragon.getHealth()<dragon.getMaxHealth(),"A real collision with the dragon head reduces its health");
+        var children=world.getEntitiesByClass(WindGustEntity.class,Box.of(p.add(0,0,8),24,24,24),WindGustEntity::child);
+        c.assertTrue(children.stream().noneMatch(child -> dragon.getUuid().equals(child.targetId())),"Fragments never retarget another part of the same dragon");
+        children.forEach(WindGustEntity::discard); dragon.discard(); c.complete();
+    }
+    @GameTest(templateName=EMPTY_STRUCTURE)
+    public void gustAcquiresLongRangeCrystalButNotThroughWalls(TestContext c) {
+        var world=c.getWorld(); var p=Vec3d.ofBottomCenter(c.getAbsolutePos(new BlockPos(3,268,2)));
+        var shooter=c.createMockPlayer(GameMode.SURVIVAL); shooter.setPosition(p);
+        var crystal=net.minecraft.entity.EntityType.END_CRYSTAL.create(world);
+        if (crystal==null) throw new IllegalStateException("crystal unavailable");
+        crystal.setPosition(p.add(0,0,30)); world.spawnEntity(crystal);
+        var gust=new WindGustEntity(world,shooter,false); gust.setPosition(p.add(0,1,0)); gust.setVelocity(0,0,1);
+        c.assertTrue(gust.nearbyTargets(WindGustEntity.MAIN_RANGE,true).contains(crystal),"Crystal beyond the old 20-block range is acquired");
+        c.setBlockState(3,269,5,net.minecraft.block.Blocks.STONE);
+        c.assertFalse(gust.nearbyTargets(WindGustEntity.MAIN_RANGE,true).contains(crystal),"Targeting does not pass through solid walls");
+        crystal.discard(); c.complete();
+    }
+
+    @GameTest(templateName=EMPTY_STRUCTURE)
+    public void splitGustsCanSeekAndDestroyAnEndCrystal(TestContext c) {
+        var world=c.getWorld(); var p=Vec3d.ofBottomCenter(c.getAbsolutePos(new BlockPos(3,288,2)));
+        var shooter=c.createMockPlayer(GameMode.SURVIVAL); shooter.setPosition(p);
+        var first=zombie(c,p.add(0,0,3));
+        var crystal=net.minecraft.entity.EntityType.END_CRYSTAL.create(world);
+        if (crystal==null) throw new IllegalStateException("crystal unavailable");
+        crystal.setPosition(p.add(4,0,4)); world.spawnEntity(crystal);
+        var gust=new WindGustEntity(world,shooter,false); gust.setPosition(p.add(0,1,0)); gust.setVelocity(0,0,1.1); world.spawnEntity(gust);
+        for(int i=0;i<10 && !gust.isRemoved();i++) gust.tick();
+        var fragments=world.getEntitiesByClass(WindGustEntity.class,Box.of(p,20,20,20),WindGustEntity::child);
+        c.assertTrue(fragments.size()==2 && fragments.stream().allMatch(e->crystal.getUuid().equals(e.targetId())),"Fragments seek an End Crystal as the other target");
+        for(var child:fragments) for(int i=0;i<20 && !child.isRemoved();i++) child.tick();
+        c.assertTrue(crystal.isRemoved(),"A secondary gust destroys a crystal");
+        fragments.forEach(WindGustEntity::discard); first.discard(); c.complete();
     }
 
 }

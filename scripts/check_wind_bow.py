@@ -20,4 +20,6 @@ assert 'SEGMENTS=24' in renderer and 'strand<3' in renderer and 'getEntityTransl
 projectile=Path('src/main/java/net/alkahest/entity/WindGustEntity.java').read_text()
 assert 'i<2' in projectile and 'if (damaged && !child())' in projectile and 'excludedId' in projectile
 assert 'RaycastContext.ShapeType.COLLIDER' in projectile and 'HostileEntity.class' in projectile
+assert 'EnderDragonEntity.class' in projectile and 'EndCrystalEntity.class' in projectile and 'EnderDragonPart' in projectile
+assert 'MAIN_DAMAGE=16f, CHILD_DAMAGE=8f' in projectile and 'MAIN_RANGE=64' in projectile
 print('Wind bow drawing stages, vortex, targeting and translations validated')
