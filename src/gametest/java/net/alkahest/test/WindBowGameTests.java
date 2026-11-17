@@ -159,7 +159,10 @@ public class WindBowGameTests implements FabricGameTest {
         for(int i=0;i<25 && !gust.isRemoved();i++) gust.tick();
         c.assertTrue(gust.isRemoved() && dragon.getHealth()<dragon.getMaxHealth(),"A real collision with the dragon head reduces its health");
         var children=world.getEntitiesByClass(WindGustEntity.class,Box.of(p.add(0,0,8),24,24,24),WindGustEntity::child);
-        c.assertTrue(children.stream().noneMatch(child -> dragon.getUuid().equals(child.targetId())),"Fragments never retarget another part of the same dragon");
+        c.assertTrue(children.size()==2 && children.stream().noneMatch(child -> dragon.getUuid().equals(child.targetId())),"Two fragments never retarget another part of the same dragon");
+        var saved=children.getFirst().writeNbt(new net.minecraft.nbt.NbtCompound());
+        var restored=new WindGustEntity(world,shooter,true); restored.readNbt(saved);
+        c.assertFalse(restored.nearbyTargets(20,false).contains(dragon),"Dragon exclusion survives fragment serialization");
         children.forEach(WindGustEntity::discard); dragon.discard(); c.complete();
     }
     @GameTest(templateName=EMPTY_STRUCTURE)
