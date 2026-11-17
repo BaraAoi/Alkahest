@@ -8,6 +8,7 @@ import net.minecraft.entity.data.DataTracker;
 import net.minecraft.entity.data.TrackedData;
 import net.minecraft.entity.data.TrackedDataHandlerRegistry;
 import net.minecraft.entity.mob.HostileEntity;
+import net.minecraft.entity.mob.EndermanEntity;
 import net.minecraft.entity.boss.dragon.EnderDragonEntity;
 import net.minecraft.entity.boss.dragon.EnderDragonPart;
 import net.minecraft.entity.decoration.EndCrystalEntity;
@@ -15,14 +16,19 @@ import net.minecraft.entity.projectile.thrown.ThrownEntity;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
+import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.EntityHitResult;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.RaycastContext;
 import net.minecraft.world.World;
+import net.minecraft.world.explosion.AdvancedExplosionBehavior;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.tag.BlockTags;
+import java.util.Optional;
+import java.util.function.Function;
 import java.util.Comparator;
 import java.util.ArrayList;
 import java.util.List;
@@ -31,7 +37,11 @@ import java.util.UUID;
 /** Server-authoritative homing gust. Only the primary impact may create two child gusts. */
 public final class WindGustEntity extends ThrownEntity {
     private static final TrackedData<Boolean> CHILD=DataTracker.registerData(WindGustEntity.class,TrackedDataHandlerRegistry.BOOLEAN);
-    public static final int LIFETIME=100, CHILD_LIFETIME=35;
+    public static final int LIFETIME=200, CHILD_LIFETIME=35;
+    public static final double MAIN_MIN_SPEED=2.2, MAIN_MAX_SPEED=2.8, CHILD_SPEED=1.6;
+    // Identical behavior to the player's vanilla wind charge: knockback and block triggers, no blast damage.
+    private static final AdvancedExplosionBehavior WIND_BURST=new AdvancedExplosionBehavior(
+        true,false,Optional.of(1.22f),Registries.BLOCK.getEntryList(BlockTags.BLOCKS_WIND_CHARGE_EXPLOSIONS).map(Function.identity()));
     public static final double MAIN_RANGE=64, CHILD_RANGE=10;
     public static final float MAIN_DAMAGE=16f, CHILD_DAMAGE=8f;
     private UUID targetId, excludedId;
@@ -50,7 +60,7 @@ public final class WindGustEntity extends ThrownEntity {
     private boolean validTarget(Entity entity) {
         Entity target=root(entity), owner=getOwner();
         return (target instanceof HostileEntity || target instanceof EnderDragonEntity || target instanceof EndCrystalEntity)
-            && target.isAlive() && !target.isSpectator() && target!=owner
+            && !(target instanceof EndermanEntity) && target.isAlive() && !target.isSpectator() && target!=owner
             && (excludedId==null || !excludedId.equals(target.getUuid()))
             && (owner==null || !owner.isTeammate(target));
     }
@@ -121,9 +131,9 @@ public final class WindGustEntity extends ThrownEntity {
             if (target!=null) {
                 Vec3d velocity=getVelocity();
                 Vec3d desired=destination.subtract(getPos()).normalize();
-                double speed=Math.max(1.05,Math.min(1.65,velocity.length()));
+                double speed=child() ? CHILD_SPEED : Math.max(MAIN_MIN_SPEED,Math.min(MAIN_MAX_SPEED,velocity.length()));
                 Vec3d current=velocity.lengthSquared()<.001?desired:velocity.normalize();
-                Vec3d blended=current.multiply(child()?.68:.82).add(desired.multiply(child()?.32:.18));
+                Vec3d blended=current.multiply(child()?.60:.70).add(desired.multiply(child()?.40:.30));
                 if (blended.lengthSquared()>.0001) setVelocity(blended.normalize().multiply(speed));
             }
         }
@@ -166,7 +176,7 @@ public final class WindGustEntity extends ThrownEntity {
                     Vec3d point=other==null ? null : aimPoint(other,false);
                     Vec3d direction=(point==null ? velocity.normalize() : point.subtract(getPos()).normalize())
                         .add(side.multiply(i==0?.35:-.35)).normalize();
-                    fragment.setVelocity(direction.multiply(1.1));
+                    fragment.setVelocity(direction.multiply(CHILD_SPEED));
                     server.spawnEntity(fragment);
                 }
             }
@@ -175,11 +185,15 @@ public final class WindGustEntity extends ThrownEntity {
     @Override protected void onCollision(HitResult hit) {
         super.onCollision(hit);
         if (getWorld() instanceof ServerWorld server) {
-            server.spawnParticles(ParticleTypes.CLOUD,getX(),getY(),getZ(),child()?9:22,.25,.25,.25,.06);
-            server.playSound(null,getBlockPos(),SoundEvents.ENTITY_BREEZE_SHOOT,SoundCategory.PLAYERS,.45f,child()?1.5f:1.2f);
+            Vec3d pos=hit.getPos();
+            if (hit instanceof BlockHitResult block) pos=pos.add(Vec3d.of(block.getSide().getVector()).multiply(.25));
+            server.createExplosion(this,null,WIND_BURST,pos.x,pos.y,pos.z,1.2f,false,World.ExplosionSourceType.TRIGGER,
+                ParticleTypes.GUST_EMITTER_SMALL,ParticleTypes.GUST_EMITTER_LARGE,SoundEvents.ENTITY_WIND_CHARGE_WIND_BURST);
             discard();
         }
     }
+    // A wind burst must not throw newly spawned fragments off their paths.
+    @Override public void addVelocity(double x, double y, double z) { }
     @Override public void writeCustomDataToNbt(NbtCompound nbt) {
         super.writeCustomDataToNbt(nbt); nbt.putBoolean("Child",child()); nbt.putInt("Life",life);
         if (targetId!=null) nbt.putUuid("WindTarget",targetId);

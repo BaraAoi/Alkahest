@@ -42,6 +42,7 @@ public class WindBowGameTests implements FabricGameTest {
         c.assertTrue(stack.get(ModDataComponents.ESSENCE_CHARGE)==0 && stack.get(ModDataComponents.WIND_BOW_SHOT_STEP)==0,"Second shot consumes exactly one Aer");
         var gusts=world.getEntitiesByClass(WindGustEntity.class,Box.of(Vec3d.ofCenter(p),10,10,10),e -> true);
         c.assertTrue(gusts.size()==2,"Both real releases spawn a gust");
+        c.assertTrue(gusts.stream().allMatch(g -> g.getVelocity().length()>2.7),"A full draw launches the gust faster than before");
         bow.onStoppedUsing(stack,world,player,WindBowItem.MAX_USE-20);
         c.assertTrue(world.getEntitiesByClass(WindGustEntity.class,Box.of(Vec3d.ofCenter(p),10,10,10),e -> true).size()==2,"An empty bow fires nothing");
         gusts.forEach(WindGustEntity::discard);
@@ -194,6 +195,53 @@ public class WindBowGameTests implements FabricGameTest {
         for(var child:fragments) for(int i=0;i<20 && !child.isRemoved();i++) child.tick();
         c.assertTrue(crystal.isRemoved(),"A secondary gust destroys a crystal");
         fragments.forEach(WindGustEntity::discard); first.discard(); c.complete();
+    }
+
+    @GameTest(templateName=EMPTY_STRUCTURE)
+    public void endermenAreNotHomingTargets(TestContext c) {
+        var world=c.getWorld(); var p=Vec3d.ofBottomCenter(c.getAbsolutePos(new BlockPos(3,108,2)));
+        var shooter=c.createMockPlayer(GameMode.SURVIVAL); shooter.setPosition(p);
+        var enderman=EntityType.ENDERMAN.create(world);
+        if (enderman==null) throw new IllegalStateException("enderman unavailable");
+        enderman.setPosition(p.add(1,0,5)); enderman.setAiDisabled(true); world.spawnEntity(enderman);
+        var zombie=zombie(c,p.add(-1,0,7));
+        var main=new WindGustEntity(world,shooter,false); main.setPosition(p.add(0,1,0)); main.setVelocity(0,0,2.2);
+        c.assertFalse(main.nearbyTargets(WindGustEntity.MAIN_RANGE,true).contains(enderman),"Main gust does not select an enderman");
+        c.assertTrue(main.nearbyTargets(WindGustEntity.MAIN_RANGE,true).contains(zombie),"Other hostiles remain valid");
+        main.target(enderman); world.spawnEntity(main); main.tick();
+        c.assertTrue(zombie.getUuid().equals(main.targetId()),"A previously saved enderman target is cleared and another enemy is chosen");
+        var child=new WindGustEntity(world,shooter,true); child.setPosition(p.add(0,1,0)); child.setVelocity(0,0,1.6);
+        c.assertFalse(child.nearbyTargets(WindGustEntity.CHILD_RANGE,false).contains(enderman),"Fragments do not select endermen either");
+        main.discard(); enderman.discard(); zombie.discard(); c.complete();
+    }
+    @GameTest(templateName=EMPTY_STRUCTURE)
+    public void windBurstKnocksBackWithoutBlastDamage(TestContext c) {
+        var world=c.getWorld(); var p=Vec3d.ofBottomCenter(c.getAbsolutePos(new BlockPos(3,298,2)));
+        var shooter=c.createMockPlayer(GameMode.SURVIVAL); shooter.setPosition(p.add(0,0,-4));
+        var bystander=zombie(c,p.add(1.5,0,1)); float health=bystander.getHealth();
+        c.setBlockState(3,299,4,net.minecraft.block.Blocks.STONE);
+        var gust=new WindGustEntity(world,shooter,false); gust.setPosition(p.add(0,1,0)); gust.setVelocity(0,0,2.2); world.spawnEntity(gust);
+        for(int i=0;i<4 && !gust.isRemoved();i++) gust.tick();
+        c.assertTrue(gust.isRemoved(),"Gust hits a block");
+        c.assertTrue(bystander.getVelocity().lengthSquared()>.001,"Wind charge burst knocks nearby entities back");
+        c.assertTrue(bystander.getHealth()==health,"Wind burst does not deal additional area damage");
+        c.assertTrue(c.getBlockState(new BlockPos(3,299,4)).isOf(net.minecraft.block.Blocks.STONE),"Wind burst does not destroy ordinary stone");
+        bystander.discard(); c.complete();
+    }
+    @GameTest(templateName=EMPTY_STRUCTURE)
+    public void primaryFlightSurvivesOldLifetimeAndSaving(TestContext c) {
+        var world=c.getWorld(); var p=Vec3d.ofBottomCenter(c.getAbsolutePos(new BlockPos(3,308,2)));
+        var shooter=c.createMockPlayer(GameMode.SURVIVAL); shooter.setPosition(p);
+        var gust=new WindGustEntity(world,shooter,false); gust.setPosition(p.add(0,1,0)); gust.setVelocity(0,0,2.8); world.spawnEntity(gust);
+        for(int i=0;i<110 && !gust.isRemoved();i++) gust.tick();
+        c.assertTrue(!gust.isRemoved() && gust.getPos().distanceTo(p)>250,"Main gust flies well beyond its old 100-tick lifetime");
+        var tag=gust.writeNbt(new net.minecraft.nbt.NbtCompound());
+        var restored=new WindGustEntity(world,shooter,false); restored.readNbt(tag);
+        for(int i=0;i<89 && !restored.isRemoved();i++) restored.tick();
+        c.assertFalse(restored.isRemoved(),"Flight lifetime is retained after saving");
+        restored.tick(); restored.tick();
+        c.assertTrue(restored.isRemoved(),"Primary gust still expires after its bounded lifetime");
+        gust.discard(); c.complete();
     }
 
 }

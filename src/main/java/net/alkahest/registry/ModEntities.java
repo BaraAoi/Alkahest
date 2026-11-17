@@ -37,7 +37,7 @@ public final class ModEntities {
     public static final EntityType<net.alkahest.entity.WindGustEntity> WIND_GUST = Registry.register(
         Registries.ENTITY_TYPE, Alkahest.id("wind_gust"),
         FabricEntityTypeBuilder.<net.alkahest.entity.WindGustEntity>create(SpawnGroup.MISC, net.alkahest.entity.WindGustEntity::new)
-            .dimensions(EntityDimensions.fixed(0.35f, 0.35f)).trackRangeBlocks(96).trackedUpdateRate(2).build());
+            .dimensions(EntityDimensions.fixed(0.35f, 0.35f)).trackRangeBlocks(160).trackedUpdateRate(2).build());
     public static final EntityType<DissolvedEntity> DISSOLVED = Registry.register(
         Registries.ENTITY_TYPE, Alkahest.id("dissolved"),
         FabricEntityTypeBuilder.<DissolvedEntity>create(SpawnGroup.MONSTER, DissolvedEntity::new)

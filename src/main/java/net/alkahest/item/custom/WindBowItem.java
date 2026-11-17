@@ -38,7 +38,7 @@ public final class WindBowItem extends Item {
         if (drawn<5 || (!player.isCreative() && stack.getOrDefault(ModDataComponents.ESSENCE_CHARGE,0)<=0)) return;
         float power=Math.min(1f,drawn/(float)DRAW_TICKS);
         var gust=new WindGustEntity(world,player,false);
-        gust.setVelocity(player,player.getPitch(),player.getYaw(),0,1.1f+power*.5f,0);
+        gust.setVelocity(player,player.getPitch(),player.getYaw(),0,2.2f+power*.6f,0);
         if (!world.spawnEntity(gust)) return;
         if (!player.isCreative()) consumeShot(stack);
         world.playSound(null,player.getBlockPos(),SoundEvents.ENTITY_BREEZE_SHOOT,SoundCategory.PLAYERS,.75f,1.1f);
